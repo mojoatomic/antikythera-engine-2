@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antikythera Front Face - Detailed Historical Mockup</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Georgia, serif;
+        }
+        
+        .container {
+            background: rgba(0,0,0,0.4);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        
+        canvas {
+            display: block;
+            background: radial-gradient(circle, #2a2a2a 0%, #1a1a1a 100%);
+            border-radius: 10px;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+        }
+        
+        .info {
+            color: #d4af37;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="mockup" width="900" height="900"></canvas>
+        <div class="info">
+            Authentic detail: Greek inscriptions, day numbers, parapegma (star calendar), degree scales
+        </div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('mockup');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const maxRadius = 410;
+        
+        // Greek month names
+        const monthNames = [
+            'ΦΑΩΦΙ', 'ΑΘΥΡ', 'ΧΟΙΑΚ', 'ΤΥΒΙ', 'ΜΕΧΕΙΡ', 'ΦΑΜΕΝΩΘ',
+            'ΦΑΡΜΟΥΘΙ', 'ΠΑΧΩΝ', 'ΠΑΥΝΙ', 'ΕΠΕΙΦ', 'ΜΕΣΟΡΗ', 'ΘΩΥΘ'
+        ];
+        
+        // Greek zodiac names
+        const zodiacData = [
+            { symbol: '♈', name: 'ΚΡΙΟΣ' },
+            { symbol: '♉', name: 'ΤΑΥΡΟΣ' },
+            { symbol: '♊', name: 'ΔΙΔΥΜΟΙ' },
+            { symbol: '♋', name: 'ΚΑΡΚΙΝΟΣ' },
+            { symbol: '♌', name: 'ΛΕΩΝ' },
+            { symbol: '♍', name: 'ΠΑΡΘΕΝΟΣ' },
+            { symbol: '♎', name: 'ΖΥΓΟΣ' },
+            { symbol: '♏', name: 'ΣΚΟΡΠΙΟΣ' },
+            { symbol: '♐', name: 'ΤΟΞΟΤΗΣ' },
+            { symbol: '♑', name: 'ΑΙΓΟΚΕΡΩΣ' },
+            { symbol: '♒', name: 'ΥΔΡΟΧΟΟΣ' },
+            { symbol: '♓', name: 'ΙΧΘΥΕΣ' }
+        ];
+        
+        // Parapegma (star calendar)
+        const parapegma = [
+            { day: 15, text: 'ΠΛΕΙΑΔΕΣ' },
+            { day: 45, text: 'ΑΡΚΤΟΥΡΟΣ' },
+            { day: 75, text: 'ΣΕΙΡΙΟΣ' },
+            { day: 105, text: 'ΥΑΔΕΣ' },
+            { day: 135, text: 'ΩΡΙΩΝ' },
+            { day: 165, text: 'ΛΥΡΑ' },
+            { day: 195, text: 'ΑΕΤΟΣ' },
+            { day: 225, text: 'ΚΥΩΝ' },
+            { day: 255, text: 'ΚΑΣΣΙΟΠΕΙΑ' },
+            { day: 285, text: 'ΠΕΡΣΕΥΣ' },
+            { day: 315, text: 'ΑΝΔΡΟΜΕΔΑ' },
+            { day: 345, text: 'ΠΗΓΑΣΟΣ' }
+        ];
+        
+        // Sample positions
+        const planets = {
+            saturn: { longitude: 330, color: '#8B7355', name: 'Saturn' },
+            jupiter: { longitude: 60, color: '#DAA520', name: 'Jupiter' },
+            mars: { longitude: 280, color: '#CD5C5C', name: 'Mars' },
+            venus: { longitude: 200, color: '#F0E68C', name: 'Venus' },
+            mercury: { longitude: 240, color: '#C0C0C0', name: 'Mercury' },
+            moon: { longitude: 45, phase: 250, illumination: 0.75, color: '#E0E0E0', name: 'Moon' },
+            sun: { longitude: 225, color: '#FFD700', name: 'Sun' }
+        };
+        
+        const orbits = {
+            saturn: 0.88,
+            jupiter: 0.80,
+            mars: 0.72,
+            venus: 0.64,
+            mercury: 0.56,
+            moon: 0.48,
+            sun: 0.40
+        };
+        
+        // 1. EGYPTIAN CALENDAR - Outermost ring with DAY NUMBERS
+        function drawEgyptianCalendar() {
+            const outerR = maxRadius;
+            const innerR = maxRadius - 35;
+            
+            // Rings
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, outerR, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerR, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // EVERY DAY marked (360 ticks!)
+            for (let day = 0; day < 360; day++) {
+                const angle = (day - 90) * Math.PI / 180;
+                
+                const isMonth = day % 30 === 0;
+                const is10 = day % 10 === 0;
+                const is5 = day % 5 === 0;
+                
+                let tickLength = isMonth ? 30 : (is10 ? 20 : (is5 ? 12 : 6));
+                let lineWidth = isMonth ? 3 : (is10 ? 2 : 1);
+                
+                const x1 = centerX + Math.cos(angle) * (outerR - tickLength);
+                const y1 = centerY + Math.sin(angle) * (outerR - tickLength);
+                const x2 = centerX + Math.cos(angle) * outerR;
+                const y2 = centerY + Math.sin(angle) * outerR;
+                
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = lineWidth;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+                
+                // Day numbers every 10 days
+                if (is10 && day > 0) {
+                    const dayInMonth = (day % 30) || 30;
+                    ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
+                    ctx.font = '9px Georgia';
+                    ctx.textAlign = 'center';
+                    const tx = centerX + Math.cos(angle) * (outerR - 15);
+                    const ty = centerY + Math.sin(angle) * (outerR - 15);
+                    ctx.save();
+                    ctx.translate(tx, ty);
+                    ctx.rotate(angle + Math.PI / 2);
+                    ctx.fillText(dayInMonth.toString(), 0, 0);
+                    ctx.restore();
+                }
+            }
+        }
+        
+        // 2. MONTH NAMES in Greek
+        function drawMonthNames() {
+            const radius = maxRadius - 48;
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 11px Georgia';
+            ctx.textAlign = 'center';
+            
+            for (let i = 0; i < 12; i++) {
+                const angle = (i * 30 + 15 - 90) * Math.PI / 180;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angle + Math.PI / 2);
+                ctx.fillText(monthNames[i], 0, 0);
+                ctx.restore();
+            }
+        }
+        
+        // 3. PARAPEGMA - Star calendar
+        function drawParapegma() {
+            const radius = maxRadius - 60;
+            
+            parapegma.forEach(entry => {
+                const angle = (entry.day - 90) * Math.PI / 180;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                // Star symbol
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.6)';
+                ctx.font = '10px Arial';
+                ctx.fillText('★', x, y);
+                
+                // Star name
+                ctx.fillStyle = 'rgba(240, 230, 210, 0.5)';
+                ctx.font = '7px Georgia';
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angle + Math.PI / 2);
+                ctx.fillText(entry.text, 8, 0);
+                ctx.restore();
+            });
+        }
+        
+        // 4. ZODIAC RING with symbols and Greek names
+        function drawZodiac() {
+            const outerR = maxRadius - 80;
+            const innerR = maxRadius - 110;
+            
+            // Rings
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, outerR, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerR, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Zodiac symbols and divisions
+            ctx.font = 'bold 32px Arial';
+            ctx.fillStyle = '#f0e6d2';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            for (let i = 0; i < 12; i++) {
+                const angle = (i * 30 - 90) * Math.PI / 180;
+                const x = centerX + Math.cos(angle) * (outerR - 15);
+                const y = centerY + Math.sin(angle) * (outerR - 15);
+                
+                // Symbol
+                ctx.fillText(zodiacData[i].symbol, x, y);
+                
+                // Division line
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(centerX + Math.cos(angle) * innerR, centerY + Math.sin(angle) * innerR);
+                ctx.lineTo(centerX + Math.cos(angle) * (outerR + 10), centerY + Math.sin(angle) * (outerR + 10));
+                ctx.stroke();
+                
+                // Greek name
+                const nameAngle = (i * 30 + 15 - 90) * Math.PI / 180;
+                const nameX = centerX + Math.cos(nameAngle) * (maxRadius - 120);
+                const nameY = centerY + Math.sin(nameAngle) * (maxRadius - 120);
+                
+                ctx.font = 'bold 10px Georgia';
+                ctx.fillStyle = '#d4af37';
+                ctx.save();
+                ctx.translate(nameX, nameY);
+                ctx.rotate(nameAngle + Math.PI / 2);
+                ctx.fillText(zodiacData[i].name, 0, 0);
+                ctx.restore();
+                ctx.font = 'bold 32px Arial';
+                ctx.fillStyle = '#f0e6d2';
+            }
+        }
+        
+        // 5. DEGREE SCALE - Fine graduations
+        function drawDegreeScale() {
+            const outerR = maxRadius - 115;
+            const innerR = maxRadius - 125;
+            
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.5)';
+            
+            for (let deg = 0; deg < 360; deg += 5) {
+                const angle = (deg - 90) * Math.PI / 180;
+                const is10 = deg % 10 === 0;
+                const tickLength = is10 ? 8 : 4;
+                const lineWidth = is10 ? 1.5 : 0.8;
+                
+                ctx.lineWidth = lineWidth;
+                ctx.beginPath();
+                ctx.moveTo(centerX + Math.cos(angle) * innerR, centerY + Math.sin(angle) * innerR);
+                ctx.lineTo(centerX + Math.cos(angle) * (innerR + tickLength), centerY + Math.sin(angle) * (innerR + tickLength));
+                ctx.stroke();
+            }
+        }
+        
+        // 6. ORBITAL RINGS
+        function drawOrbits() {
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.15)';
+            ctx.lineWidth = 1;
+            
+            Object.values(orbits).forEach(ratio => {
+                const r = (maxRadius - 130) * ratio;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+        }
+        
+        // 7. PLANETS
+        function drawPlanets() {
+            ['saturn', 'jupiter', 'mars', 'venus', 'mercury'].forEach(name => {
+                const planet = planets[name];
+                const angle = (planet.longitude - 90) * Math.PI / 180;
+                const radius = (maxRadius - 130) * orbits[name];
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                // Pointer
+                ctx.strokeStyle = planet.color;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                
+                // Body
+                ctx.fillStyle = planet.color;
+                ctx.beginPath();
+                ctx.arc(x, y, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Label
+                ctx.fillStyle = '#f0e6d2';
+                ctx.font = '11px Georgia';
+                ctx.textAlign = 'center';
+                const labelAngle = angle + Math.PI / 2;
+                ctx.fillText(planet.name, x + Math.cos(labelAngle) * 18, y + Math.sin(labelAngle) * 18);
+            });
+        }
+        
+        // 8. MOON with phase
+        function drawMoon() {
+            const planet = planets.moon;
+            const angle = (planet.longitude - 90) * Math.PI / 180;
+            const radius = (maxRadius - 130) * orbits.moon;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            // Pointer
+            ctx.strokeStyle = planet.color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            // Moon disc
+            const moonR = 12;
+            ctx.fillStyle = planet.color;
+            ctx.beginPath();
+            ctx.arc(x, y, moonR, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Phase shadow
+            if (planet.illumination < 1) {
+                ctx.fillStyle = '#1a1a1a';
+                ctx.beginPath();
+                const offset = moonR * (1 - planet.illumination * 2);
+                if (planet.phase < 180) {
+                    ctx.arc(x, y, moonR, -Math.PI/2, Math.PI/2);
+                    ctx.arc(x + offset, y, moonR, Math.PI/2, -Math.PI/2);
+                } else {
+                    ctx.arc(x, y, moonR, Math.PI/2, -Math.PI/2);
+                    ctx.arc(x - offset, y, moonR, -Math.PI/2, Math.PI/2);
+                }
+                ctx.fill();
+            }
+            
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, moonR, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // 9. SUN with glow
+        function drawSun() {
+            const planet = planets.sun;
+            const angle = (planet.longitude - 90) * Math.PI / 180;
+            const radius = (maxRadius - 130) * orbits.sun;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            // Pointer
+            ctx.strokeStyle = planet.color;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            // Glow
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, 18);
+            gradient.addColorStop(0, '#FFD700');
+            gradient.addColorStop(0.5, '#FFA500');
+            gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, 18, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Core
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(x, y, 10, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // 10. CENTER HUB
+        function drawHub() {
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 35, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#8b7355';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 22, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 14, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // 11. LABELS
+        function drawLabels() {
+            // Greek title
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 24px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('ΠΡΟΣΟΨΙΣ', centerX, 30);
+            
+            ctx.font = '12px Georgia';
+            ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
+            ctx.fillText('(Front Face)', centerX, 48);
+            
+            // Bottom info
+            ctx.font = '14px Georgia';
+            ctx.fillStyle = '#f0e6d2';
+            ctx.fillText('ΣΚΟΡΠΙΟΣ 15.0°', centerX, canvas.height - 35);
+            
+            ctx.font = '12px Georgia';
+            ctx.fillStyle = 'rgba(240, 230, 210, 0.8)';
+            ctx.fillText('ΧΟΙΑΚ 5', centerX, canvas.height - 18);
+        }
+        
+        // RENDER ALL
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        drawEgyptianCalendar();
+        drawMonthNames();
+        drawParapegma();
+        drawZodiac();
+        drawDegreeScale();
+        drawOrbits();
+        drawPlanets();
+        drawMoon();
+        drawSun();
+        drawHub();
+        drawLabels();
+    </script>
+</body>
+</html>

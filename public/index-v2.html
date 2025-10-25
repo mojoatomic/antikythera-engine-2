@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antikythera Mechanism - The Three Faces</title>
+    <style>
+        /* CSS Variables for theming */
+        :root {
+            --bg-primary: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --bg-dial: radial-gradient(circle, #2a2a2a 0%, #1a1a1a 100%);
+            --color-accent: #d4af37;
+            --color-pointer: #ffaa00;
+            --color-text: #f0e6d2;
+            --font-primary: 'Georgia', serif;
+        }
+        
+        /* Ancient Bronze Theme (default) */
+        [data-theme="ancient-bronze"] {
+            --bg-primary: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --bg-dial: radial-gradient(circle, #2a2a2a 0%, #1a1a1a 100%);
+            --color-accent: #d4af37;
+            --color-pointer: #ffaa00;
+            --color-text: #f0e6d2;
+        }
+        
+        /* Restored Bronze Theme */
+        [data-theme="restored-bronze"] {
+            --bg-primary: linear-gradient(135deg, #8B4513 0%, #CD853F 100%);
+            --bg-dial: radial-gradient(circle, #3a2a1a 0%, #2a1a0a 100%);
+            --color-accent: #FFD700;
+            --color-pointer: #FFA500;
+            --color-text: #FFF8DC;
+        }
+        
+        /* Steampunk Theme */
+        [data-theme="steampunk"] {
+            --bg-primary: linear-gradient(135deg, #3d2817 0%, #5c4033 100%);
+            --bg-dial: radial-gradient(circle, #4a3728 0%, #2d1f14 100%);
+            --color-accent: #c7a770;
+            --color-pointer: #e89923;
+            --color-text: #f4e8d0;
+        }
+        
+        /* Minimal Theme */
+        [data-theme="minimal"] {
+            --bg-primary: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+            --bg-dial: radial-gradient(circle, #ffffff 0%, #f0f0f0 100%);
+            --color-accent: #333333;
+            --color-pointer: #666666;
+            --color-text: #000000;
+        }
+        
+        /* Dark Mode Theme */
+        [data-theme="dark-mode"] {
+            --bg-primary: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            --bg-dial: radial-gradient(circle, #1a1a1a 0%, #0a0a0a 100%);
+            --color-accent: #00ff00;
+            --color-pointer: #00ffff;
+            --color-text: #00ff00;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-primary);
+            background: var(--bg-primary);
+            color: var(--color-text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .app-container {
+            width: 100%;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 3em;
+            letter-spacing: 4px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+        
+        .controls {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .controls label {
+            font-weight: bold;
+            color: var(--color-accent);
+        }
+        
+        .controls select,
+        .controls input[type="datetime-local"] {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 2px solid var(--color-accent);
+            background: rgba(255,255,255,0.9);
+            color: #000;
+            font-size: 1em;
+            font-family: var(--font-primary);
+        }
+        
+        .controls button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: 2px solid var(--color-accent);
+            background: var(--color-accent);
+            color: #1e3c72;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        .controls button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        /* Layout: Hero (single large face) */
+        .layout-hero .faces-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 70vh;
+        }
+        
+        .layout-hero .face {
+            width: 90vmin;
+            height: 90vmin;
+            max-width: 800px;
+            max-height: 800px;
+        }
+        
+        /* Layout: Gallery (three faces side-by-side) */
+        .layout-gallery .faces-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        .layout-gallery .face {
+            width: 100%;
+            aspect-ratio: 1;
+        }
+        
+        /* Layout: Focus (one at a time with navigation) */
+        .layout-focus .faces-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 70vh;
+            position: relative;
+        }
+        
+        .layout-focus .face {
+            width: 90vmin;
+            height: 90vmin;
+            max-width: 800px;
+            max-height: 800px;
+            display: none;
+        }
+        
+        .layout-focus .face.active {
+            display: block;
+        }
+        
+        .face-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: none;
+        }
+        
+        .face-nav button {
+            pointer-events: all;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--color-accent);
+            color: #000;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .face-nav button:hover {
+            transform: scale(1.1);
+        }
+        
+        .face-card {
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .face-card canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dial);
+            border-radius: 10px;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            opacity: 0.7;
+            font-size: 0.9em;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body data-theme="ancient-bronze">
+    <div class="app-container layout-gallery">
+        <header>
+            <h1>ΑΝΤΙΚΥΘΗΡΑ</h1>
+            <div class="subtitle">The Three Faces of the Ancient Greek Astronomical Calculator</div>
+        </header>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="layoutSelect">Layout:</label>
+                <select id="layoutSelect">
+                    <option value="gallery">Gallery (All Three)</option>
+                    <option value="hero">Hero (Front Only)</option>
+                    <option value="focus">Focus (One at a Time)</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="themeSelect">Theme:</label>
+                <select id="themeSelect">
+                    <option value="ancient-bronze">Ancient Bronze</option>
+                    <option value="restored-bronze">Restored Bronze</option>
+                    <option value="steampunk">Steampunk</option>
+                    <option value="minimal">Minimal</option>
+                    <option value="dark-mode">Dark Mode</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <input type="datetime-local" id="dateInput" />
+                <button onclick="setCurrentDate()">Now</button>
+                <button onclick="updateDisplay()">Update</button>
+            </div>
+            
+            <div class="control-group">
+                <button onclick="animateForward()">Play ▶</button>
+                <button onclick="stopAnimation()">Stop ⏸</button>
+            </div>
+        </div>
+        
+        <div class="faces-container">
+            <div class="face-card face" id="frontFace">
+                <canvas id="frontCanvas" width="600" height="600"></canvas>
+            </div>
+            
+            <div class="face-card face" id="backUpperFace">
+                <canvas id="backUpperCanvas" width="600" height="600"></canvas>
+            </div>
+            
+            <div class="face-card face" id="backLowerFace">
+                <canvas id="backLowerCanvas" width="600" height="600"></canvas>
+            </div>
+            
+            <!-- Navigation for Focus layout -->
+            <div class="face-nav hidden" id="faceNav">
+                <button onclick="previousFace()">←</button>
+                <button onclick="nextFace()">→</button>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Based on the Antikythera Mechanism (~100 BCE)</p>
+            <p>Discovered 1901 in a shipwreck off the Greek island of Antikythera</p>
+        </footer>
+    </div>
+    
+    <script src="components/FrontFace.js"></script>
+    <script src="components/BackUpperFace.js"></script>
+    <script src="components/BackLowerFace.js"></script>
+    <script src="display.js"></script>
+</body>
+</html>

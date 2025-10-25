@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antikythera Front Face - Layout Mockup</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Georgia, serif;
+        }
+        
+        .container {
+            background: rgba(0,0,0,0.4);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        
+        canvas {
+            display: block;
+            background: radial-gradient(circle, #2a2a2a 0%, #1a1a1a 100%);
+            border-radius: 10px;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="mockup" width="800" height="800"></canvas>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('mockup');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const maxRadius = 360;
+        
+        // Sample data for display (Scorpio season, waning gibbous moon)
+        const mockData = {
+            sun: { longitude: 225 },      // Scorpio
+            moon: { longitude: 45, phase: 250, illumination: 0.75 },  // Taurus, waning gibbous
+            planets: {
+                saturn: { longitude: 330 },    // Pisces
+                jupiter: { longitude: 60 },    // Gemini
+                mars: { longitude: 280 },      // Capricorn
+                venus: { longitude: 200 },     // Libra
+                mercury: { longitude: 240 }    // Sagittarius
+            }
+        };
+        
+        // Orbital radii (relative)
+        const orbits = {
+            saturn: 0.95,
+            jupiter: 0.85,
+            mars: 0.75,
+            venus: 0.65,
+            mercury: 0.55,
+            moon: 0.45,
+            sun: 0.35
+        };
+        
+        // Colors
+        const colors = {
+            saturn: '#8B7355',
+            jupiter: '#DAA520',
+            mars: '#CD5C5C',
+            venus: '#F0E68C',
+            mercury: '#C0C0C0',
+            moon: '#E0E0E0',
+            sun: '#FFD700'
+        };
+        
+        // Zodiac symbols
+        const zodiacSymbols = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
+        const zodiacNames = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
+                             'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+        
+        // Draw Egyptian Calendar Ring (outermost)
+        function drawEgyptianCalendar() {
+            const outerR = maxRadius;
+            const innerR = maxRadius - 25;
+            
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2;
+            
+            // Outer circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, outerR, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Inner circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerR, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Day markers (every 30 degrees)
+            for (let deg = 0; deg < 360; deg += 30) {
+                const angle = (deg - 90) * Math.PI / 180;
+                const x1 = centerX + Math.cos(angle) * innerR;
+                const y1 = centerY + Math.sin(angle) * innerR;
+                const x2 = centerX + Math.cos(angle) * outerR;
+                const y2 = centerY + Math.sin(angle) * outerR;
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+            
+            // Label
+            ctx.fillStyle = '#d4af37';
+            ctx.font = '14px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Egyptian Calendar', centerX, 30);
+        }
+        
+        // Draw Zodiac Ring
+        function drawZodiacRing() {
+            const radius = maxRadius - 50;
+            
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Draw zodiac signs
+            ctx.fillStyle = '#f0e6d2';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            for (let i = 0; i < 12; i++) {
+                const angle = (i * 30 - 90) * Math.PI / 180;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                ctx.fillText(zodiacSymbols[i], x, y);
+                
+                // Division lines
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX + Math.cos(angle) * (radius - 25), centerY + Math.sin(angle) * (radius - 25));
+                ctx.lineTo(centerX + Math.cos(angle) * (radius + 25), centerY + Math.sin(angle) * (radius + 25));
+                ctx.stroke();
+            }
+        }
+        
+        // Draw orbital rings
+        function drawOrbitalRings() {
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.2)';
+            ctx.lineWidth = 1;
+            
+            Object.values(orbits).forEach(ratio => {
+                const r = (maxRadius - 80) * ratio;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+        }
+        
+        // Draw planet pointer
+        function drawPlanet(name, longitude, orbitRatio, color) {
+            const angle = (longitude - 90) * Math.PI / 180;
+            const radius = (maxRadius - 80) * orbitRatio;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            // Pointer line
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            // Planet marker
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, 7, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Label
+            ctx.fillStyle = '#f0e6d2';
+            ctx.font = '12px Georgia';
+            ctx.textAlign = 'center';
+            const labelAngle = angle + Math.PI / 2;
+            const labelX = x + Math.cos(labelAngle) * 20;
+            const labelY = y + Math.sin(labelAngle) * 20;
+            ctx.fillText(name.charAt(0).toUpperCase() + name.slice(1), labelX, labelY);
+        }
+        
+        // Draw moon with phase
+        function drawMoon() {
+            const angle = (mockData.moon.longitude - 90) * Math.PI / 180;
+            const radius = (maxRadius - 80) * orbits.moon;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            // Pointer
+            ctx.strokeStyle = colors.moon;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            // Moon disc
+            const moonR = 12;
+            ctx.fillStyle = colors.moon;
+            ctx.beginPath();
+            ctx.arc(x, y, moonR, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Phase shadow
+            if (mockData.moon.illumination < 1) {
+                ctx.fillStyle = '#1a1a1a';
+                ctx.beginPath();
+                const offset = moonR * (1 - mockData.moon.illumination * 2);
+                
+                if (mockData.moon.phase < 180) {
+                    ctx.arc(x, y, moonR, -Math.PI/2, Math.PI/2);
+                    ctx.arc(x + offset, y, moonR, Math.PI/2, -Math.PI/2);
+                } else {
+                    ctx.arc(x, y, moonR, Math.PI/2, -Math.PI/2);
+                    ctx.arc(x - offset, y, moonR, -Math.PI/2, Math.PI/2);
+                }
+                ctx.fill();
+            }
+            
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, moonR, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Label
+            ctx.fillStyle = '#f0e6d2';
+            ctx.font = '12px Georgia';
+            const labelAngle = angle + Math.PI / 2;
+            ctx.fillText('Moon', x + Math.cos(labelAngle) * 25, y + Math.sin(labelAngle) * 25);
+        }
+        
+        // Draw sun with glow
+        function drawSun() {
+            const angle = (mockData.sun.longitude - 90) * Math.PI / 180;
+            const radius = (maxRadius - 80) * orbits.sun;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            // Pointer
+            ctx.strokeStyle = colors.sun;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            // Glow
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, 18);
+            gradient.addColorStop(0, '#FFD700');
+            gradient.addColorStop(0.5, '#FFA500');
+            gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, 18, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Core
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(x, y, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Label
+            ctx.fillStyle = '#f0e6d2';
+            ctx.font = 'bold 12px Georgia';
+            ctx.textAlign = 'center';
+            const labelAngle = angle + Math.PI / 2;
+            ctx.fillText('Sun', x + Math.cos(labelAngle) * 25, y + Math.sin(labelAngle) * 25);
+        }
+        
+        // Draw center hub
+        function drawCenterHub() {
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#8b7355';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 25, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // Draw title
+        function drawTitle() {
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 24px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('FRONT FACE', centerX, canvas.height - 40);
+            
+            ctx.font = '16px Georgia';
+            ctx.fillStyle = '#f0e6d2';
+            ctx.fillText('All Seven Celestial Bodies', centerX, canvas.height - 18);
+        }
+        
+        // Render everything
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        drawEgyptianCalendar();
+        drawZodiacRing();
+        drawOrbitalRings();
+        
+        // Planets from outside to inside
+        drawPlanet('saturn', mockData.planets.saturn.longitude, orbits.saturn, colors.saturn);
+        drawPlanet('jupiter', mockData.planets.jupiter.longitude, orbits.jupiter, colors.jupiter);
+        drawPlanet('mars', mockData.planets.mars.longitude, orbits.mars, colors.mars);
+        drawPlanet('venus', mockData.planets.venus.longitude, orbits.venus, colors.venus);
+        drawPlanet('mercury', mockData.planets.mercury.longitude, orbits.mercury, colors.mercury);
+        
+        drawMoon();
+        drawSun();
+        
+        drawCenterHub();
+        drawTitle();
+    </script>
+</body>
+</html>
