@@ -4,7 +4,7 @@ A modern, component-based simulation of the ancient Greek Antikythera mechanism 
 
 ## 🎯 The Vision
 
-This project faithfully recreates the three faces of the Antikythera mechanism as beautiful, interactive displays:
+This project recreates the three faces of the Antikythera mechanism as interactive displays:
 
 1. **Front Face** - All 7 celestial bodies (Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn) on concentric circles moving through the zodiac
 2. **Back Upper Face** - Metonic cycle spiral (19-year lunar calendar) with Callippic sub-dial
@@ -21,7 +21,7 @@ This project faithfully recreates the three faces of the Antikythera mechanism a
 - **Three Face Components**: `FrontFace`, `BackUpperFace`, `BackLowerFace`
 - **Theme System**: CSS variables for instant visual transformations
 - **Layout System**: Multiple viewing modes (Gallery, Hero, Focus)
-- **Pure Canvas**: No frameworks, just beautiful rendering
+- **Pure Canvas**: No frameworks; Canvas-based rendering
 
 ## 🚀 Quick Start
 
@@ -34,7 +34,7 @@ Then open: `http://localhost:3000`
 
 ## 🎨 Themes
 
-Switch between 5 beautiful themes instantly:
+Switch between 5 themes instantly:
 
 1. **Ancient Bronze** - Weathered patina with blue backdrop (default)
 2. **Restored Bronze** - Polished golden finish
@@ -55,7 +55,7 @@ Three layout modes for different display contexts:
 ## 🔧 Components
 
 ### FrontFace Component
-The star of the show - displays all celestial bodies on concentric rings:
+Displays all celestial bodies on concentric rings:
 - Outermost: Egyptian calendar (360 days)
 - Zodiac ring with 12 signs
 - Saturn, Jupiter, Mars, Venus, Mercury pointers (outer to inner)
@@ -149,7 +149,7 @@ Our simulation replicates the three main faces:
 - **Educational Tools** - Interactive astronomy learning
 - **Digital Art** - Ambient display/screensaver
 - **Planetarium** - Supplement to sky shows
-- **Office Decor** - Beautiful, educational background display
+- **Office Decor** - Educational background display
 
 ## API Endpoints
 

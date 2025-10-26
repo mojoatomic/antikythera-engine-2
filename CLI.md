@@ -175,7 +175,7 @@ $ antikythera position moon --format json | jq '.phase'
 
 ### `compare`
 
-Compare calculations from different sources - the **killer debugging feature**.
+Compare calculations from different sources — a key debugging feature.
 
 **Syntax:**
 ```bash
@@ -335,7 +335,7 @@ The CLI intelligently selects between data sources:
 ### Auto (Default)
 1. Try API server first
 2. Fallback to embedded engine if API unavailable
-3. Best for production use
+3. Recommended default mode
 
 ```bash
 antikythera position mars
@@ -476,7 +476,7 @@ $ antikythera watch sun --interval 100 --date 2025-03-09T01:59:00
 ```bash
 $ antikythera position mars --profile --local
 Calculation time: 14ms
-# ✓ Plenty fast for real-time updates
+# Typical calculation time is sufficient for real-time updates
 ```
 
 ### Example 4: Export for Analysis
