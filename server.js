@@ -176,10 +176,13 @@ app.get('/api/display', (req, res) => {
     // System metadata
     const sunAltitude = state.sun.altitude;
     let twilightStage = 'day';
-    if (sunAltitude < -18) twilightStage = 'astronomical';
-    else if (sunAltitude < -12) twilightStage = 'nautical';
-    else if (sunAltitude < -6) twilightStage = 'civil';
-    else if (sunAltitude < 0) twilightStage = 'twilight';
+    if (sunAltitude < -18) twilightStage = 'night';
+    else if (sunAltitude < -12) twilightStage = 'astronomical';
+    else if (sunAltitude < -6) twilightStage = 'nautical';
+    else if (sunAltitude < 0) twilightStage = 'civil';
+    
+    // Count planets above horizon
+    const planetsAboveHorizon = Object.values(state.planets).filter(p => p.altitude > 0).length;
     
     const system = {
       healthy: true,
@@ -187,7 +190,9 @@ app.get('/api/display', (req, res) => {
       computation_time_ms: Date.now() - startTime,
       debug: {
         sun_altitude: sunAltitude,
-        twilight_stage: twilightStage
+        twilight_stage: twilightStage,
+        visibility_threshold: -6,
+        planets_above_horizon: planetsAboveHorizon
       }
     };
     
