@@ -252,20 +252,14 @@ class FrontFace {
     if (data.sunVisibility && data.sunVisibility.sunrise && data.sunVisibility.sunset) {
       const vis = data.sunVisibility;
       
-      // Calculate sunrise time in hours (from local time string)
+      // Calculate sunrise time in hours using UTC to avoid DST jumps
       const sunriseTime = new Date(vis.sunrise.time);
-      const sunriseHours = sunriseTime.getHours() + sunriseTime.getMinutes() / 60;
+      const sunriseHours = sunriseTime.getUTCHours() + sunriseTime.getUTCMinutes() / 60;
       const sunriseAngle = (sunriseHours * 15 - 90) * Math.PI / 180; // No ecliptic rotation - fixed to time of day
       
-      // Debug logging
-      console.log('Current time:', new Date(data.date).toTimeString());
-      console.log('Sunrise time:', sunriseTime.toTimeString());
-      console.log('Sunrise hours:', sunriseHours);
-      console.log('Sunrise angle (deg):', (sunriseAngle * 180 / Math.PI));
-      
-      // Calculate sunset time in hours
+      // Calculate sunset time in hours using UTC to avoid DST jumps
       const sunsetTime = new Date(vis.sunset.time);
-      const sunsetHours = sunsetTime.getHours() + sunsetTime.getMinutes() / 60;
+      const sunsetHours = sunsetTime.getUTCHours() + sunsetTime.getUTCMinutes() / 60;
       const sunsetAngle = (sunsetHours * 15 - 90) * Math.PI / 180; // No ecliptic rotation - fixed to time of day
       
       // Sunrise marker (on both rings) - ORANGE
