@@ -257,6 +257,12 @@ class FrontFace {
       const sunriseHours = sunriseTime.getHours() + sunriseTime.getMinutes() / 60;
       const sunriseAngle = (sunriseHours * 15 - 90) * Math.PI / 180; // No ecliptic rotation - fixed to time of day
       
+      // Debug logging
+      console.log('Current time:', new Date(data.date).toTimeString());
+      console.log('Sunrise time:', sunriseTime.toTimeString());
+      console.log('Sunrise hours:', sunriseHours);
+      console.log('Sunrise angle (deg):', (sunriseAngle * 180 / Math.PI));
+      
       // Calculate sunset time in hours
       const sunsetTime = new Date(vis.sunset.time);
       const sunsetHours = sunsetTime.getHours() + sunsetTime.getMinutes() / 60;
