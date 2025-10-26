@@ -13,7 +13,8 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "ci": "npm run lint && npm test"
+    "ci": "npm run lint && npm test",
+    "validate:horizons": "node scripts/validate-horizons.js"
   },
   "keywords": [
     "antikythera",
@@ -35,6 +36,7 @@
     "commander": "^14.0.2",
     "cors": "2.8.5",
     "express": "5.1.0",
+    "node-fetch": "^2.7.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {

@@ -171,6 +171,7 @@ class AntikytheraEngine {
       egyptianCalendar: this.getEgyptianCalendar(date),
       metonicCycle: this.getMetonicCycle(date),
       sarosCycle: this.getSarosCycle(date),
+      lunarNodes: this.getLunarNodes(date),
       nextEclipse: this.getNextEclipse(date),
       equationOfTime: this.getEquationOfTime(date),
       sunVisibility: this.getSunVisibility(date, observer)
@@ -367,6 +368,67 @@ class AntikytheraEngine {
     } catch (_err) {
       return { error: 'Could not calculate next eclipse' };
     }
+  }
+
+  /**
+   * Calculate lunar orbital nodes position
+   * The nodes precess (move backwards) with an 18.613 year period
+   */
+  getLunarNodes(date) {
+    // Lunar nodes: points where Moon's orbit crosses the ecliptic plane
+    // The nodes precess (move backwards) completing a full cycle in 18.613 years
+    // This is known as the "Draconic" or "Nodal" cycle
+    
+    const NODAL_PERIOD_DAYS = 6798.375; // 18.613 years in days
+    const NODAL_PERIOD_YEARS = 18.613;
+    
+    // Reference epoch: J2000.0 (January 1, 2000, 12:00 TT)
+    // Ascending node was at ~125.04° on this date
+    const referenceDate = new Date('2000-01-01T12:00:00Z');
+    const REFERENCE_ASCENDING_NODE = 125.04; // degrees
+    
+    // Calculate days since reference
+    const daysSince = (date - referenceDate) / (1000 * 60 * 60 * 24);
+    
+    // Node motion: -19.3416° per year (retrograde/westward)
+    const nodeMotionPerDay = -19.3416 / 365.25;
+    
+    // Calculate current ascending node position
+    let ascendingNode = (REFERENCE_ASCENDING_NODE + (nodeMotionPerDay * daysSince)) % 360;
+    if (ascendingNode < 0) ascendingNode += 360;
+    
+    // Descending node is 180° opposite
+    const descendingNode = (ascendingNode + 180) % 360;
+    
+    // Progress through current nodal cycle
+    const cycleProgress = (daysSince % NODAL_PERIOD_DAYS) / NODAL_PERIOD_DAYS;
+    
+    // Days until next node passage (approximate)
+    const moonLongitude = astronomy.EclipticGeoMoon(date).lon;
+    
+    // Calculate angular distance to nearest node
+    const distToAscending = Math.abs(((moonLongitude - ascendingNode + 180) % 360) - 180);
+    const distToDescending = Math.abs(((moonLongitude - descendingNode + 180) % 360) - 180);
+    const distToNearestNode = Math.min(distToAscending, distToDescending);
+    
+    // Approximate days until node passage (moon moves ~13.2°/day)
+    const daysUntilNodePassage = distToNearestNode / 13.2;
+    
+    return {
+      ascendingNode: ascendingNode, // degrees (where moon crosses ecliptic northward)
+      descendingNode: descendingNode, // degrees (where moon crosses ecliptic southward)
+      period: {
+        days: NODAL_PERIOD_DAYS,
+        years: NODAL_PERIOD_YEARS
+      },
+      progress: cycleProgress, // 0-1 through current 18.6 year cycle
+      anglePosition: cycleProgress * 360, // degrees for display dial
+      motionRate: nodeMotionPerDay, // degrees per day (negative = retrograde)
+      nextNodePassage: {
+        daysUntil: daysUntilNodePassage,
+        type: distToAscending < distToDescending ? 'ascending' : 'descending'
+      }
+    };
   }
 }
 

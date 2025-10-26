@@ -108,6 +108,14 @@ app.get('/api/display', (req, res) => {
         saturn: {
           position: state.planets.saturn.longitude,
           velocity: state.planets.saturn.velocity
+        },
+        lunar_nodes_ascending: {
+          position: state.lunarNodes.ascendingNode,
+          velocity: state.lunarNodes.motionRate
+        },
+        lunar_nodes_descending: {
+          position: state.lunarNodes.descendingNode,
+          velocity: state.lunarNodes.motionRate
         }
       },
       servos: {
@@ -208,7 +216,37 @@ app.get('/api/display', (req, res) => {
         planets_above_horizon: planetsAboveHorizon,
         sunrise: state.sunVisibility.sunrise ? state.sunVisibility.sunrise.time : null,
         sunset: state.sunVisibility.sunset ? state.sunVisibility.sunset.time : null,
-        next_visibility_window: nextVisibilityWindow
+        next_visibility_window: nextVisibilityWindow,
+        ecliptic_coordinates: {
+          sun: {
+            lon: state.sun.longitude,
+            lat: state.sun.latitude
+          },
+          moon: {
+            lon: state.moon.longitude,
+            lat: state.moon.latitude
+          },
+          mercury: {
+            lon: state.planets.mercury.longitude,
+            lat: state.planets.mercury.latitude
+          },
+          venus: {
+            lon: state.planets.venus.longitude,
+            lat: state.planets.venus.latitude
+          },
+          mars: {
+            lon: state.planets.mars.longitude,
+            lat: state.planets.mars.latitude
+          },
+          jupiter: {
+            lon: state.planets.jupiter.longitude,
+            lat: state.planets.jupiter.latitude
+          },
+          saturn: {
+            lon: state.planets.saturn.longitude,
+            lat: state.planets.saturn.latitude
+          }
+        }
       }
     };
     
@@ -224,58 +262,79 @@ app.get('/api/display', (req, res) => {
       system
     };
     
-    // Optional: Include raw astronomical data for debugging/CLI
+    // Optional: Include raw astronomical data for debugging/CLI/HORIZONS validation
     if (req.query.include === 'astronomical') {
       response.astronomical = {
+        observer: {
+          type: 'topocentric',
+          latitude: latitude,
+          longitude: longitude,
+          elevation: 0,
+          frame: 'ecliptic_j2000'
+        },
         sun: {
-          longitude: state.sun.longitude,
+          ecliptic_longitude: state.sun.longitude,
+          ecliptic_latitude: state.sun.latitude,
           altitude: state.sun.altitude,
           azimuth: state.sun.azimuth,
-          velocity: state.sun.velocity
+          velocity: state.sun.velocity,
+          horizons_comparable: true
         },
         moon: {
-          longitude: state.moon.longitude,
+          ecliptic_longitude: state.moon.longitude,
+          ecliptic_latitude: state.moon.latitude,
           altitude: state.moon.altitude,
           azimuth: state.moon.azimuth,
           velocity: state.moon.velocity,
           phase: state.moon.phase,
-          illumination: state.moon.illumination
+          illumination: state.moon.illumination,
+          horizons_comparable: true
         },
         planets: {
           mercury: {
-            longitude: state.planets.mercury.longitude,
+            ecliptic_longitude: state.planets.mercury.longitude,
+            ecliptic_latitude: state.planets.mercury.latitude,
             altitude: state.planets.mercury.altitude,
             azimuth: state.planets.mercury.azimuth,
             velocity: state.planets.mercury.velocity,
-            isRetrograde: state.planets.mercury.isRetrograde
+            isRetrograde: state.planets.mercury.isRetrograde,
+            horizons_comparable: true
           },
           venus: {
-            longitude: state.planets.venus.longitude,
+            ecliptic_longitude: state.planets.venus.longitude,
+            ecliptic_latitude: state.planets.venus.latitude,
             altitude: state.planets.venus.altitude,
             azimuth: state.planets.venus.azimuth,
             velocity: state.planets.venus.velocity,
-            isRetrograde: state.planets.venus.isRetrograde
+            isRetrograde: state.planets.venus.isRetrograde,
+            horizons_comparable: true
           },
           mars: {
-            longitude: state.planets.mars.longitude,
+            ecliptic_longitude: state.planets.mars.longitude,
+            ecliptic_latitude: state.planets.mars.latitude,
             altitude: state.planets.mars.altitude,
             azimuth: state.planets.mars.azimuth,
             velocity: state.planets.mars.velocity,
-            isRetrograde: state.planets.mars.isRetrograde
+            isRetrograde: state.planets.mars.isRetrograde,
+            horizons_comparable: true
           },
           jupiter: {
-            longitude: state.planets.jupiter.longitude,
+            ecliptic_longitude: state.planets.jupiter.longitude,
+            ecliptic_latitude: state.planets.jupiter.latitude,
             altitude: state.planets.jupiter.altitude,
             azimuth: state.planets.jupiter.azimuth,
             velocity: state.planets.jupiter.velocity,
-            isRetrograde: state.planets.jupiter.isRetrograde
+            isRetrograde: state.planets.jupiter.isRetrograde,
+            horizons_comparable: true
           },
           saturn: {
-            longitude: state.planets.saturn.longitude,
+            ecliptic_longitude: state.planets.saturn.longitude,
+            ecliptic_latitude: state.planets.saturn.latitude,
             altitude: state.planets.saturn.altitude,
             azimuth: state.planets.saturn.azimuth,
             velocity: state.planets.saturn.velocity,
-            isRetrograde: state.planets.saturn.isRetrograde
+            isRetrograde: state.planets.saturn.isRetrograde,
+            horizons_comparable: true
           }
         }
       };

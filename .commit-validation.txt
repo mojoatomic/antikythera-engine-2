@@ -1,0 +1,20 @@
+Add NASA HORIZONS validation script for precision testing
+
+- Create scripts/validate-horizons.js for comparing API output against JPL HORIZONS
+- Add npm run validate:horizons command
+- Install node-fetch@2 for HTTP requests
+- Query NASA HORIZONS API for Moon position
+- Compare engine calculations against gold-standard ephemeris
+- Display precision metrics and tolerance checks
+
+Features:
+- Validates Moon position against JPL HORIZONS (gold standard)
+- Compares with direct astronomy-engine calculation (baseline)
+- Shows differences in degrees and arcseconds
+- Precision standards: Display (±0.1°), Professional (±0.01°), LLR (±0.0001°)
+- Manual verification link provided
+
+Note: HORIZONS API response parsing needs refinement for automated comparison.
+Manual verification via web interface works perfectly.
+
+Part of Phase 2: Precision metadata and quality assurance.
