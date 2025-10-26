@@ -262,29 +262,38 @@ class FrontFace {
       const sunsetHours = sunsetTime.getHours() + sunsetTime.getMinutes() / 60;
       const sunsetAngle = (sunsetHours * 15 - 90) * Math.PI / 180; // No ecliptic rotation - fixed to time of day
       
-      // Place markers on Egyptian calendar ring (non-rotating)
-      const egyptianRingRadius = this.maxRadius;
+      // Sunrise marker (on both rings) - ORANGE
+      const sunriseOuterX = this.centerX + Math.cos(sunriseAngle) * outerRingRadius;
+      const sunriseOuterY = this.centerY + Math.sin(sunriseAngle) * outerRingRadius;
+      const sunriseInnerX = this.centerX + Math.cos(sunriseAngle) * innerRingRadius;
+      const sunriseInnerY = this.centerY + Math.sin(sunriseAngle) * innerRingRadius;
       
-      // Sunrise marker - ORANGE
-      const sunriseX = this.centerX + Math.cos(sunriseAngle) * egyptianRingRadius;
-      const sunriseY = this.centerY + Math.sin(sunriseAngle) * egyptianRingRadius;
-      
-      // Sunrise icon
+      // Sunrise icon on outer ring
       this.ctx.fillStyle = '#ff6b35';
-      this.ctx.font = '18px Arial';
+      this.ctx.font = '16px Arial';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
-      this.ctx.fillText('☀', sunriseX, sunriseY);
+      this.ctx.fillText('☀', sunriseOuterX, sunriseOuterY);
       
-      // Sunset marker - ORANGE/RED with moon phase
-      const sunsetX = this.centerX + Math.cos(sunsetAngle) * egyptianRingRadius;
-      const sunsetY = this.centerY + Math.sin(sunsetAngle) * egyptianRingRadius;
+      // Sunrise line connecting rings
+      this.ctx.strokeStyle = 'rgba(255, 107, 53, 0.4)';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(sunriseInnerX, sunriseInnerY);
+      this.ctx.lineTo(sunriseOuterX, sunriseOuterY);
+      this.ctx.stroke();
+      
+      // Sunset marker (on both rings) - ORANGE/RED with moon phase
+      const sunsetOuterX = this.centerX + Math.cos(sunsetAngle) * outerRingRadius;
+      const sunsetOuterY = this.centerY + Math.sin(sunsetAngle) * outerRingRadius;
+      const sunsetInnerX = this.centerX + Math.cos(sunsetAngle) * innerRingRadius;
+      const sunsetInnerY = this.centerY + Math.sin(sunsetAngle) * innerRingRadius;
       
       // Draw moon phase at sunset position
       if (data.moon) {
         this.drawMoonPhase(
-          sunsetX,
-          sunsetY,
+          sunsetOuterX,
+          sunsetOuterY,
           10,
           data.moon.illumination,
           data.moon.phase
@@ -292,20 +301,28 @@ class FrontFace {
       } else {
         // Fallback to moon icon if no moon data
         this.ctx.fillStyle = '#ff8c35';
-        this.ctx.font = '18px Arial';
-        this.ctx.fillText('🌙', sunsetX, sunsetY);
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText('🌙', sunsetOuterX, sunsetOuterY);
       }
       
-      // Daylight arc (between sunrise and sunset on Egyptian calendar ring)
+      // Sunset line connecting rings
+      this.ctx.strokeStyle = 'rgba(255, 140, 53, 0.4)';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(sunsetInnerX, sunsetInnerY);
+      this.ctx.lineTo(sunsetOuterX, sunsetOuterY);
+      this.ctx.stroke();
+      
+      // Daylight arc (between sunrise and sunset on outer ring)
       this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)';
       this.ctx.lineWidth = 8;
       this.ctx.beginPath();
       // Draw arc from sunrise to sunset (clockwise)
       if (sunsetAngle > sunriseAngle) {
-        this.ctx.arc(this.centerX, this.centerY, egyptianRingRadius, sunriseAngle, sunsetAngle);
+        this.ctx.arc(this.centerX, this.centerY, outerRingRadius, sunriseAngle, sunsetAngle);
       } else {
         // Handle crossing midnight
-        this.ctx.arc(this.centerX, this.centerY, egyptianRingRadius, sunriseAngle, sunsetAngle + Math.PI * 2);
+        this.ctx.arc(this.centerX, this.centerY, outerRingRadius, sunriseAngle, sunsetAngle + Math.PI * 2);
       }
       this.ctx.stroke();
     }
