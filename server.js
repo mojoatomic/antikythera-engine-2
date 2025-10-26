@@ -90,31 +90,45 @@ app.get('/api/display', async (req, res) => {
       steppers: {
         sun: {
           position: state.sun.longitude,
-          velocity: state.sun.velocity
+          velocity: state.sun.velocity,
+          altitude: state.sun.altitude,
+          azimuth: state.sun.azimuth
         },
         moon: {
           position: state.moon.longitude,
-          velocity: state.moon.velocity
+          velocity: state.moon.velocity,
+          altitude: state.moon.altitude,
+          azimuth: state.moon.azimuth
         },
         mercury: {
           position: state.planets.mercury.longitude,
-          velocity: state.planets.mercury.velocity
+          velocity: state.planets.mercury.velocity,
+          altitude: state.planets.mercury.altitude,
+          azimuth: state.planets.mercury.azimuth
         },
         venus: {
           position: state.planets.venus.longitude,
-          velocity: state.planets.venus.velocity
+          velocity: state.planets.venus.velocity,
+          altitude: state.planets.venus.altitude,
+          azimuth: state.planets.venus.azimuth
         },
         mars: {
           position: state.planets.mars.longitude,
-          velocity: state.planets.mars.velocity
+          velocity: state.planets.mars.velocity,
+          altitude: state.planets.mars.altitude,
+          azimuth: state.planets.mars.azimuth
         },
         jupiter: {
           position: state.planets.jupiter.longitude,
-          velocity: state.planets.jupiter.velocity
+          velocity: state.planets.jupiter.velocity,
+          altitude: state.planets.jupiter.altitude,
+          azimuth: state.planets.jupiter.azimuth
         },
         saturn: {
           position: state.planets.saturn.longitude,
-          velocity: state.planets.saturn.velocity
+          velocity: state.planets.saturn.velocity,
+          altitude: state.planets.saturn.altitude,
+          azimuth: state.planets.saturn.azimuth
         },
         lunar_nodes_ascending: {
           position: state.lunarNodes.ascendingNode,
@@ -265,6 +279,11 @@ app.get('/api/display', async (req, res) => {
       timestamp: state.date,
       mechanical,
       digital,
+      next_opposition: state.nextOpposition && !state.nextOpposition.error ? {
+        planet: state.nextOpposition.planet,
+        date: state.nextOpposition.date,
+        daysUntil: state.nextOpposition.daysUntil
+      } : null,
       update_hints: {
         mechanical: 10000, // 10 seconds
         digital: 1000      // 1 second
