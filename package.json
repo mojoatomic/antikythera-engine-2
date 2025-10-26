@@ -1,18 +1,31 @@
 {
   "name": "antikythera-engine",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Modern reconstruction of the Antikythera mechanism with accurate astronomical calculations",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "ci": "npm run lint && npm test"
   },
-  "keywords": [],
+  "keywords": ["antikythera", "astronomy", "mechanism", "ephemeris"],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
-    "astronomy-engine": "^2.1.19",
-    "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "astronomy-engine": "2.1.19",
+    "cors": "2.8.5",
+    "express": "5.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.18.0",
+    "jest": "^29.7.0"
   }
 }

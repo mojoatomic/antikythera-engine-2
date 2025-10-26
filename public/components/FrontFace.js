@@ -463,7 +463,7 @@ class FrontFace {
     }
   }
   
-  drawParapegmaMarkers(data) {
+  drawParapegmaMarkers(_data) {
     // Parapegma - star rising/setting calendar
     const radius = this.maxRadius - 55;
     
@@ -554,7 +554,7 @@ class FrontFace {
   
   drawDegreeScale() {
     // Fine degree markings (every 5 degrees)
-    const outerR = this.maxRadius - 110;
+    const _outerR = this.maxRadius - 110;
     const innerR = this.maxRadius - 120;
     
     this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.5)';
@@ -585,7 +585,7 @@ class FrontFace {
     this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.2)';
     this.ctx.lineWidth = 1;
     
-    Object.entries(this.orbits).forEach(([body, ratio]) => {
+    Object.entries(this.orbits).forEach(([_body, ratio]) => {
       const radius = (this.maxRadius - 70) * ratio;
       this.ctx.beginPath();
       this.ctx.arc(this.centerX, this.centerY, radius, 0, Math.PI * 2);

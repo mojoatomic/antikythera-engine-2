@@ -12,7 +12,7 @@ class AntikytheraEngine {
     // Find sunrise and sunset for this day
     // Use a search window that ensures we get today's sunrise/sunset
     const startOfDay = TimeUtils.utcStartOfDay(date);
-    const endOfDay = TimeUtils.utcEndOfDay(date);
+    const _endOfDay = TimeUtils.utcEndOfDay(date);
     
     let sunrise = null;
     let sunset = null;
@@ -37,7 +37,7 @@ class AntikytheraEngine {
           sunset = null;
         }
       }
-    } catch (e) {
+    } catch (_e) {
       // Handle polar day/night (no sunrise or sunset)
       const noon = TimeUtils.utcNoon(date);
       const noonSun = this.getSunPosition(noon, observer);
@@ -255,7 +255,7 @@ class AntikytheraEngine {
     
     // Use centralized time utilities for accurate year progress
     const egyptianDayFloat = TimeUtils.yearProgress360(date);
-    const egyptianDay = Math.floor(egyptianDayFloat) + 1; // 1-360, 1-indexed
+    const _egyptianDay = Math.floor(egyptianDayFloat) + 1; // 1-360, 1-indexed
     
     // Traditional Egyptian month/day (12 months of 30 days)
     const month = Math.floor(egyptianDayFloat / 30) + 1;
@@ -316,7 +316,7 @@ class AntikytheraEngine {
         date: nextEclipse.data.peak.date.toISOString(),
         daysUntil: (nextEclipse.data.peak.date - date) / (1000 * 60 * 60 * 24)
       };
-    } catch (err) {
+    } catch (_err) {
       return { error: 'Could not calculate next eclipse' };
     }
   }
