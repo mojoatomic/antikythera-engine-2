@@ -9,17 +9,30 @@ class AntikytheraEngine {
     const sunPos = this.getSunPosition(date, observer);
     
     // Find sunrise and sunset for this day
+    // Use a search window that ensures we get today's sunrise/sunset
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
     
     let sunrise = null;
     let sunset = null;
     
     try {
-      // Search for sunrise (sun rising above horizon)
+      // Search for sunrise (sun rising above horizon) within today
       sunrise = astronomy.SearchRiseSet('Sun', observer, 1, startOfDay, 1);
-      // Search for sunset (sun setting below horizon)
+      // Verify it's actually today
+      if (sunrise && (sunrise.date || sunrise).toDateString() !== date.toDateString()) {
+        sunrise = null;
+      }
+      
+      // Search for sunset (sun setting below horizon) within today
       sunset = astronomy.SearchRiseSet('Sun', observer, -1, startOfDay, 1);
+      // Verify it's actually today  
+      if (sunset && (sunset.date || sunset).toDateString() !== date.toDateString()) {
+        sunset = null;
+      }
     } catch (e) {
       // Handle polar day/night (no sunrise or sunset)
       const noon = new Date(date);
