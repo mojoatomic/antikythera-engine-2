@@ -88,130 +88,158 @@ class FrontFace {
     if (!data.equationOfTime) return;
     
     const eot = data.equationOfTime;
+    const date = new Date(data.date);
     
     // Ring dimensions - OUTERMOST rings
     const outerRingRadius = this.maxRadius + 50;
     const innerRingRadius = this.maxRadius + 30;
-    const graduationRadius = this.maxRadius + 40; // Between the rings
     
-    // === 1. OUTER RING - Apparent Solar Time (Real Sun) ===
-    this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
-    this.ctx.lineWidth = 2;
+    // === 1. OUTER RING - Mean Solar Time (Clock Time) ===
+    this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.8)';
+    this.ctx.lineWidth = 3;
     this.ctx.beginPath();
     this.ctx.arc(this.centerX, this.centerY, outerRingRadius, 0, Math.PI * 2);
     this.ctx.stroke();
     
+    // 24-hour graduations on outer ring
+    for (let hour = 0; hour < 24; hour++) {
+      const angle = (hour * 15 - 90) * Math.PI / 180; // 15° per hour
+      const isMajor = hour % 6 === 0;
+      const tickLength = isMajor ? 15 : 8;
+      
+      this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.8)';
+      this.ctx.lineWidth = isMajor ? 2 : 1;
+      this.ctx.beginPath();
+      this.ctx.moveTo(
+        this.centerX + Math.cos(angle) * (outerRingRadius - tickLength),
+        this.centerY + Math.sin(angle) * (outerRingRadius - tickLength)
+      );
+      this.ctx.lineTo(
+        this.centerX + Math.cos(angle) * outerRingRadius,
+        this.centerY + Math.sin(angle) * outerRingRadius
+      );
+      this.ctx.stroke();
+      
+      // Hour labels
+      if (hour % 6 === 0) {
+        this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
+        this.ctx.font = 'bold 10px Georgia';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        const labelRadius = outerRingRadius - 25;
+        this.ctx.fillText(
+          hour.toString(),
+          this.centerX + Math.cos(angle) * labelRadius,
+          this.centerY + Math.sin(angle) * labelRadius
+        );
+      }
+    }
+    
     // Label for outer ring
-    this.ctx.fillStyle = '#FFD700';
+    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
     this.ctx.font = 'bold 11px Georgia';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('ΦΑΙΝΟΜΕΝΗ ΩΡΑ', this.centerX, this.centerY - outerRingRadius - 10);
+    this.ctx.fillText('ΜΕΣΗ ΩΡΑ', this.centerX, this.centerY - outerRingRadius - 10);
     this.ctx.font = '9px Georgia';
-    this.ctx.fillStyle = 'rgba(255, 215, 0, 0.7)';
-    this.ctx.fillText('(Apparent Time)', this.centerX, this.centerY - outerRingRadius);
+    this.ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
+    this.ctx.fillText('(Mean Time)', this.centerX, this.centerY - outerRingRadius);
     
-    // === 2. INNER RING - Mean Solar Time (Clock Time) ===
-    this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.7)';
-    this.ctx.lineWidth = 2;
+    // === 2. INNER RING - Apparent Solar Time (Sundial) ===
+    this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+    this.ctx.lineWidth = 3;
     this.ctx.beginPath();
     this.ctx.arc(this.centerX, this.centerY, innerRingRadius, 0, Math.PI * 2);
     this.ctx.stroke();
     
-    // Label for inner ring
-    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
-    this.ctx.font = 'bold 11px Georgia';
-    this.ctx.fillText('ΜΕΣΗ ΩΡΑ', this.centerX, this.centerY - innerRingRadius + 15);
-    this.ctx.font = '9px Georgia';
-    this.ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
-    this.ctx.fillText('(Mean Time)', this.centerX, this.centerY - innerRingRadius + 25);
-    
-    // === 3. GRADUATIONS between rings (showing EoT scale) ===
-    this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
-    this.ctx.fillStyle = 'rgba(240, 230, 210, 0.6)';
-    this.ctx.font = '8px Georgia';
-    this.ctx.textAlign = 'center';
-    
-    // Draw tick marks every 2 minutes from -16 to +14
-    const eotRange = 30; // Total range in minutes
-    const arcSpan = 90; // Degrees of arc to use
-    
-    for (let minutes = -16; minutes <= 14; minutes += 2) {
-      // Map minute value to angle
-      const angleOffset = (minutes / eotRange) * arcSpan;
-      const angle = (-angleOffset) * Math.PI / 180; // Start at top (0°)
+    // 24-hour graduations on inner ring
+    for (let hour = 0; hour < 24; hour++) {
+      const angle = (hour * 15 - 90) * Math.PI / 180;
+      const isMajor = hour % 6 === 0;
+      const tickLength = isMajor ? 15 : 8;
       
-      const isLabelPoint = minutes % 4 === 0;
-      const tickLength = isLabelPoint ? 8 : 4;
-      
-      // Tick mark
-      this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.5)';
-      this.ctx.lineWidth = isLabelPoint ? 1.5 : 1;
+      this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+      this.ctx.lineWidth = isMajor ? 2 : 1;
       this.ctx.beginPath();
       this.ctx.moveTo(
-        this.centerX + Math.cos(angle) * (graduationRadius - tickLength/2),
-        this.centerY + Math.sin(angle) * (graduationRadius - tickLength/2)
+        this.centerX + Math.cos(angle) * (innerRingRadius + tickLength),
+        this.centerY + Math.sin(angle) * (innerRingRadius + tickLength)
       );
       this.ctx.lineTo(
-        this.centerX + Math.cos(angle) * (graduationRadius + tickLength/2),
-        this.centerY + Math.sin(angle) * (graduationRadius + tickLength/2)
+        this.centerX + Math.cos(angle) * innerRingRadius,
+        this.centerY + Math.sin(angle) * innerRingRadius
       );
       this.ctx.stroke();
       
-      // Labels at key points
-      if (isLabelPoint) {
-        this.ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
-        const labelRadius = graduationRadius + 15;
-        const lx = this.centerX + Math.cos(angle) * labelRadius;
-        const ly = this.centerY + Math.sin(angle) * labelRadius;
-        
-        const label = minutes > 0 ? `+${minutes}` : minutes.toString();
-        this.ctx.fillText(label, lx, ly);
+      // Hour labels
+      if (hour % 6 === 0) {
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.font = 'bold 10px Georgia';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        const labelRadius = innerRingRadius + 25;
+        this.ctx.fillText(
+          hour.toString(),
+          this.centerX + Math.cos(angle) * labelRadius,
+          this.centerY + Math.sin(angle) * labelRadius
+        );
       }
     }
     
-    // === 4. MARKERS showing current positions on rings ===
+    // Label for inner ring
+    this.ctx.fillStyle = '#FFD700';
+    this.ctx.font = 'bold 11px Georgia';
+    this.ctx.fillText('ΦΑΙΝΟΜΕΝΗ ΩΡΑ', this.centerX, this.centerY - innerRingRadius + 15);
+    this.ctx.font = '9px Georgia';
+    this.ctx.fillStyle = 'rgba(255, 215, 0, 0.7)';
+    this.ctx.fillText('(Apparent Time)', this.centerX, this.centerY - innerRingRadius + 25);
     
-    // Apparent Sun marker (on outer ring) - BRIGHT GOLD
-    if (eot.apparentSun) {
-      const apparentAngle = (eot.apparentSun.longitude - 90) * Math.PI / 180;
-      const markerX = this.centerX + Math.cos(apparentAngle) * outerRingRadius;
-      const markerY = this.centerY + Math.sin(apparentAngle) * outerRingRadius;
-      
-      // Bright gold marker
-      this.ctx.fillStyle = '#FFD700';
-      this.ctx.beginPath();
-      this.ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
-      this.ctx.fill();
-      
-      // White border
-      this.ctx.strokeStyle = '#ffffff';
-      this.ctx.lineWidth = 2;
-      this.ctx.stroke();
-      
-      // Subtle glow
-      this.ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
-      this.ctx.beginPath();
-      this.ctx.arc(markerX, markerY, 12, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
+    // === 3. MARKERS showing current time of day positions ===
     
-    // Mean Sun marker (on inner ring) - BRONZE
-    if (eot.meanSun) {
-      const meanAngle = (eot.meanSun.longitude - 90) * Math.PI / 180;
-      const markerX = this.centerX + Math.cos(meanAngle) * innerRingRadius;
-      const markerY = this.centerY + Math.sin(meanAngle) * innerRingRadius;
-      
-      // Bronze marker
-      this.ctx.fillStyle = '#d4af37';
-      this.ctx.beginPath();
-      this.ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
-      this.ctx.fill();
-      
-      // White border
-      this.ctx.strokeStyle = '#ffffff';
-      this.ctx.lineWidth = 2;
-      this.ctx.stroke();
-    }
+    // Calculate time of day angles (0-24 hours maps to 0-360 degrees)
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const seconds = date.getSeconds();
+    
+    // Mean solar time (clock time) - simple hour angle
+    const meanTimeHours = hours + minutes / 60 + seconds / 3600;
+    const meanAngle = (meanTimeHours * 15 - 90) * Math.PI / 180; // 15° per hour
+    
+    // Apparent solar time (sundial time) - adjusted by equation of time
+    const eotMinutes = eot.equationOfTime.minutes;
+    const apparentTimeHours = meanTimeHours + (eotMinutes / 60); // Add EoT correction
+    const apparentAngle = (apparentTimeHours * 15 - 90) * Math.PI / 180;
+    
+    // Mean Time marker (on outer ring) - BRONZE
+    const meanMarkerX = this.centerX + Math.cos(meanAngle) * outerRingRadius;
+    const meanMarkerY = this.centerY + Math.sin(meanAngle) * outerRingRadius;
+    
+    this.ctx.fillStyle = '#d4af37';
+    this.ctx.beginPath();
+    this.ctx.arc(meanMarkerX, meanMarkerY, 8, 0, Math.PI * 2);
+    this.ctx.fill();
+    
+    this.ctx.strokeStyle = '#ffffff';
+    this.ctx.lineWidth = 2;
+    this.ctx.stroke();
+    
+    // Apparent Time marker (on inner ring) - BRIGHT GOLD
+    const apparentMarkerX = this.centerX + Math.cos(apparentAngle) * innerRingRadius;
+    const apparentMarkerY = this.centerY + Math.sin(apparentAngle) * innerRingRadius;
+    
+    this.ctx.fillStyle = '#FFD700';
+    this.ctx.beginPath();
+    this.ctx.arc(apparentMarkerX, apparentMarkerY, 8, 0, Math.PI * 2);
+    this.ctx.fill();
+    
+    this.ctx.strokeStyle = '#ffffff';
+    this.ctx.lineWidth = 2;
+    this.ctx.stroke();
+    
+    // Subtle glow
+    this.ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+    this.ctx.beginPath();
+    this.ctx.arc(apparentMarkerX, apparentMarkerY, 14, 0, Math.PI * 2);
+    this.ctx.fill();
     
     // === 5. Current EoT value display (Top Right) ===
     const eotValue = eot.equationOfTime.minutes;
