@@ -283,16 +283,27 @@ class FrontFace {
       this.ctx.lineTo(sunriseOuterX, sunriseOuterY);
       this.ctx.stroke();
       
-      // Sunset marker (on both rings) - ORANGE/RED
+      // Sunset marker (on both rings) - ORANGE/RED with moon phase
       const sunsetOuterX = this.centerX + Math.cos(sunsetAngle) * outerRingRadius;
       const sunsetOuterY = this.centerY + Math.sin(sunsetAngle) * outerRingRadius;
       const sunsetInnerX = this.centerX + Math.cos(sunsetAngle) * innerRingRadius;
       const sunsetInnerY = this.centerY + Math.sin(sunsetAngle) * innerRingRadius;
       
-      // Sunset icon on outer ring
-      this.ctx.fillStyle = '#ff8c35';
-      this.ctx.font = '16px Arial';
-      this.ctx.fillText('🌙', sunsetOuterX, sunsetOuterY);
+      // Draw moon phase at sunset position
+      if (data.moon) {
+        this.drawMoonPhase(
+          sunsetOuterX,
+          sunsetOuterY,
+          10,
+          data.moon.illumination,
+          data.moon.phase
+        );
+      } else {
+        // Fallback to moon icon if no moon data
+        this.ctx.fillStyle = '#ff8c35';
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText('🌙', sunsetOuterX, sunsetOuterY);
+      }
       
       // Sunset line connecting rings
       this.ctx.strokeStyle = 'rgba(255, 140, 53, 0.4)';
