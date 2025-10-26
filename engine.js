@@ -182,13 +182,17 @@ class AntikytheraEngine {
     const horizon = astronomy.Horizon(date, observer, equator.ra, equator.dec, 'normal');
     const ecliptic = astronomy.Ecliptic(equator.vec);
     
+    const velocity = this.getVelocity('Sun', date, observer);
+    
     return {
       longitude: ecliptic.elon, // Ecliptic longitude (degrees)
       latitude: ecliptic.elat,
       rightAscension: equator.ra,
       declination: equator.dec,
       altitude: horizon.altitude,
-      azimuth: horizon.azimuth
+      azimuth: horizon.azimuth,
+      velocity: velocity, // degrees per day
+      angularVelocity: velocity / 24 // degrees per hour
     };
   }
 
@@ -197,6 +201,9 @@ class AntikytheraEngine {
     const equator = astronomy.Equator('Moon', date, observer, true, true);
     const ecliptic = astronomy.Ecliptic(equator.vec);
     const illumination = astronomy.Illumination('Moon', date);
+    const horizon = astronomy.Horizon(date, observer, equator.ra, equator.dec, 'normal');
+    
+    const velocity = this.getVelocity('Moon', date, observer);
     
     return {
       longitude: ecliptic.elon,
@@ -205,8 +212,38 @@ class AntikytheraEngine {
       illumination: illumination.phase_fraction,
       age: phase / 12.368, // Approximate age in days (360°/29.53 days per degree)
       rightAscension: equator.ra,
-      declination: equator.dec
+      declination: equator.dec,
+      altitude: horizon.altitude,
+      azimuth: horizon.azimuth,
+      velocity: velocity, // degrees per day
+      angularVelocity: velocity / 24 // degrees per hour
     };
+  }
+
+  /**
+   * Calculate velocity (degrees per day) for a celestial body
+   * Uses 1-day delta to determine rate of change
+   */
+  getVelocity(body, date, observer) {
+    const currentEquator = astronomy.Equator(body, date, observer, true, true);
+    const currentEcliptic = astronomy.Ecliptic(currentEquator.vec);
+    const currentLongitude = currentEcliptic.elon;
+    
+    // Calculate position 1 day later
+    const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+    const nextEquator = astronomy.Equator(body, nextDate, observer, true, true);
+    const nextEcliptic = astronomy.Ecliptic(nextEquator.vec);
+    const nextLongitude = nextEcliptic.elon;
+    
+    // Handle 360° wraparound (e.g., 359° -> 1°)
+    let delta = nextLongitude - currentLongitude;
+    if (delta > 180) {
+      delta -= 360;
+    } else if (delta < -180) {
+      delta += 360;
+    }
+    
+    return delta; // degrees per day
   }
 
   getPlanetaryPositions(date, observer) {
@@ -216,12 +253,23 @@ class AntikytheraEngine {
     planets.forEach(planet => {
       const equator = astronomy.Equator(planet, date, observer, true, true);
       const ecliptic = astronomy.Ecliptic(equator.vec);
+      const horizon = astronomy.Horizon(date, observer, equator.ra, equator.dec, 'normal');
+      
+      // Calculate velocity and retrograde status
+      const velocity = this.getVelocity(planet, date, observer);
+      const isRetrograde = velocity < 0;
       
       positions[planet.toLowerCase()] = {
         longitude: ecliptic.elon,
         latitude: ecliptic.elat,
         rightAscension: equator.ra,
-        declination: equator.dec
+        declination: equator.dec,
+        altitude: horizon.altitude,
+        azimuth: horizon.azimuth,
+        velocity: velocity, // degrees per day
+        angularVelocity: velocity / 24, // degrees per hour
+        isRetrograde: isRetrograde,
+        motionState: isRetrograde ? 'retrograde' : 'prograde'
       };
     });
 
