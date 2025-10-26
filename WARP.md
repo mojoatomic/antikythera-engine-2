@@ -198,6 +198,33 @@ const startOfYear = TimeUtils.startOfYear(date);
 - Mechanical aesthetic for all visual elements (bronze/gold colors, clear typography)
 - Comment complex astronomical calculations with explanations
 
+## Shell Command Quoting
+
+**CRITICAL:** When using `gh` CLI or other shell commands with multi-line strings, quotes/newlines/special chars, ALWAYS use a file instead of inline strings.
+
+❌ **Bad (causes shell quoting issues):**
+```bash
+gh issue comment 3 --body 'Extended validation complete:
+- Item 1
+- Item 2'
+```
+
+✅ **Good (use file):**
+```bash
+cat > .github/comment.md << 'EOF'
+Extended validation complete:
+- Item 1  
+- Item 2
+EOF
+gh issue comment 3 --body-file .github/comment.md
+```
+
+**Applies to:**
+- `gh issue create --body` → use `--body-file`
+- `gh pr create --body` → use `--body-file`
+- `gh issue comment --body` → use `--body-file`
+- Any command with JSON/markdown/multi-line input
+
 ## Centralized Time Utilities
 
 All date/time calculations should use the functions in `utils/time.js` to ensure:
