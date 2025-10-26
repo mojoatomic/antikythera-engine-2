@@ -88,17 +88,14 @@ async function queryHORIZONS(date, latitude = 37.5, longitude = 23.0) {
 function getEnginePosition(date) {
   try {
     const astronomy = require('astronomy-engine');
-    
-    // Calculate using astronomy-engine (same as our engine)
     const equatorial = astronomy.Equator('Moon', date, null, true, true);
     const ecliptic = astronomy.Ecliptic(equatorial.vec);
-    
     return {
       longitude: ecliptic.elon,
       latitude: ecliptic.elat
     };
-  } catch (error) {
-    console.error('❌ Could not load astronomy-engine:', error.message);
+  } catch (_error) {
+    // astronomy-engine direct comparison not available - skip it
     return null;
   }
 }
