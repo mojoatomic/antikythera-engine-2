@@ -1,306 +1,511 @@
-# Antikythera Mechanism - The Three Faces
+# Antikythera Engine
 
-A modern, component-based simulation of the ancient Greek Antikythera mechanism - an astronomical calculator from ~100 BCE.
+Astronomical ephemeris API inspired by the ancient Greek Antikythera mechanism, providing NASA-validated celestial body positions for educational displays and physical mechanism control.
 
-## 🎯 The Vision
+**Validation:** NASA JPL HORIZONS-compared, 1.4 arcsec typical error  
+**Method:** astronomy-engine library (VSOP87/ELP2000)  
+**Use Cases:** Educational demonstrations, planetarium displays, physical orrery control
 
-This project recreates the three faces of the Antikythera mechanism as interactive displays:
+## Overview
 
-1. **Front Face** - All 7 celestial bodies (Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn) on concentric circles moving through the zodiac
-2. **Back Upper Face** - Metonic cycle spiral (19-year lunar calendar) with Callippic sub-dial
-3. **Back Lower Face** - Saros cycle spiral (eclipse prediction) with Exeligmos sub-dial
+The Antikythera Engine calculates real-time positions of celestial bodies (Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn) with validated sub-10-arcsecond precision. The system provides structured outputs for both digital visualization and physical mechanism control, recreating the computational capabilities of the ancient Antikythera mechanism with contemporary astronomical accuracy.
 
-## 🏗️ Architecture
+### Precision and Validation
 
-### Backend: Simple API Wrapper
-- Node.js + Express
-- Wraps `astronomy-engine` for all astronomical calculations
-- Clean REST endpoints
+- **Validated against:** NASA JPL HORIZONS ephemeris system
+- **Typical error:** 1.4 arcseconds (median across 7 bodies)
+- **Maximum error:** 8.6 arcseconds (Saturn longitude)
+- **Validation date:** 2025-10-26
+- **Method:** Topocentric ecliptic coordinate comparison
+- **Observer location:** 37.751°N, 97.822°W (Kansas, United States)
 
-### Frontend: Component-Based Display
-- **Three Face Components**: `FrontFace`, `BackUpperFace`, `BackLowerFace`
-- **Theme System**: CSS variables for instant visual transformations
-- **Layout System**: Multiple viewing modes (Gallery, Hero, Focus)
-- **Pure Canvas**: No frameworks; Canvas-based rendering
+Complete validation methodology and results documented in `docs/VALIDATION.md`.
 
-## 🚀 Quick Start
+### Intended Use Cases
+
+**Suitable for:**
+- Educational astronomy demonstrations
+- Planetarium displays and museum exhibits
+- Physical orrery and mechanism control
+- Amateur astronomy planning
+- Visual observation applications
+- Interactive astronomy learning
+
+**Not suitable for:**
+- Satellite tracking or orbital mechanics
+- Occultation prediction requiring sub-arcsecond precision
+- Astrometry or precise coordinate measurements
+- Navigation or timing applications
+- Research requiring peer-reviewed ephemeris
+
+## Quick Start
 
 ```bash
 npm install
 npm start
 ```
 
-Then open: `http://localhost:3000`
+API available at `http://localhost:3000`
 
-## 🎨 Themes
+Test the system:
+```bash
+# Get current astronomical state
+curl http://localhost:3000/api/state
 
-Switch between 5 themes instantly:
+# Get physical device control data
+curl http://localhost:3000/api/display
 
-1. **Ancient Bronze** - Weathered patina with blue backdrop (default)
-2. **Restored Bronze** - Polished golden finish
-3. **Steampunk** - Brass engravings with dark wood
-4. **Minimal** - Clean modern lines
-5. **Dark Mode** - OLED-friendly with green highlights
-
-All themes use CSS variables - create your own by copying any theme and changing the colors!
-
-## 📐 Layouts
-
-Three layout modes for different display contexts:
-
-- **Gallery** (default) - All three faces side-by-side, perfect for wide screens
-- **Hero** - Single large front face, maximum impact
-- **Focus** - One face at a time with arrow navigation, ideal for presentations
-
-## 🔧 Components
-
-### FrontFace Component
-Displays all celestial bodies on concentric rings:
-- Outermost: Egyptian calendar (360 days)
-- Zodiac ring with 12 signs
-- Saturn, Jupiter, Mars, Venus, Mercury pointers (outer to inner)
-- Moon with realistic phase rendering
-- Sun with radiant glow effect
-
-### BackUpperFace Component
-Metonic cycle (19 solar years = 235 lunar months):
-- Archimedean spiral with year markers
-- Callippic sub-dial (76-year refinement)
-- Current position pointer
-
-### BackLowerFace Component  
-Saros cycle (223 synodic months ≈ 18 years for eclipse prediction):
-- Spiral with eclipse glyphs (☉ solar, ☽ lunar)
-- Exeligmos sub-dial (triple Saros = 54 years)
-- Next eclipse countdown
-
-## 🎮 Controls
-
-- **Layout Selector** - Switch between Gallery/Hero/Focus
-- **Theme Selector** - Change visual style instantly
-- **Date/Time Picker** - Jump to any date
-- **Now Button** - Return to current time
-- **Update Button** - Refresh display
-- **Play ▶** - Animate forward (1 day per frame)
-- **Stop ⏸** - Pause animation
-- **Arrow Keys** (Focus mode) - Navigate between faces
-- **Spacebar** - Play/pause animation
-
-## 🎨 Creating Custom Themes
-
-Add a new theme by adding CSS variables to `index.html`:
-
-```css
-[data-theme="your-theme"] {
-    --bg-primary: your-gradient-here;
-    --bg-dial: your-radial-gradient;
-    --color-accent: #your-color;
-    --color-pointer: #your-color;
-    --color-text: #your-color;
-}
+# Get system metadata and validation info
+curl http://localhost:3000/api/system
 ```
 
-Then add it to the theme selector dropdown.
+## Features
 
-## 🔨 Creating Custom Components
+### Astronomical Calculations
+- Geocentric and topocentric celestial body positions
+- Ecliptic, equatorial, and horizontal coordinate systems
+- Eclipse predictions (solar and lunar)
+- Planetary oppositions and conjunctions
+- Visibility calculations with twilight modeling
+- Ancient astronomical cycles (Metonic, Saros, Callippic)
+- Lunar nodes and planetary retrograde motion
 
-Want to add a new dial or visualization? Here's the pattern:
-
-```javascript
-class YourComponent {
-  constructor(canvas) {
-    this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
-    this.centerX = canvas.width / 2;
-    this.centerY = canvas.height / 2;
-  }
-  
-  render(data) {
-    // Your rendering code here
-    // Access theme colors via CSS variables
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    // ... draw your visualization
-  }
-}
-```
-
-## 🎓 Historical Accuracy
-
-The Antikythera mechanism was discovered in 1901 in a Roman-era shipwreck. It contained:
-- At least 30 meshing bronze gears
-- Multiple dials and pointers
-- Inscriptions describing astronomical phenomena
-
-Our simulation replicates the three main faces:
-- **Front**: The Egyptian calendar, zodiac, and pointers for all visible celestial bodies
-- **Back Upper**: Long-term lunar calendar (Metonic cycle)  
-- **Back Lower**: Eclipse prediction system (Saros cycle)
-
-## 📊 Technical Stack
-
-- **Backend**: Node.js, Express, astronomy-engine
-- **Frontend**: Vanilla JavaScript, Canvas API
-- **No Build Step**: Pure HTML/CSS/JS
-- **No Frameworks**: Maximum simplicity and performance
-
-## 🚀 Use Cases
-
-- **Museum Displays** - Gallery layout on large screens
-- **Educational Tools** - Interactive astronomy learning
-- **Digital Art** - Ambient display/screensaver
-- **Planetarium** - Supplement to sky shows
-- **Office Decor** - Educational background display
+### Output Formats
+- **Mechanical:** Stepper motor positions and velocities, servo angles for retrograde indicators
+- **Digital:** OLED/LCD display text, LED brightness/color values
+- **Astronomical:** Detailed celestial coordinates and phenomena
+- **System:** Precision metadata, reproducibility information, validation statistics
 
 ## API Endpoints
 
-### Get Current State
-```
-GET /api/state
-```
+### Physical Device Control
+**GET /api/display**
 
-Returns the complete state of the mechanism for the current date/time.
+Complete state for physical mechanism implementation, including stepper motor control, servo positions, display text, and LED indicators.
 
-### Get State for Specific Date
-```
-GET /api/state/:date
+```bash
+curl http://localhost:3000/api/display
 ```
 
-Example: `GET /api/state/2024-06-21T12:00:00Z`
-
-### Query Parameters
-You can also use query parameters:
-```
-GET /api/state?date=2024-06-21T12:00:00Z
-```
-
-### Specific Data Endpoints
-- `GET /api/sun` - Sun position only
-- `GET /api/moon` - Moon position and phase
-- `GET /api/planets` - All planetary positions
-
-## Validation
-
-- Quick check (Moon):
-```bash path=null start=null
-node scripts/validate-simple.js
-```
-
-- Comprehensive (all bodies vs HORIZONS):
-```bash path=null start=null
-node scripts/validate-all-bodies.js
-```
-
-See `docs/VALIDATION.md` for details, coordinate frames, and expected output.
-
-## Response Format
-
+**Response structure:**
 ```json
 {
-  "date": "2024-10-25T12:00:00.000Z",
-  "sun": {
-    "longitude": 212.45,
-    "latitude": 0.0,
-    "rightAscension": 14.12,
-    "declination": -12.34
+  "timestamp": "2025-10-26T15:28:33.459Z",
+  "mechanical": {
+    "steppers": {
+      "sun": { "position": 213.47, "velocity": 0.998 },
+      "moon": { "position": 270.00, "velocity": 11.97 },
+      "mercury": { "position": 236.97, "velocity": 1.113 },
+      "venus": { "position": 195.88, "velocity": 1.248 },
+      "mars": { "position": 233.67, "velocity": 0.708 },
+      "jupiter": { "position": 114.73, "velocity": 0.050 },
+      "saturn": { "position": 356.06, "velocity": -0.052 },
+      "lunar_nodes_ascending": { "position": 345.67, "velocity": -0.053 },
+      "lunar_nodes_descending": { "position": 165.67, "velocity": -0.053 }
+    },
+    "servos": {
+      "mercury_retrograde": { "angle": 0, "state": "prograde" },
+      "venus_retrograde": { "angle": 0, "state": "prograde" },
+      "mars_retrograde": { "angle": 0, "state": "prograde" },
+      "jupiter_retrograde": { "angle": 0, "state": "prograde" },
+      "saturn_retrograde": { "angle": 180, "state": "retrograde" }
+    }
   },
-  "moon": {
-    "longitude": 145.67,
-    "latitude": 2.34,
-    "phase": 234.56,
-    "illumination": 0.67,
-    "age": 18.95
+  "digital": {
+    "displays": {
+      "oled_main": {
+        "line1": "Next Eclipse: solar",
+        "line2": "114 days",
+        "line3": "2026-02-17"
+      },
+      "oled_secondary": {
+        "line1": "Next Opposition: Mars",
+        "line2": "75 days",
+        "line3": "2026-01-09"
+      },
+      "lcd_cycles": {
+        "line1": "Metonic: Year 7/19",
+        "line2": "Saros: 43.1% complete"
+      }
+    },
+    "leds": {
+      "visibility": {
+        "mercury": { "color": "red", "brightness": 0 },
+        "venus": { "color": "red", "brightness": 0 },
+        "mars": { "color": "red", "brightness": 0 },
+        "jupiter": { "color": "red", "brightness": 0 },
+        "saturn": { "color": "red", "brightness": 0 }
+      }
+    }
   },
-  "planets": {
-    "mercury": { "longitude": 198.23, ... },
-    "venus": { "longitude": 234.56, ... },
-    "mars": { "longitude": 123.45, ... },
-    "jupiter": { "longitude": 89.12, ... },
-    "saturn": { "longitude": 312.34, ... }
-  },
-  "zodiac": {
-    "sign": "Scorpio",
-    "signIndex": 7,
-    "degreeInSign": 2.45,
-    "absoluteLongitude": 212.45
-  },
-  "metonicCycle": {
-    "year": 8,
-    "progress": 0.368,
-    "anglePosition": 132.5
-  },
-  "sarosCycle": {
-    "cycle": 145,
-    "progress": 0.234,
-    "anglePosition": 84.24,
-    "daysUntilNext": 5043.2
-  },
-  "egyptianCalendar": {
-    "month": 10,
-    "day": 25,
-    "dayOfYear": 298
-  },
-  "nextEclipse": {
-    "type": "lunar",
-    "date": "2024-11-15T06:30:00.000Z",
-    "daysUntil": 21
+  "update_hints": {
+    "mechanical": 10000,
+    "digital": 1000
   }
 }
 ```
 
-## How the Dials Work
+**Units and conventions:**
+- **position:** Ecliptic longitude in degrees [0, 360)
+- **velocity:** Degrees per day (negative values indicate retrograde motion)
+- **angle:** Servo position in degrees (0=prograde, 180=retrograde)
+- **brightness:** LED brightness [0, 255]
+- **update_hints:** Suggested update intervals in milliseconds
 
-### Zodiac Dial
-- Shows the sun's position through the 12 zodiac signs
-- Gold pointer indicates current sun position
-- Silver pointer shows moon position
-- Outer ring marked with zodiac symbols
+### Detailed Astronomical Data
+**GET /api/state**
 
-### Lunar Phase Dial
-- Displays the current phase of the moon
-- Shows illumination percentage
-- Visual representation of waxing/waning phases
-- 8 major phase positions marked
+Comprehensive astronomical calculations for visualization and analysis.
 
-### Metonic Cycle Spiral
-- 19-year cycle (235 lunar months = 19 solar years)
-- Spiral representation showing current year
-- Used by ancient Greeks to predict moon positions
+```bash
+curl http://localhost:3000/api/state
 
-### Saros Cycle Spiral
-- 18-year eclipse prediction cycle (223 synodic months)
-- Predicts when similar eclipses will occur
-- Shows time until next eclipse
+# Historical or future date
+curl http://localhost:3000/api/state?date=2024-06-21T12:00:00Z
 
-## Animation Controls
+# Custom observer location
+curl "http://localhost:3000/api/state?lon=-122.42&lat=37.77&elev=50"
+```
 
-- **Now**: Jump to current date/time
-- **Update**: Refresh display with selected date
-- **Play ▶**: Animate forward (1 day per frame)
-- **Stop ⏸**: Pause animation
+**Response structure:**
+```json
+{
+  "date": "2025-10-26T15:27:31.358Z",
+  "location": {
+    "latitude": 37.5,
+    "longitude": 23.0
+  },
+  "sun": {
+    "longitude": 213.47,
+    "latitude": -0.002,
+    "rightAscension": 14.06,
+    "declination": -12.55,
+    "altitude": 1.26,
+    "azimuth": 253.23,
+    "velocity": 0.998,
+    "angularVelocity": 0.042
+  },
+  "moon": {
+    "longitude": 269.03,
+    "latitude": -5.82,
+    "phase": 55.81,
+    "illumination": 0.22,
+    "age": 4.51,
+    "altitude": 20.28,
+    "azimuth": 200.07,
+    "velocity": 12.12
+  },
+  "planets": {
+    "mercury": {
+      "longitude": 236.97,
+      "latitude": -2.72,
+      "altitude": 10.30,
+      "velocity": 1.11,
+      "isRetrograde": false,
+      "motionState": "prograde"
+    }
+    // ... venus, mars, jupiter, saturn
+  },
+  "nextEclipse": {
+    "type": "solar",
+    "date": "2026-02-17T12:11:53.939Z",
+    "daysUntil": 113.86
+  },
+  "nextOpposition": {
+    "planet": "Mars",
+    "date": "2026-01-09T11:41:19.176Z",
+    "daysUntil": 74.84
+  },
+  "metonicCycle": {
+    "year": 7,
+    "progress": 0.359,
+    "anglePosition": 129.22
+  },
+  "sarosCycle": {
+    "cycle": 1,
+    "progress": 0.431,
+    "anglePosition": 155.27,
+    "daysUntilNext": 3745.00
+  },
+  "lunarNodes": {
+    "ascendingNode": 345.67,
+    "descendingNode": 165.67,
+    "motionRate": -0.053,
+    "nextNodePassage": {
+      "daysUntil": 5.79,
+      "type": "ascending"
+    }
+  }
+}
+```
 
-## Technical Stack
+### System Metadata
+**GET /api/system**
 
-- **Backend**: Node.js + Express
-- **Astronomy**: astronomy-engine library
-- **Frontend**: Vanilla JavaScript + Canvas API
-- **No frameworks**: Pure JS for maximum simplicity
+Precision metadata, validation statistics, and reproducibility information.
 
-## The Original Antikythera Mechanism
+```bash
+curl http://localhost:3000/api/system
+```
 
-Discovered in 1901 in a Roman-era shipwreck off the Greek island of Antikythera, this device is considered the world's first analog computer. It used a complex system of bronze gears to predict:
+**Response structure:**
+```json
+{
+  "timestamp": "2025-10-26T15:29:25.976Z",
+  "system": {
+    "healthy": true,
+    "computation_time_ms": 29,
+    "precision": {
+      "validated_against": "NASA JPL HORIZONS",
+      "validation_date": "2025-10-26",
+      "coordinate_frame": "J2000 ecliptic",
+      "calculation_method": "astronomy-engine (VSOP87/ELP2000)",
+      "typical_error_arcsec": 1.4,
+      "max_error_arcsec": 8.6,
+      "validation_url": "https://github.com/mojoatomic/antikythera-engine-2/blob/main/docs/VALIDATION.md"
+    },
+    "reproducibility": {
+      "api_version": "1.0.0",
+      "engine_version": "astronomy-engine v2.1.19",
+      "git_sha": "fb764bd",
+      "sample_count": 7,
+      "conventions": {
+        "angle_units": "degrees",
+        "error_units": "arcsec",
+        "longitude_wrap": "[0,360)",
+        "apparent": true,
+        "frame": "J2000 ecliptic"
+      }
+    },
+    "observer": {
+      "latitude": 37.751,
+      "longitude": -97.822,
+      "elevation": 0,
+      "country": "US",
+      "source": "ip_geolocation",
+      "time_scale": "UTC"
+    }
+  }
+}
+```
+
+### Query Parameters
+
+All endpoints support the following query parameters:
+
+- **date** - ISO 8601 timestamp for historical/future calculations
+  - Example: `?date=2024-06-21T12:00:00Z`
+- **lon**, **lat**, **elev** - Manual observer location override
+  - Example: `?lon=-122.42&lat=37.77&elev=50`
+  - Units: longitude/latitude in degrees, elevation in meters
+- **precision=full** - Include per-body validation errors (debugging)
+
+## Validation
+
+### Quick Validation (Single Body)
+Verify Moon position against current conditions:
+```bash
+node scripts/validate-simple.js
+```
+
+### Comprehensive Validation (All Bodies vs HORIZONS)
+Complete validation against NASA JPL HORIZONS ephemeris:
+```bash
+node scripts/validate-all-bodies.js
+```
+
+Expected output: All bodies pass with errors under 10 arcseconds.
+
+### Validation Results Summary
+
+Comparison against NASA JPL HORIZONS System performed on 2025-10-26:
+
+| Body    | Longitude Error | Latitude Error |
+|---------|-----------------|----------------|
+| Sun     | 0.4"           | 0.7"           |
+| Moon    | 1.9"           | 0.3"           |
+| Mercury | 1.4"           | 2.1"           |
+| Venus   | 1.1"           | 0.3"           |
+| Mars    | 0.5"           | 1.6"           |
+| Jupiter | 2.8"           | 1.1"           |
+| Saturn  | 8.6"           | 0.5"           |
+
+- **Median error:** 1.4 arcseconds
+- **Maximum error:** 8.6 arcseconds (Saturn longitude)
+- **Method:** Topocentric ecliptic coordinate comparison
+- **Observer:** 37.751°N, 97.822°W
+
+For context, the human eye has a resolution of approximately 60 arcseconds, and typical planetarium software operates at 10-30 arcsecond precision. The maximum error of 8.6 arcseconds represents approximately 0.5% of the Moon's apparent diameter.
+
+Complete validation methodology, coordinate frame specifications, and reproducibility instructions are documented in `docs/VALIDATION.md`.
+
+## Architecture
+
+### Backend
+- **Runtime:** Node.js with Express
+- **Calculations:** astronomy-engine library (VSOP87/ELP2000 planetary theories)
+- **Design:** Stateless REST API
+- **Deployment:** Single process, horizontal scaling supported
+
+### Astronomical Engine
+- **Planetary Theory:** VSOP87 (Variations Séculaires des Orbites Planétaires)
+- **Lunar Theory:** ELP2000 (Ephéméride Lunaire Parisienne)
+- **Corrections:** Light-time delay, stellar aberration, parallax, atmospheric refraction
+- **Coordinate Systems:** Ecliptic (J2000), Equatorial (J2000), Horizontal (topocentric)
+
+### Observer Location
+- **Primary:** Automatic IP geolocation
+- **Override:** Query parameters (`?lon=X&lat=Y&elev=Z`)
+- **Fallback:** Default coordinates (Kansas, United States) if detection fails
+
+### Performance Characteristics
+- **Computation time:** 25-75ms typical per request
+- **Update rate:** Suitable for 1-10 Hz display refresh
+- **Scalability:** Stateless design enables horizontal scaling
+- **Caching:** No built-in caching (stateless design principle)
+
+## Historical Context
+
+The Antikythera mechanism (circa 100 BCE) was discovered in 1901 in a Roman-era shipwreck off the Greek island of Antikythera. The device represents one of the most sophisticated technological artifacts from the ancient world, using approximately 30 meshing bronze gears to predict:
 
 - Solar and lunar positions
 - Moon phases
-- Eclipse timings
-- Olympic game cycles
+- Eclipse timing (Saros cycle)
 - Planetary positions (Mercury through Saturn)
+- Olympic game cycles
+- Ancient Greek calendar cycles (Metonic, Callippic)
 
-Our simulation uses modern astronomical calculations to achieve similar results through software rather than mechanical gears.
+This software recreates the mechanism's computational capabilities using modern astronomical calculations via the astronomy-engine library, while maintaining similar output formats for compatibility with physical implementations. The `/api/display` endpoint specifically provides data formatted for stepper motors, servos, and display elements, enabling construction of physical replicas with accurate astronomical behavior.
+
+## Use Cases
+
+### Educational Demonstrations
+Interactive astronomy learning tools demonstrating celestial mechanics, coordinate systems, and historical astronomical knowledge. The system provides real-time data suitable for classroom demonstrations, museum exhibits, and public outreach.
+
+### Physical Mechanisms
+The `/api/display` endpoint provides motor control data suitable for:
+- Motorized orreries and planetariums
+- Physical Antikythera mechanism replicas
+- Robotic telescope pointing systems (within precision limits)
+- Interactive museum exhibits with mechanical components
+
+Update hints in the response suggest appropriate refresh intervals for mechanical (10 seconds) and digital (1 second) components.
+
+### Digital Displays
+Planetarium visualization, observatory displays, public astronomy installations, and educational kiosks. The comprehensive coordinate data supports various display formats and projection systems.
+
+### Research and Development
+Astronomical algorithm testing, historical astronomy research, and coordinate system demonstrations. The validation against HORIZONS and reproducibility metadata make the system suitable for educational research contexts.
+
+## Project Structure
+
+```
+antikythera-engine-2/
+├── server.js              # Main API server
+├── src/
+│   ├── constants/
+│   │   └── validation.js  # Validation statistics
+│   └── utils/
+│       └── metadata.js     # Version and git SHA extraction
+├── scripts/
+│   ├── validate-simple.js      # Quick validation (Moon only)
+│   ├── validate-all-bodies.js  # Comprehensive HORIZONS comparison
+│   └── dump-horizons.js        # HORIZONS API diagnostic tool
+├── docs/
+│   └── VALIDATION.md      # Complete validation methodology
+└── public/
+    └── index.html         # Example visualization client
+```
+
+## Technical Stack
+
+- **Language:** JavaScript (Node.js)
+- **Framework:** Express
+- **Astronomy:** astronomy-engine v2.1.19
+- **Testing:** Custom validation suite against NASA JPL HORIZONS data
+- **Documentation:** Markdown with validation reports
+
+## Limitations and Known Issues
+
+### Precision Boundaries
+- Maximum validated error: 8.6 arcseconds (suitable for display applications)
+- Not validated for occultation predictions requiring sub-arcsecond precision
+- Not validated for satellite tracking or orbital mechanics
+- Single validation point (2025-10-26); extended temporal validation pending
+
+### Coordinate Systems
+- Primary output: J2000 ecliptic coordinates (apparent positions)
+- Atmospheric refraction applied for horizontal coordinates
+- No proper motion corrections (suitable for solar system bodies only)
+
+### Observer Location
+- IP geolocation may be inaccurate by several degrees
+- Manual override recommended for precision applications
+- No automated time zone handling (all times in UTC)
+
+### Computational Limitations
+- No caching (every request performs full calculation)
+- No batch computation endpoints
+- Computation time scales linearly with number of bodies
+
+### Development Status
+This software is currently in active development. While validation demonstrates suitable precision for intended use cases, the API and response formats may evolve. Production deployment should account for potential changes.
+
+## Contributing
+
+Contributions are welcome in the following areas:
+
+### Extended Validation
+- Multiple time periods (historical and future dates)
+- Multiple observer locations (latitude/longitude diversity)
+- Statistical analysis of error distribution
+
+### Documentation
+- Additional use case examples
+- Physical mechanism integration guides
+- Coordinate system transformation documentation
+
+### Features
+- Additional astronomical phenomena (transits, planetary configurations)
+- Performance optimizations
+- Batch computation endpoints
+
+### Physical Implementations
+- Example Arduino/Raspberry Pi integration code
+- Stepper motor control libraries
+- Display formatting utilities
+
+## Documentation
+
+- **API Documentation:** Complete endpoint descriptions in this README
+- **Validation Results:** `docs/VALIDATION.md` (methodology, coordinate frames, error analysis)
+- **Precision Metadata:** Included in all `/api/system` responses
+- **Coordinate Systems:** Documented in validation file
+
+## Citation
+
+If using this software in research, education, or publication, please cite:
+
+```
+Fennell, D. (2025). Antikythera Engine: Astronomical Ephemeris API.
+GitHub: https://github.com/mojoatomic/antikythera-engine-2
+```
+
+For academic citation, see `CITATION.cff` in repository.
 
 ## License
 
-MIT
+MIT License - See LICENSE file for details.
 
-## Credits
+## Acknowledgments
 
-Based on the astronomical knowledge preserved in the ancient Greek Antikythera mechanism (~100 BCE).
+- **Astronomy calculations:** Don Cross (astronomy-engine library)
+- **Validation authority:** NASA JPL HORIZONS System
+- **Historical inspiration:** Ancient Greek Antikythera mechanism (circa 100 BCE)
+- **Planetary theories:** VSOP87 (Bureau des Longitudes), ELP2000 (Paris Observatory)
+
+## Support
+
+- **Issues:** https://github.com/mojoatomic/antikythera-engine-2/issues
+- **Documentation:** https://github.com/mojoatomic/antikythera-engine-2/blob/main/docs/
+- **Validation:** https://github.com/mojoatomic/antikythera-engine-2/blob/main/docs/VALIDATION.md

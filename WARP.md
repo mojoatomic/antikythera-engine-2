@@ -2,6 +2,10 @@
 
 ## Critical Rules
 
+### Documentation Standards (Golden Rule)
+
+All project documentation MUST follow the professional guidance in `warp-professional-docs.md`. Treat this as the golden rule: use conservative, evidence-backed language, state bounded error metrics, specify methods and limitations, and avoid unsubstantiated superlatives. Apply it to README, API docs, VALIDATION.md, PRs, and issues.
+
 ### Time Handling - ALWAYS USE UTC
 
 **IMPORTANT:** All time calculations in this project MUST use UTC methods to avoid Daylight Saving Time (DST) related jumps and inconsistencies.
