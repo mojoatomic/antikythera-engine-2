@@ -184,6 +184,19 @@ app.get('/api/display', (req, res) => {
     // Count planets above horizon
     const planetsAboveHorizon = Object.values(state.planets).filter(p => p.altitude > 0).length;
     
+    // Calculate next visibility window (when sun < -6°)
+    let nextVisibilityWindow = null;
+    if (sunAltitude >= -6) {
+      // Currently not dark enough - find next evening or current evening
+      const sunset = state.sunVisibility.sunset;
+      if (sunset && sunset.time) {
+        // Approximate: civil twilight ends ~30 min after sunset
+        const twilightEnd = new Date(sunset.time);
+        twilightEnd.setMinutes(twilightEnd.getMinutes() + 30);
+        nextVisibilityWindow = twilightEnd.toISOString();
+      }
+    }
+    
     const system = {
       healthy: true,
       cached: false,
@@ -192,7 +205,10 @@ app.get('/api/display', (req, res) => {
         sun_altitude: sunAltitude,
         twilight_stage: twilightStage,
         visibility_threshold: -6,
-        planets_above_horizon: planetsAboveHorizon
+        planets_above_horizon: planetsAboveHorizon,
+        sunrise: state.sunVisibility.sunrise ? state.sunVisibility.sunrise.time : null,
+        sunset: state.sunVisibility.sunset ? state.sunVisibility.sunset.time : null,
+        next_visibility_window: nextVisibilityWindow
       }
     };
     

@@ -1,0 +1,6 @@
+Add sunrise/sunset times and next visibility window to debug info
+
+- Add sunrise and sunset times from existing sunVisibility data
+- Calculate next_visibility_window (approx 30min after sunset)
+- Only show next_visibility_window when sun >= -6° (too bright)
+- Provides context for when planets will be visible again
