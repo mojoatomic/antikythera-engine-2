@@ -247,6 +247,75 @@ class FrontFace {
     this.ctx.arc(apparentMarkerX, apparentMarkerY, 14, 0, Math.PI * 2);
     this.ctx.fill();
     
+    // === 4. SUNRISE/SUNSET MARKERS ===
+    
+    if (data.sunVisibility && data.sunVisibility.sunrise && data.sunVisibility.sunset) {
+      const vis = data.sunVisibility;
+      
+      // Calculate sunrise time in hours (from local time string)
+      const sunriseTime = new Date(vis.sunrise.time);
+      const sunriseHours = sunriseTime.getHours() + sunriseTime.getMinutes() / 60;
+      const sunriseAngle = (sunriseHours * 15 - 90) * Math.PI / 180 + eclipticRotation;
+      
+      // Calculate sunset time in hours
+      const sunsetTime = new Date(vis.sunset.time);
+      const sunsetHours = sunsetTime.getHours() + sunsetTime.getMinutes() / 60;
+      const sunsetAngle = (sunsetHours * 15 - 90) * Math.PI / 180 + eclipticRotation;
+      
+      // Sunrise marker (on both rings) - ORANGE
+      const sunriseOuterX = this.centerX + Math.cos(sunriseAngle) * outerRingRadius;
+      const sunriseOuterY = this.centerY + Math.sin(sunriseAngle) * outerRingRadius;
+      const sunriseInnerX = this.centerX + Math.cos(sunriseAngle) * innerRingRadius;
+      const sunriseInnerY = this.centerY + Math.sin(sunriseAngle) * innerRingRadius;
+      
+      // Sunrise icon on outer ring
+      this.ctx.fillStyle = '#ff6b35';
+      this.ctx.font = '16px Arial';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText('☀', sunriseOuterX, sunriseOuterY);
+      
+      // Sunrise line connecting rings
+      this.ctx.strokeStyle = 'rgba(255, 107, 53, 0.4)';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(sunriseInnerX, sunriseInnerY);
+      this.ctx.lineTo(sunriseOuterX, sunriseOuterY);
+      this.ctx.stroke();
+      
+      // Sunset marker (on both rings) - ORANGE/RED
+      const sunsetOuterX = this.centerX + Math.cos(sunsetAngle) * outerRingRadius;
+      const sunsetOuterY = this.centerY + Math.sin(sunsetAngle) * outerRingRadius;
+      const sunsetInnerX = this.centerX + Math.cos(sunsetAngle) * innerRingRadius;
+      const sunsetInnerY = this.centerY + Math.sin(sunsetAngle) * innerRingRadius;
+      
+      // Sunset icon on outer ring
+      this.ctx.fillStyle = '#ff8c35';
+      this.ctx.font = '16px Arial';
+      this.ctx.fillText('🌙', sunsetOuterX, sunsetOuterY);
+      
+      // Sunset line connecting rings
+      this.ctx.strokeStyle = 'rgba(255, 140, 53, 0.4)';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(sunsetInnerX, sunsetInnerY);
+      this.ctx.lineTo(sunsetOuterX, sunsetOuterY);
+      this.ctx.stroke();
+      
+      // Daylight arc (between sunrise and sunset on outer ring)
+      this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)';
+      this.ctx.lineWidth = 8;
+      this.ctx.beginPath();
+      // Draw arc from sunrise to sunset (clockwise)
+      if (sunsetAngle > sunriseAngle) {
+        this.ctx.arc(this.centerX, this.centerY, outerRingRadius, sunriseAngle, sunsetAngle);
+      } else {
+        // Handle crossing midnight
+        this.ctx.arc(this.centerX, this.centerY, outerRingRadius, sunriseAngle, sunsetAngle + Math.PI * 2);
+      }
+      this.ctx.stroke();
+    }
+    
     // === 5. Current EoT value display (Top Right) ===
     const eotValue = eot.equationOfTime.minutes;
     const eotStatus = eotValue > 0 ? 'AHEAD' : 'BEHIND';
