@@ -14,7 +14,6 @@
  */
 
 const astronomy = require('astronomy-engine');
-const fetch = require('node-fetch');
 
 const date = new Date('2025-10-26T06:23:19.116Z');
 const observer = new astronomy.Observer(37.5, 23.0, 0);

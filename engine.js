@@ -467,7 +467,7 @@ class AntikytheraEngine {
             elongation: bestElongation
           });
         }
-      } catch (error) {
+      } catch (_err) {
         // Skip this planet if calculation fails
         continue;
       }
