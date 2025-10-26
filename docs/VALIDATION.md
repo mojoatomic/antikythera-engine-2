@@ -126,4 +126,41 @@ console.log(`Δ Latitude: ${delta_lat}°`);
 
 ## Why Include This?
 
-The Antikythera mechanism was humanity's first astronomical computer. By validating against modern JPL HORIZONS data, we honor that legacy by ensuring our reconstruction is astronomically accurate—something the ancient Greeks would have appreciated!
+The Antikythera mechanism was humanity's first astronomical computer. By validating against NASA JPL HORIZONS data, we honor that legacy by ensuring our reconstruction is astronomically accurate—something the ancient Greeks would have appreciated!
+
+---
+
+## Comprehensive Validation (All Bodies)
+
+This repository includes a comprehensive validator that compares ecliptic longitude/latitude for Sun, Moon, and visible planets against NASA JPL HORIZONS using the current API observer (topocentric) and exact timestamp (to the second).
+
+### Run
+```bash path=null start=null
+node scripts/validate-all-bodies.js
+```
+
+- Automatically uses `system.observer` from the API response (IP geolocation or manual override via `?lat=&lon=`).
+- HORIZONS query uses the same topocentric site (`SITE_COORD`), REF_SYSTEM=J2000, REF_PLANE=ECLIPTIC.
+- Preserves seconds in time to avoid lunar fast-motion errors.
+
+### Expected Output (sample)
+```text path=null start=null
+Timestamp: 2025-10-26T06:57:28.599Z
+Location: 37.751°N, -97.822°E (US)
+Source: ip_geolocation
+
+[PASS] sun        Δlon=   0.0001°  Δlat=   0.0002°
+[PASS] moon       Δlon=   0.0006°  Δlat=   0.0001°
+[PASS] mercury    Δlon=   0.0004°  Δlat=   0.0006°
+[PASS] venus      Δlon=   0.0003°  Δlat=   0.0001°
+[PASS] mars       Δlon=   0.0001°  Δlat=   0.0004°
+[PASS] jupiter    Δlon=   0.0008°  Δlat=   0.0003°
+[PASS] saturn     Δlon=   0.0024°  Δlat=   0.0001°
+```
+
+### Frame/Epoch Alignment (what fixed the 0.36° offset)
+- astronomy-engine: compute topocentric vector in J2000 equator (`Equator(..., ofdate=false)`), then convert using `Astronomy.Ecliptic(eqjVector)` to obtain true ecliptic-of-date angles.
+- HORIZONS: `REF_SYSTEM=J2000`, `REF_PLANE=ECLIPTIC` (documented in header).
+- Preserve exact seconds in timestamp; for Moon, 60s ≈ 0.2–0.5°.
+
+Result: arcsecond-level agreement across all bodies.

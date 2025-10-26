@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const geoip = require('geoip-lite');
 const AntikytheraEngine = require('./engine');
 
 const app = express();
@@ -68,13 +69,66 @@ app.get('/api/planets', (req, res) => {
   }
 });
 
+/**
+ * Get observer location from IP address or query parameters
+ */
+function getObserverLocation(req) {
+  // Priority 1: Manual override from query params
+  if (req.query.lat && req.query.lon) {
+    return {
+      latitude: parseFloat(req.query.lat),
+      longitude: parseFloat(req.query.lon),
+      elevation: parseFloat(req.query.elev) || 0,
+      source: 'manual'
+    };
+  }
+  
+  // Priority 2: IP geolocation
+  try {
+    let clientIP = req.headers['x-forwarded-for']?.split(',')[0] || 
+                   req.socket.remoteAddress || 
+                   req.connection.remoteAddress;
+    
+    // For local testing, use a test IP (Google DNS -> Mountain View, CA)
+    if (clientIP === '127.0.0.1' || clientIP === '::1' || clientIP === '::ffff:127.0.0.1') {
+      clientIP = '8.8.8.8';
+    }
+    
+    const geo = geoip.lookup(clientIP);
+    
+    if (geo && geo.ll) {
+      return {
+        latitude: geo.ll[0],
+        longitude: geo.ll[1],
+        elevation: 0,
+        city: geo.city,
+        country: geo.country,
+        source: 'ip_geolocation'
+      };
+    }
+  } catch (error) {
+    console.log('IP geolocation failed:', error.message);
+  }
+  
+  // Priority 3: Default to Athens (historical Antikythera mechanism location)
+  return {
+    latitude: 37.5,
+    longitude: 23.0,
+    elevation: 0,
+    city: 'Athens',
+    country: 'Greece',
+    source: 'default'
+  };
+}
+
 // Hybrid display endpoint - mechanical + digital data for physical device
 app.get('/api/display', (req, res) => {
   try {
     const startTime = Date.now();
     const date = req.query.date ? new Date(req.query.date) : new Date();
-    const latitude = parseFloat(req.query.lat) || 37.5;
-    const longitude = parseFloat(req.query.lon) || 23.0;
+    const observer = getObserverLocation(req);
+    const latitude = observer.latitude;
+    const longitude = observer.longitude;
     
     const state = engine.getState(date, latitude, longitude);
     
@@ -150,6 +204,15 @@ app.get('/api/display', (req, res) => {
           line2: `${Math.round(state.nextEclipse.daysUntil)} days`,
           line3: new Date(state.nextEclipse.date).toISOString().split('T')[0]
         },
+        oled_secondary: state.nextOpposition && !state.nextOpposition.error ? {
+          line1: `Next Opposition: ${state.nextOpposition.planet}`,
+          line2: `${Math.round(state.nextOpposition.daysUntil)} days`,
+          line3: new Date(state.nextOpposition.date).toISOString().split('T')[0]
+        } : {
+          line1: 'Opposition',
+          line2: 'Searching...',
+          line3: ''
+        },
         lcd_cycles: {
           line1: `Metonic: Year ${state.metonicCycle.year}/19`,
           line2: `Saros: ${(state.sarosCycle.progress * 100).toFixed(1)}% complete`
@@ -209,6 +272,14 @@ app.get('/api/display', (req, res) => {
       healthy: true,
       cached: false,
       computation_time_ms: Date.now() - startTime,
+      observer: {
+        latitude: observer.latitude,
+        longitude: observer.longitude,
+        elevation: observer.elevation,
+        city: observer.city || null,
+        country: observer.country || null,
+        source: observer.source
+      },
       debug: {
         sun_altitude: sunAltitude,
         twilight_stage: twilightStage,

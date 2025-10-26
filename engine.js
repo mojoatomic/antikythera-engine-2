@@ -3,6 +3,24 @@ const TimeUtils = require('./utils/time');
 
 class AntikytheraEngine {
   /**
+   * Convert an equator-of-date vector to J2000 mean ecliptic angles
+   */
+  eclipticFromEquatorVec_EQD(date, equatorVec) {
+    const rot = astronomy.Rotation_EQD_ECL(date);
+    const eclVec = astronomy.RotateVector(rot, equatorVec);
+    const sph = astronomy.SphereFromVector(eclVec);
+    let elon = sph.lon % 360; if (elon < 0) elon += 360;
+    return { elon, elat: sph.lat };
+  }
+
+  eclipticFromEquatorVec_EQJ(equatorJ2000Vec) {
+    // Convert J2000 equator topocentric vector to true ecliptic of date
+    const ecl = astronomy.Ecliptic(equatorJ2000Vec);
+    // astronomy.Ecliptic returns EclipticCoordinates with elon/elat
+    return { elon: ecl.elon, elat: ecl.elat };
+  }
+
+  /**
    * Calculate sun visibility and daylight information for a given location and time
    */
   getSunVisibility(date, observer) {
@@ -173,15 +191,17 @@ class AntikytheraEngine {
       sarosCycle: this.getSarosCycle(date),
       lunarNodes: this.getLunarNodes(date),
       nextEclipse: this.getNextEclipse(date),
+      nextOpposition: this.getNextOpposition(date),
       equationOfTime: this.getEquationOfTime(date),
       sunVisibility: this.getSunVisibility(date, observer)
     };
   }
 
   getSunPosition(date, observer) {
-    const equator = astronomy.Equator('Sun', date, observer, true, true);
-    const horizon = astronomy.Horizon(date, observer, equator.ra, equator.dec, 'normal');
-    const ecliptic = astronomy.Ecliptic(equator.vec);
+    const equator = astronomy.Equator('Sun', date, observer, false, true); // EQJ
+    const horizonEqd = astronomy.Equator('Sun', date, observer, true, true);
+    const horizon = astronomy.Horizon(date, observer, horizonEqd.ra, horizonEqd.dec, 'normal');
+    const ecliptic = this.eclipticFromEquatorVec_EQJ(equator.vec);
     
     const velocity = this.getVelocity('Sun', date, observer);
     
@@ -199,8 +219,8 @@ class AntikytheraEngine {
 
   getMoonPosition(date, observer) {
     const phase = astronomy.MoonPhase(date);
-    const equator = astronomy.Equator('Moon', date, observer, true, true);
-    const ecliptic = astronomy.Ecliptic(equator.vec);
+    const equator = astronomy.Equator('Moon', date, observer, false, true); // EQJ
+    const ecliptic = this.eclipticFromEquatorVec_EQJ(equator.vec);
     const illumination = astronomy.Illumination('Moon', date);
     const horizon = astronomy.Horizon(date, observer, equator.ra, equator.dec, 'normal');
     
@@ -226,14 +246,14 @@ class AntikytheraEngine {
    * Uses 1-day delta to determine rate of change
    */
   getVelocity(body, date, observer) {
-    const currentEquator = astronomy.Equator(body, date, observer, true, true);
-    const currentEcliptic = astronomy.Ecliptic(currentEquator.vec);
+    const currentEquator = astronomy.Equator(body, date, observer, false, true);
+    const currentEcliptic = this.eclipticFromEquatorVec_EQJ(currentEquator.vec);
     const currentLongitude = currentEcliptic.elon;
     
     // Calculate position 1 day later
     const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
-    const nextEquator = astronomy.Equator(body, nextDate, observer, true, true);
-    const nextEcliptic = astronomy.Ecliptic(nextEquator.vec);
+    const nextEquator = astronomy.Equator(body, nextDate, observer, false, true);
+    const nextEcliptic = this.eclipticFromEquatorVec_EQJ(nextEquator.vec);
     const nextLongitude = nextEcliptic.elon;
     
     // Handle 360° wraparound (e.g., 359° -> 1°)
@@ -252,8 +272,8 @@ class AntikytheraEngine {
     const positions = {};
 
     planets.forEach(planet => {
-      const equator = astronomy.Equator(planet, date, observer, true, true);
-      const ecliptic = astronomy.Ecliptic(equator.vec);
+      const equator = astronomy.Equator(planet, date, observer, false, true);
+      const ecliptic = this.eclipticFromEquatorVec_EQJ(equator.vec);
       const horizon = astronomy.Horizon(date, observer, equator.ra, equator.dec, 'normal');
       
       // Calculate velocity and retrograde status
@@ -368,6 +388,103 @@ class AntikytheraEngine {
     } catch (_err) {
       return { error: 'Could not calculate next eclipse' };
     }
+  }
+
+  /**
+   * Find the next planetary opposition
+   * Opposition: when a planet is 180° from the Sun as viewed from Earth
+   * This is the optimal time for observation (planet is closest and fully illuminated)
+   */
+  getNextOpposition(date, maxDays = 1095) {
+    // Approximate synodic periods (days between oppositions)
+    const synodicPeriods = {
+      'Mars': 780,
+      'Jupiter': 399,
+      'Saturn': 378
+    };
+    
+    const planets = ['Mars', 'Jupiter', 'Saturn'];
+    const oppositions = [];
+    
+    for (const planet of planets) {
+      try {
+        const synodicPeriod = synodicPeriods[planet];
+        
+        // Calculate elongation helper
+        const observer = new astronomy.Observer(0, 0, 0); // Geocentric (Earth center)
+        const getElongation = (searchDate) => {
+          const sunEq = astronomy.Equator('Sun', searchDate, observer, true, true);
+          const sunEcl = astronomy.Ecliptic(sunEq.vec);
+          const sunLon = sunEcl.elon;
+          
+          const planetEq = astronomy.Equator(planet, searchDate, observer, true, true);
+          const planetEcl = astronomy.Ecliptic(planetEq.vec);
+          const planetLon = planetEcl.elon;
+          
+          // Calculate elongation (angular separation from Sun)
+          // Result should be 0-180° (opposition = 180°)
+          let elongation = Math.abs(planetLon - sunLon);
+          if (elongation > 180) elongation = 360 - elongation;
+          
+          return elongation;
+        };
+        
+        // Start search from today, looking forward up to 1.2x synodic period
+        let searchStart = new Date(date);
+        let searchEnd = new Date(date.getTime() + (synodicPeriod * 1.2) * 24 * 60 * 60 * 1000);
+        
+        // Binary search for opposition (when elongation = 180°)
+        let bestDate = null;
+        let bestElongation = 0;
+        
+        // Coarse search (10-day steps)
+        for (let t = searchStart; t <= searchEnd; t = new Date(t.getTime() + 10 * 24 * 60 * 60 * 1000)) {
+          const elong = getElongation(t);
+          if (elong > bestElongation) {
+            bestElongation = elong;
+            bestDate = new Date(t);
+          }
+        }
+        
+        if (bestDate && bestElongation > 170) {
+          // Fine search around best date (1-day steps)
+          const fineStart = new Date(bestDate.getTime() - 20 * 24 * 60 * 60 * 1000);
+          const fineEnd = new Date(bestDate.getTime() + 20 * 24 * 60 * 60 * 1000);
+          
+          for (let t = fineStart; t <= fineEnd; t = new Date(t.getTime() + 24 * 60 * 60 * 1000)) {
+            const elong = getElongation(t);
+            if (elong > bestElongation) {
+              bestElongation = elong;
+              bestDate = new Date(t);
+            }
+          }
+          
+          const daysUntil = (bestDate - date) / (1000 * 60 * 60 * 24);
+          oppositions.push({
+            planet: planet,
+            date: bestDate.toISOString(),
+            daysUntil: daysUntil,
+            elongation: bestElongation
+          });
+        }
+      } catch (_err) {
+        // Skip this planet if calculation fails
+        continue;
+      }
+    }
+    
+    // Sort by days until opposition (soonest first)
+    oppositions.sort((a, b) => a.daysUntil - b.daysUntil);
+    
+    if (oppositions.length === 0) {
+      return {
+        error: 'No oppositions found within search window',
+        searchedDays: maxDays
+      };
+    }
+    
+    // Return next opposition
+    return oppositions[0];
   }
 
   /**
