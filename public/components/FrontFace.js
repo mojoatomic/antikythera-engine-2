@@ -85,7 +85,7 @@ class FrontFace {
   }
   
   drawEquationOfTimeRings(data) {
-    if (!data.equationOfTime) return;
+    if (!data.equationOfTime || !data.sun) return;
     
     const eot = data.equationOfTime;
     const date = new Date(data.date);
@@ -93,6 +93,10 @@ class FrontFace {
     // Ring dimensions - OUTERMOST rings
     const outerRingRadius = this.maxRadius + 50;
     const innerRingRadius = this.maxRadius + 30;
+    
+    // Get sun's ecliptic longitude to rotate entire ring system
+    const sunLongitude = data.sun.longitude;
+    const eclipticRotation = (sunLongitude - 90) * Math.PI / 180;
     
     // === 1. OUTER RING - Mean Solar Time (Clock Time) ===
     this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.8)';
@@ -103,7 +107,8 @@ class FrontFace {
     
     // 24-hour graduations on outer ring
     for (let hour = 0; hour < 24; hour++) {
-      const angle = (hour * 15 - 90) * Math.PI / 180; // 15° per hour
+      const hourAngle = (hour * 15 - 90) * Math.PI / 180; // 15° per hour
+      const angle = hourAngle + eclipticRotation; // Rotate by sun's position
       const isMajor = hour % 6 === 0;
       const tickLength = isMajor ? 15 : 8;
       
@@ -153,7 +158,8 @@ class FrontFace {
     
     // 24-hour graduations on inner ring
     for (let hour = 0; hour < 24; hour++) {
-      const angle = (hour * 15 - 90) * Math.PI / 180;
+      const hourAngle = (hour * 15 - 90) * Math.PI / 180;
+      const angle = hourAngle + eclipticRotation; // Rotate by sun's position
       const isMajor = hour % 6 === 0;
       const tickLength = isMajor ? 15 : 8;
       
@@ -202,12 +208,12 @@ class FrontFace {
     
     // Mean solar time (clock time) - simple hour angle
     const meanTimeHours = hours + minutes / 60 + seconds / 3600;
-    const meanAngle = (meanTimeHours * 15 - 90) * Math.PI / 180; // 15° per hour
+    const meanAngle = (meanTimeHours * 15 - 90) * Math.PI / 180 + eclipticRotation;
     
     // Apparent solar time (sundial time) - adjusted by equation of time
     const eotMinutes = eot.equationOfTime.minutes;
     const apparentTimeHours = meanTimeHours + (eotMinutes / 60); // Add EoT correction
-    const apparentAngle = (apparentTimeHours * 15 - 90) * Math.PI / 180;
+    const apparentAngle = (apparentTimeHours * 15 - 90) * Math.PI / 180 + eclipticRotation;
     
     // Mean Time marker (on outer ring) - BRONZE
     const meanMarkerX = this.centerX + Math.cos(meanAngle) * outerRingRadius;
