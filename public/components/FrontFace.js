@@ -268,12 +268,14 @@ class FrontFace {
       const sunriseInnerX = this.centerX + Math.cos(sunriseAngle) * innerRingRadius;
       const sunriseInnerY = this.centerY + Math.sin(sunriseAngle) * innerRingRadius;
       
-      // Sunrise icon on outer ring
+      // Sunrise marker on outer ring - solid orange circle
       this.ctx.fillStyle = '#ff6b35';
-      this.ctx.font = '16px Arial';
-      this.ctx.textAlign = 'center';
-      this.ctx.textBaseline = 'middle';
-      this.ctx.fillText('☀', sunriseOuterX, sunriseOuterY);
+      this.ctx.beginPath();
+      this.ctx.arc(sunriseOuterX, sunriseOuterY, 6, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#ffffff';
+      this.ctx.lineWidth = 2;
+      this.ctx.stroke();
       
       // Sunrise line connecting rings
       this.ctx.strokeStyle = 'rgba(255, 107, 53, 0.4)';
