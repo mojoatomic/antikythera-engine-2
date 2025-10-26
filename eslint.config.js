@@ -1,6 +1,6 @@
 module.exports = [
   {
-    ignores: ['node_modules/**', 'coverage/**', '**/*.test.js']
+    ignores: ['node_modules/**', 'coverage/**', '**/*.test.js', 'precision-metadata-package/**']
   },
   {
     files: ['**/*.js'],

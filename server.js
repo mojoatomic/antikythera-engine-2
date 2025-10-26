@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const geoip = require('geoip-lite');
+const { VALIDATION, CONVENTIONS } = require('./constants/validation');
+const { API_VERSION, ENGINE_VERSION, GIT_SHA } = require('./utils/metadata');
+const { buildSystemMetadata } = require('./utils/precision-builder');
 const AntikytheraEngine = require('./engine');
 
 const app = express();
@@ -79,7 +82,7 @@ function getObserverLocation(req) {
       latitude: parseFloat(req.query.lat),
       longitude: parseFloat(req.query.lon),
       elevation: parseFloat(req.query.elev) || 0,
-      source: 'manual'
+      source: 'query'
     };
   }
   
@@ -117,7 +120,7 @@ function getObserverLocation(req) {
     elevation: 0,
     city: 'Athens',
     country: 'Greece',
-    source: 'default'
+    source: 'fallback'
   };
 }
 
@@ -129,6 +132,7 @@ app.get('/api/display', (req, res) => {
     const observer = getObserverLocation(req);
     const latitude = observer.latitude;
     const longitude = observer.longitude;
+    const fullPrecision = req.query.precision === 'full';
     
     const state = engine.getState(date, latitude, longitude);
     
@@ -268,56 +272,42 @@ app.get('/api/display', (req, res) => {
       }
     }
     
+    const eclipticCoords = {
+      sun: { lon: state.sun.longitude, lat: state.sun.latitude },
+      moon: { lon: state.moon.longitude, lat: state.moon.latitude },
+      mercury: { lon: state.planets.mercury.longitude, lat: state.planets.mercury.latitude },
+      venus: { lon: state.planets.venus.longitude, lat: state.planets.venus.latitude },
+      mars: { lon: state.planets.mars.longitude, lat: state.planets.mars.latitude },
+      jupiter: { lon: state.planets.jupiter.longitude, lat: state.planets.jupiter.latitude },
+      saturn: { lon: state.planets.saturn.longitude, lat: state.planets.saturn.latitude }
+    };
+
+    const debugData = {
+      sun_altitude: sunAltitude,
+      twilight_stage: twilightStage,
+      visibility_threshold: -6,
+      planets_above_horizon: planetsAboveHorizon,
+      sunrise: state.sunVisibility.sunrise ? state.sunVisibility.sunrise.time : null,
+      sunset: state.sunVisibility.sunset ? state.sunVisibility.sunset.time : null,
+      next_visibility_window: nextVisibilityWindow,
+    };
+
     const system = {
-      healthy: true,
-      cached: false,
-      computation_time_ms: Date.now() - startTime,
+      ...buildSystemMetadata({
+        cached: false,
+        computationTime: Date.now() - startTime,
+        fullPrecision,
+        eclipticCoords,
+        debugData,
+      }),
       observer: {
         latitude: observer.latitude,
         longitude: observer.longitude,
         elevation: observer.elevation,
         city: observer.city || null,
         country: observer.country || null,
-        source: observer.source
-      },
-      debug: {
-        sun_altitude: sunAltitude,
-        twilight_stage: twilightStage,
-        visibility_threshold: -6,
-        planets_above_horizon: planetsAboveHorizon,
-        sunrise: state.sunVisibility.sunrise ? state.sunVisibility.sunrise.time : null,
-        sunset: state.sunVisibility.sunset ? state.sunVisibility.sunset.time : null,
-        next_visibility_window: nextVisibilityWindow,
-        ecliptic_coordinates: {
-          sun: {
-            lon: state.sun.longitude,
-            lat: state.sun.latitude
-          },
-          moon: {
-            lon: state.moon.longitude,
-            lat: state.moon.latitude
-          },
-          mercury: {
-            lon: state.planets.mercury.longitude,
-            lat: state.planets.mercury.latitude
-          },
-          venus: {
-            lon: state.planets.venus.longitude,
-            lat: state.planets.venus.latitude
-          },
-          mars: {
-            lon: state.planets.mars.longitude,
-            lat: state.planets.mars.latitude
-          },
-          jupiter: {
-            lon: state.planets.jupiter.longitude,
-            lat: state.planets.jupiter.latitude
-          },
-          saturn: {
-            lon: state.planets.saturn.longitude,
-            lat: state.planets.saturn.latitude
-          }
-        }
+        source: observer.source,
+        time_scale: 'UTC'
       }
     };
     
@@ -423,8 +413,42 @@ app.get('/api/display', (req, res) => {
   }
 });
 
+// System metadata endpoint only
+app.get('/api/system', (req, res) => {
+  try {
+    const startTime = Date.now();
+    const observer = getObserverLocation(req);
+    const system = {
+      ...buildSystemMetadata({
+        cached: false,
+        computationTime: Date.now() - startTime,
+        fullPrecision: false,
+        eclipticCoords: {},
+        debugData: {},
+      }),
+      observer: {
+        latitude: observer.latitude,
+        longitude: observer.longitude,
+        elevation: observer.elevation,
+        city: observer.city || null,
+        country: observer.country || null,
+        source: observer.source,
+        time_scale: 'UTC'
+      }
+    };
+
+    res.json({
+      timestamp: new Date().toISOString(),
+      system,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Antikythera Engine API running on http://localhost:${PORT}`);
   console.log(`Try: http://localhost:${PORT}/api/state`);
   console.log(`Hybrid display: http://localhost:${PORT}/api/display`);
+  console.log(`System metadata: http://localhost:${PORT}/api/system`);
 });
