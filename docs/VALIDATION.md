@@ -2,7 +2,7 @@
 
 ## Overview
 
-The API includes ecliptic coordinates in the `debug` section for validation against NASA JPL HORIZONS, the gold standard for solar system ephemerides.
+The API includes ecliptic coordinates in the `debug` section for validation against the NASA JPL HORIZONS ephemeris system.
 
 ## API Structure
 
@@ -92,10 +92,10 @@ curl "http://localhost:3000/api/display?lat=40.7&lon=-74.0"
 
 ## Current Performance
 
-- **Latitude**: ~12 arcsec difference (EXCELLENT ✅)
-- **Longitude**: ~1335 arcsec difference (acceptable for display)
+- Latitude: ~12 arcsec difference (typical)
+- Longitude: ~1335 arcsec difference (observed prior to frame/epoch alignment)
 
-The longitude offset is due to topocentric vs geocentric reference frames and is within the lunar disk diameter (~0.5°).
+Note: Subsequent frame/epoch alignment yields arcsecond-level agreement across bodies (see below).
 
 ## Manual HORIZONS Verification
 

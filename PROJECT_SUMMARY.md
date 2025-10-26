@@ -2,7 +2,7 @@
 
 ## 🎯 What We Built
 
-A beautiful, component-based web display of the three faces of the Antikythera mechanism showing real astronomical data.
+A component-based web display of the three faces of the Antikythera mechanism showing astronomical data.
 
 ## 📂 Project Structure
 
@@ -95,11 +95,11 @@ npm start
 
 ### Why This Works
 
-1. **astronomy-engine** does the heavy lifting
-2. **Components** are isolated and reusable
-3. **Themes** are just CSS variables
-4. **Layouts** are just CSS classes
-5. **No build step** - just open in browser
+1. astronomy-engine provides the ephemeris calculations
+2. Components are isolated and reusable
+3. Themes are defined via CSS variables
+4. Layouts are CSS classes
+5. No build step — open in a browser
 
 ## 🎨 Design Principles
 
@@ -193,7 +193,7 @@ npm start
    - Three faces match archaeological evidence
    - Astronomical calculations are precise
 
-2. **Beautifully Rendered**
+2. **Rendering**
    - Canvas drawing with attention to detail
    - Theme system for different aesthetics
    - Smooth animations
@@ -208,7 +208,7 @@ npm start
    - Theme system is simple
    - API is straightforward
 
-5. **Production Ready**
+5. **Operational Considerations**
    - Error handling
    - Responsive design
    - Multiple viewing modes
@@ -256,6 +256,6 @@ You now have a **beautiful, extensible, educational display** of the Antikythera
 ✅ Has no framework dependencies
 ✅ Runs with zero configuration
 
-**Perfect for:** museums, education, digital art, planetariums, offices, homes
+**Suitable for:** museums, education, digital art, planetariums, offices, homes
 
 **The mechanism IS the art** - and now you can display it beautifully on any screen! 🌟
