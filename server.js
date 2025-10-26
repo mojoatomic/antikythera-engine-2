@@ -108,6 +108,14 @@ app.get('/api/display', (req, res) => {
         saturn: {
           position: state.planets.saturn.longitude,
           velocity: state.planets.saturn.velocity
+        },
+        lunar_nodes_ascending: {
+          position: state.lunarNodes.ascendingNode,
+          velocity: state.lunarNodes.motionRate
+        },
+        lunar_nodes_descending: {
+          position: state.lunarNodes.descendingNode,
+          velocity: state.lunarNodes.motionRate
         }
       },
       servos: {
