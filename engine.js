@@ -1,4 +1,5 @@
 const astronomy = require('astronomy-engine');
+const TimeUtils = require('./utils/time');
 
 class AntikytheraEngine {
   /**
@@ -10,11 +11,8 @@ class AntikytheraEngine {
     
     // Find sunrise and sunset for this day
     // Use a search window that ensures we get today's sunrise/sunset
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = TimeUtils.utcStartOfDay(date);
+    const endOfDay = TimeUtils.utcEndOfDay(date);
     
     let sunrise = null;
     let sunset = null;
@@ -22,21 +20,26 @@ class AntikytheraEngine {
     try {
       // Search for sunrise (sun rising above horizon) within today
       sunrise = astronomy.SearchRiseSet('Sun', observer, 1, startOfDay, 1);
-      // Verify it's actually today
-      if (sunrise && (sunrise.date || sunrise).toDateString() !== date.toDateString()) {
-        sunrise = null;
+      // Verify it's actually today (using UTC date comparison)
+      if (sunrise) {
+        const sunriseDate = sunrise.date || sunrise;
+        if (!TimeUtils.sameUtcDate(sunriseDate, date)) {
+          sunrise = null;
+        }
       }
       
       // Search for sunset (sun setting below horizon) within today
       sunset = astronomy.SearchRiseSet('Sun', observer, -1, startOfDay, 1);
-      // Verify it's actually today  
-      if (sunset && (sunset.date || sunset).toDateString() !== date.toDateString()) {
-        sunset = null;
+      // Verify it's actually today (using UTC date comparison)
+      if (sunset) {
+        const sunsetDate = sunset.date || sunset;
+        if (!TimeUtils.sameUtcDate(sunsetDate, date)) {
+          sunset = null;
+        }
       }
     } catch (e) {
       // Handle polar day/night (no sunrise or sunset)
-      const noon = new Date(date);
-      noon.setHours(12, 0, 0, 0);
+      const noon = TimeUtils.utcNoon(date);
       const noonSun = this.getSunPosition(noon, observer);
       
       if (noonSun.altitude > 0) {
@@ -117,9 +120,8 @@ class AntikytheraEngine {
    * Calculate Equation of Time - difference between apparent and mean solar time
    */
   getEquationOfTime(date) {
-    // Calculate day of year
-    const startOfYear = new Date(date.getFullYear(), 0, 1);
-    const dayOfYear = Math.floor((date - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+    // Calculate fractional day of year using centralized time utilities
+    const dayOfYear = TimeUtils.fractionalDayOfYear(date);
     
     // B parameter (in radians)
     const B = (2 * Math.PI / 365.25) * (dayOfYear - 81);
@@ -248,18 +250,21 @@ class AntikytheraEngine {
   }
 
   getEgyptianCalendar(date) {
-    // Egyptian calendar: 12 months of 30 days + 5 epagomenal days
-    // Starting from a reference point (roughly aligned with Gregorian calendar)
-    const startOfYear = new Date(date.getFullYear(), 0, 1);
-    const dayOfYear = Math.floor((date - startOfYear) / (1000 * 60 * 60 * 24));
+    // Modern accurate solar year position
+    // Maps the full solar year (365.25 days) to 360 degrees for smooth display
     
-    const month = Math.floor(dayOfYear / 30) + 1;
-    const day = (dayOfYear % 30) + 1;
+    // Use centralized time utilities for accurate year progress
+    const egyptianDayFloat = TimeUtils.yearProgress360(date);
+    const egyptianDay = Math.floor(egyptianDayFloat) + 1; // 1-360, 1-indexed
+    
+    // Traditional Egyptian month/day (12 months of 30 days)
+    const month = Math.floor(egyptianDayFloat / 30) + 1;
+    const day = Math.floor(egyptianDayFloat % 30) + 1;
     
     return {
-      month: Math.min(month, 13), // Month 13 = epagomenal days
+      month: Math.min(month, 13), // Month 13 = last 60 degrees
       day: day,
-      dayOfYear: dayOfYear
+      dayOfYear: egyptianDayFloat // Return fractional value for smooth animation (0-360)
     };
   }
 

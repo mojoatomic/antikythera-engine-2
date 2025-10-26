@@ -140,7 +140,7 @@ function animateForward() {
     animationInterval = setInterval(() => {
         const dateInput = document.getElementById('dateInput');
         const currentDate = new Date(dateInput.value || new Date());
-        currentDate.setDate(currentDate.getDate() + 1); // Advance by 1 day
+        currentDate.setUTCDate(currentDate.getUTCDate() + 1); // Advance by 1 day
         
         const localDateTime = new Date(currentDate.getTime() - currentDate.getTimezoneOffset() * 60000)
             .toISOString()

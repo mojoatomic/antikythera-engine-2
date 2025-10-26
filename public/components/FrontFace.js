@@ -202,9 +202,9 @@ class FrontFace {
     // === 3. MARKERS showing current time of day positions ===
     
     // Calculate time of day angles (0-24 hours maps to 0-360 degrees)
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const seconds = date.getSeconds();
+    const hours = date.getUTCHours();
+    const minutes = date.getUTCMinutes();
+    const seconds = date.getUTCSeconds();
     
     // Mean solar time (clock time) - simple hour angle
     const meanTimeHours = hours + minutes / 60 + seconds / 3600;
