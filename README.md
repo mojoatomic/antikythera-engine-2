@@ -93,13 +93,48 @@ curl http://localhost:3000/api/display
   "timestamp": "2025-10-26T15:28:33.459Z",
   "mechanical": {
     "steppers": {
-      "sun": { "position": 213.47, "velocity": 0.998 },
-      "moon": { "position": 270.00, "velocity": 11.97 },
-      "mercury": { "position": 236.97, "velocity": 1.113 },
-      "venus": { "position": 195.88, "velocity": 1.248 },
-      "mars": { "position": 233.67, "velocity": 0.708 },
-      "jupiter": { "position": 114.73, "velocity": 0.050 },
-      "saturn": { "position": 356.06, "velocity": -0.052 },
+      "sun": { 
+        "position": 213.47, 
+        "velocity": 0.998,
+        "altitude": 1.26,
+        "azimuth": 253.23
+      },
+      "moon": { 
+        "position": 270.00, 
+        "velocity": 11.97,
+        "altitude": 20.28,
+        "azimuth": 200.07
+      },
+      "mercury": { 
+        "position": 236.97, 
+        "velocity": 1.113,
+        "altitude": -15.47,
+        "azimuth": 290.12
+      },
+      "venus": { 
+        "position": 195.88, 
+        "velocity": 1.248,
+        "altitude": -8.33,
+        "azimuth": 270.45
+      },
+      "mars": { 
+        "position": 233.67, 
+        "velocity": 0.708,
+        "altitude": -12.89,
+        "azimuth": 285.67
+      },
+      "jupiter": { 
+        "position": 114.73, 
+        "velocity": 0.050,
+        "altitude": 45.21,
+        "azimuth": 145.33
+      },
+      "saturn": { 
+        "position": 356.06, 
+        "velocity": -0.052,
+        "altitude": 22.14,
+        "azimuth": 98.76
+      },
       "lunar_nodes_ascending": { "position": 345.67, "velocity": -0.053 },
       "lunar_nodes_descending": { "position": 165.67, "velocity": -0.053 }
     },
@@ -138,6 +173,11 @@ curl http://localhost:3000/api/display
       }
     }
   },
+  "next_opposition": {
+    "planet": "Mars",
+    "date": "2026-01-09T08:30:00.000Z",
+    "daysUntil": 75.2
+  },
   "update_hints": {
     "mechanical": 10000,
     "digital": 1000
@@ -148,8 +188,11 @@ curl http://localhost:3000/api/display
 **Units and conventions:**
 - **position:** Ecliptic longitude in degrees [0, 360)
 - **velocity:** Degrees per day (negative values indicate retrograde motion)
+- **altitude:** Degrees above horizon [-90, 90] (negative = below horizon)
+- **azimuth:** Compass direction in degrees [0, 360) (0=North, 90=East, 180=South, 270=West)
 - **angle:** Servo position in degrees (0=prograde, 180=retrograde)
 - **brightness:** LED brightness [0, 255]
+- **daysUntil:** Fractional days until event
 - **update_hints:** Suggested update intervals in milliseconds
 
 ### Detailed Astronomical Data
