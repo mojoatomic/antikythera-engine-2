@@ -114,25 +114,19 @@ class AntikytheraEngine {
     // Equation of Time in minutes (simplified formula)
     const EoT = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
     
+    // Mean sun longitude (uniform motion: 360° / 365.25 days)
+    // This represents where the sun WOULD be if it moved uniformly
+    const meanLongitude = ((dayOfYear - 1) * (360 / 365.25)) % 360;
+    
     // Get actual sun position for apparent longitude
     const observer = new astronomy.Observer(37.5, 23.0, 0);
     const sunPos = this.getSunPosition(date, observer);
     const apparentLongitude = sunPos.longitude;
     
-    // Mean sun: apparent sun adjusted by equation of time
-    // EoT is in minutes, convert to degrees (1 minute = 0.25 degrees of longitude)
-    const eotDegrees = EoT / 4;
-    // Mean sun is ahead/behind apparent sun by the EoT amount
-    let meanLongitude = apparentLongitude - eotDegrees;
-    
-    // Normalize to 0-360
-    if (meanLongitude < 0) meanLongitude += 360;
-    if (meanLongitude >= 360) meanLongitude -= 360;
-    
     return {
       equationOfTime: {
         minutes: EoT,
-        degrees: eotDegrees,
+        degrees: EoT / 4,
         status: EoT > 0 ? 'ahead' : 'behind'
       },
       meanSun: {
