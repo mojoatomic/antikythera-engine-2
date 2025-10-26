@@ -223,3 +223,42 @@ const startOfYear = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
 // Use:
 const startOfYear = TimeUtils.startOfYear(date);
 ```
+
+## GitHub Workflow
+
+### Managing Labels
+
+Always check existing labels before creating GitHub issues to avoid errors:
+
+```bash
+# List all labels
+gh label list
+
+# List with full details (JSON)
+gh label list --json name,color,description
+
+# Get just label names
+gh label list --json name --jq '.[].name'
+
+# Create a new label
+gh label create "label-name" --color "HEX" --description "Label description"
+
+# Edit existing label
+gh label edit "label-name" --color "HEX" --description "New description"
+
+# Delete a label
+gh label delete "label-name"
+
+# Open labels page in browser
+gh label list --web
+```
+
+**Project Labels:**
+- `enhancement` - New feature or request
+- `bug` - Something isn't working
+- `documentation` - Improvements or additions to documentation
+- `api` - API endpoint development
+- `hardware-integration` - Physical device / motor control features
+- `phase-1`, `phase-2`, `phase-3` - Phased development tracking
+
+**Always check labels exist before creating issues** to prevent `gh issue create` failures.
