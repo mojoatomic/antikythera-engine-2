@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const geoip = require('geoip-lite');
 const { VALIDATION, CONVENTIONS } = require('./constants/validation');
 const { API_VERSION, ENGINE_VERSION, GIT_SHA } = require('./utils/metadata');
 const { buildSystemMetadata } = require('./utils/precision-builder');
+const { getObserverFromRequest } = require('./lib/location-service');
 const AntikytheraEngine = require('./engine');
 
 const app = express();
@@ -72,64 +72,13 @@ app.get('/api/planets', (req, res) => {
   }
 });
 
-/**
- * Get observer location from IP address or query parameters
- */
-function getObserverLocation(req) {
-  // Priority 1: Manual override from query params
-  if (req.query.lat && req.query.lon) {
-    return {
-      latitude: parseFloat(req.query.lat),
-      longitude: parseFloat(req.query.lon),
-      elevation: parseFloat(req.query.elev) || 0,
-      source: 'query'
-    };
-  }
-  
-  // Priority 2: IP geolocation
-  try {
-    let clientIP = req.headers['x-forwarded-for']?.split(',')[0] || 
-                   req.socket.remoteAddress || 
-                   req.connection.remoteAddress;
-    
-    // For local testing, use a test IP (Google DNS -> Mountain View, CA)
-    if (clientIP === '127.0.0.1' || clientIP === '::1' || clientIP === '::ffff:127.0.0.1') {
-      clientIP = '8.8.8.8';
-    }
-    
-    const geo = geoip.lookup(clientIP);
-    
-    if (geo && geo.ll) {
-      return {
-        latitude: geo.ll[0],
-        longitude: geo.ll[1],
-        elevation: 0,
-        city: geo.city,
-        country: geo.country,
-        source: 'ip_geolocation'
-      };
-    }
-  } catch (error) {
-    console.log('IP geolocation failed:', error.message);
-  }
-  
-  // Priority 3: Default to Athens (historical Antikythera mechanism location)
-  return {
-    latitude: 37.5,
-    longitude: 23.0,
-    elevation: 0,
-    city: 'Athens',
-    country: 'Greece',
-    source: 'fallback'
-  };
-}
 
 // Hybrid display endpoint - mechanical + digital data for physical device
-app.get('/api/display', (req, res) => {
+app.get('/api/display', async (req, res) => {
   try {
     const startTime = Date.now();
     const date = req.query.date ? new Date(req.query.date) : new Date();
-    const observer = getObserverLocation(req);
+    const observer = await getObserverFromRequest(req);
     const latitude = observer.latitude;
     const longitude = observer.longitude;
     const fullPrecision = req.query.precision === 'full';
@@ -414,10 +363,10 @@ app.get('/api/display', (req, res) => {
 });
 
 // System metadata endpoint only
-app.get('/api/system', (req, res) => {
+app.get('/api/system', async (req, res) => {
   try {
     const startTime = Date.now();
-    const observer = getObserverLocation(req);
+    const observer = await getObserverFromRequest(req);
     const system = {
       ...buildSystemMetadata({
         cached: false,
