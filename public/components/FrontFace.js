@@ -255,12 +255,12 @@ class FrontFace {
       // Calculate sunrise time in hours (from local time string)
       const sunriseTime = new Date(vis.sunrise.time);
       const sunriseHours = sunriseTime.getHours() + sunriseTime.getMinutes() / 60;
-      const sunriseAngle = (sunriseHours * 15 - 90) * Math.PI / 180; // No ecliptic rotation - fixed to time of day
+      const sunriseAngle = (sunriseHours * 15 - 90) * Math.PI / 180 + eclipticRotation; // Rotate with heliostat rings
       
       // Calculate sunset time in hours
       const sunsetTime = new Date(vis.sunset.time);
       const sunsetHours = sunsetTime.getHours() + sunsetTime.getMinutes() / 60;
-      const sunsetAngle = (sunsetHours * 15 - 90) * Math.PI / 180; // No ecliptic rotation - fixed to time of day
+      const sunsetAngle = (sunsetHours * 15 - 90) * Math.PI / 180 + eclipticRotation; // Rotate with heliostat rings
       
       // Sunrise marker (on both rings) - ORANGE
       const sunriseOuterX = this.centerX + Math.cos(sunriseAngle) * outerRingRadius;
