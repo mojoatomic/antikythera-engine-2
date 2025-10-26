@@ -391,100 +391,75 @@ class AntikytheraEngine {
   }
 
   /**
-   * Find the next planetary opposition
-   * Opposition: when a planet is 180° from the Sun as viewed from Earth
-   * This is the optimal time for observation (planet is closest and fully illuminated)
+   * Find the next planetary opposition (frame-stable)
+   * Opposition occurs when the planet's geocentric ecliptic longitude is 180° from the Sun's.
+   * Uses Astronomy.PairLongitude and a bracket + bisection search for accuracy.
    */
   getNextOpposition(date, maxDays = 1095) {
-    // Approximate synodic periods (days between oppositions)
-    const synodicPeriods = {
-      'Mars': 780,
-      'Jupiter': 399,
-      'Saturn': 378
-    };
-    
     const planets = ['Mars', 'Jupiter', 'Saturn'];
-    const oppositions = [];
-    
+    const synodic = { Mars: 780, Jupiter: 399, Saturn: 378 };
+
+    // Normalize angle to [0,360)
+    const norm = (a) => ((a % 360) + 360) % 360;
+    // Signed smallest difference a-b in [-180,180]
+    const diff = (a, b) => {
+      let d = norm(a) - norm(b);
+      if (d > 180) d -= 360;
+      if (d < -180) d += 360;
+      return d;
+    };
+
+    const rel = (planet, t) => astronomy.PairLongitude(planet, 'Sun', t);
+
+    const findOpposition = (planet, start) => {
+      const limit = synodic[planet] || 800;
+      const end = new Date(start.getTime() + limit * 86400000);
+      // Coarse daily scan to find sign change around target 180°
+      let t0 = new Date(start);
+      let f0 = diff(rel(planet, t0), 180);
+      for (let t = new Date(t0.getTime() + 86400000); t <= end; t = new Date(t.getTime() + 86400000)) {
+        const f1 = diff(rel(planet, t), 180);
+        if (f0 === 0) return t0;
+        if (f0 * f1 <= 0) {
+          // Bracket found between t0 and t
+          let lo = t0, hi = t;
+          for (let i = 0; i < 30; i++) {
+            const mid = new Date((lo.getTime() + hi.getTime()) / 2);
+            const fm = diff(rel(planet, mid), 180);
+            if (f0 * fm <= 0) {
+              hi = mid;
+            } else {
+              lo = mid;
+              f0 = fm;
+            }
+            if ((hi.getTime() - lo.getTime()) < 1000) break; // ~1s
+          }
+          return new Date((lo.getTime() + hi.getTime()) / 2);
+        }
+        t0 = t; f0 = f1;
+      }
+      return null;
+    };
+
+    const results = [];
     for (const planet of planets) {
       try {
-        const synodicPeriod = synodicPeriods[planet];
-        
-        // Calculate elongation helper
-        const observer = new astronomy.Observer(0, 0, 0); // Geocentric (Earth center)
-        const getElongation = (searchDate) => {
-          const sunEq = astronomy.Equator('Sun', searchDate, observer, true, true);
-          const sunEcl = astronomy.Ecliptic(sunEq.vec);
-          const sunLon = sunEcl.elon;
-          
-          const planetEq = astronomy.Equator(planet, searchDate, observer, true, true);
-          const planetEcl = astronomy.Ecliptic(planetEq.vec);
-          const planetLon = planetEcl.elon;
-          
-          // Calculate elongation (angular separation from Sun)
-          // Result should be 0-180° (opposition = 180°)
-          let elongation = Math.abs(planetLon - sunLon);
-          if (elongation > 180) elongation = 360 - elongation;
-          
-          return elongation;
-        };
-        
-        // Start search from today, looking forward up to 1.2x synodic period
-        let searchStart = new Date(date);
-        let searchEnd = new Date(date.getTime() + (synodicPeriod * 1.2) * 24 * 60 * 60 * 1000);
-        
-        // Binary search for opposition (when elongation = 180°)
-        let bestDate = null;
-        let bestElongation = 0;
-        
-        // Coarse search (10-day steps)
-        for (let t = searchStart; t <= searchEnd; t = new Date(t.getTime() + 10 * 24 * 60 * 60 * 1000)) {
-          const elong = getElongation(t);
-          if (elong > bestElongation) {
-            bestElongation = elong;
-            bestDate = new Date(t);
-          }
-        }
-        
-        if (bestDate && bestElongation > 170) {
-          // Fine search around best date (1-day steps)
-          const fineStart = new Date(bestDate.getTime() - 20 * 24 * 60 * 60 * 1000);
-          const fineEnd = new Date(bestDate.getTime() + 20 * 24 * 60 * 60 * 1000);
-          
-          for (let t = fineStart; t <= fineEnd; t = new Date(t.getTime() + 24 * 60 * 60 * 1000)) {
-            const elong = getElongation(t);
-            if (elong > bestElongation) {
-              bestElongation = elong;
-              bestDate = new Date(t);
-            }
-          }
-          
-          const daysUntil = (bestDate - date) / (1000 * 60 * 60 * 24);
-          oppositions.push({
-            planet: planet,
-            date: bestDate.toISOString(),
-            daysUntil: daysUntil,
-            elongation: bestElongation
+        const when = findOpposition(planet, date);
+        if (when) {
+          results.push({
+            planet,
+            date: when.toISOString(),
+            daysUntil: (when - date) / 86400000
           });
         }
       } catch (_err) {
-        // Skip this planet if calculation fails
-        continue;
+        // skip
       }
     }
-    
-    // Sort by days until opposition (soonest first)
-    oppositions.sort((a, b) => a.daysUntil - b.daysUntil);
-    
-    if (oppositions.length === 0) {
-      return {
-        error: 'No oppositions found within search window',
-        searchedDays: maxDays
-      };
-    }
-    
-    // Return next opposition
-    return oppositions[0];
+
+    if (!results.length) return { error: 'No oppositions found', searchedDays: maxDays };
+    results.sort((a, b) => a.daysUntil - b.daysUntil);
+    return results[0];
   }
 
   /**
