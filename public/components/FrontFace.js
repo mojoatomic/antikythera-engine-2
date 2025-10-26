@@ -91,8 +91,8 @@ class FrontFace {
     const date = new Date(data.date);
     
     // Ring dimensions - OUTERMOST rings
-    const outerRingRadius = this.maxRadius + 50;
-    const innerRingRadius = this.maxRadius + 30;
+    const outerRingRadius = this.maxRadius + 35;
+    const innerRingRadius = this.maxRadius + 15;
     
     // Get sun's ecliptic longitude to rotate entire ring system
     const sunLongitude = data.sun.longitude;
