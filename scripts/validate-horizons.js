@@ -17,54 +17,65 @@ const engine = new AntikytheraEngine();
  * Command: 301 (Moon)
  * Center: 500@399 (Geocentric)
  */
-async function queryHORIZONS(date) {
+async function queryHORIZONS(date, latitude = 37.5, longitude = 23.0) {
+  // HORIZONS requires STOP_TIME > START_TIME; request a 1-minute window
+  const stop = new Date(date.getTime() + 60 * 1000);
+
   const params = new URLSearchParams({
     format: 'text',
-    COMMAND: '301',           // Moon
-    OBJ_DATA: 'YES',
+    COMMAND: "'301'",           // Moon (quoted per HORIZONS examples)
     MAKE_EPHEM: 'YES',
     EPHEM_TYPE: 'OBSERVER',
-    CENTER: '500@399',        // Geocentric
-    START_TIME: date.toISOString().split('.')[0].replace('T', ' '),
-    STOP_TIME: date.toISOString().split('.')[0].replace('T', ' '),
-    STEP_SIZE: '1m',
-    QUANTITIES: '31',         // Full observer data
-    CSV_FORMAT: 'NO'
+    // Topocentric Athens (lon,lat,elevkm): use coord@399 with GEODETIC
+    CENTER: "'coord@399'",
+    COORD_TYPE: 'GEODETIC',
+    SITE_COORD: `'${longitude},${latitude},0'`,
+    START_TIME: `'${date.toISOString().slice(0,16).replace('T',' ')}'`,
+    STOP_TIME: `'${stop.toISOString().slice(0,16).replace('T',' ')}'`,
+    STEP_SIZE: "'1 m'",         // URL-safe with quotes; space allowed
+    QUANTITIES: "'31'",         // 31 = Observer ecliptic lon/lat (ObsEcLon, ObsEcLat)
+    ANG_FORMAT: 'DEG',           // angles in degrees
+    TIME_TYPE: 'UT',
+    TIME_DIGITS: 'SECONDS',
+    CSV_FORMAT: 'YES'            // easier to parse
   });
 
   const url = `https://ssd.jpl.nasa.gov/api/horizons.api?${params}`;
   
   console.log('\n🔍 Querying NASA HORIZONS...');
+  console.log(`URL: ${url}`);
   
   try {
     const response = await fetch(url);
     const text = await response.text();
-    
-    // Parse ecliptic longitude from HORIZONS output
-    // Look for "ObsEcLon" or similar in the output
-    const eclipticMatch = text.match(/ObsEcLon[^\d]+([\d.]+)/i);
-    const latitudeMatch = text.match(/ObsEcLat[^\d-]+([-\d.]+)/i);
-    
-    if (!eclipticMatch) {
-      console.log('⚠️  Could not parse HORIZONS response.');
-      console.log('Attempting alternative parsing...\n');
-      
-      // Try to find ecliptic coordinates in table format
-      const lines = text.split('\n');
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].includes('ObsEcLon') || lines[i].includes('ObsEcLat')) {
-          console.log('Found: ', lines[i]);
-        }
-      }
-      
+
+    // Extract CSV header and first data row between $$SOE and $$EOE
+    const lines = text.split('\n');
+    // In CSV mode, header labels line is two lines before $$SOE
+    const headerIndex = lines.findIndex(l => l.includes('$$SOE')) - 2; // header labels line
+    const startIndex = lines.findIndex(l => l.includes('$$SOE')) + 1;
+    const endIndex = lines.findIndex(l => l.includes('$$EOE'));
+
+    if (headerIndex < 0 || startIndex < 0 || endIndex < 0 || startIndex >= endIndex) {
+      console.log('⚠️  Could not locate CSV data section in HORIZONS output.');
       return null;
     }
-    
-    return {
-      longitude: parseFloat(eclipticMatch[1]),
-      latitude: latitudeMatch ? parseFloat(latitudeMatch[1]) : null
-    };
-    
+
+    const header = lines[headerIndex].split(',').map(s => s.replace(/(^\"|\"$)/g,'').trim());
+    const dataRow = lines[startIndex].split(',').map(s => s.replace(/(^\"|\"$)/g,'').trim());
+
+    const lonIdx = header.findIndex(h => /ObsEcLon/i.test(h));
+    const latIdx = header.findIndex(h => /ObsEcLat/i.test(h));
+
+    if (lonIdx === -1 || latIdx === -1) {
+      console.log('⚠️  ObsEcLon/ObsEcLat not found in CSV header.');
+      return null;
+    }
+
+    const longitude = parseFloat(dataRow[lonIdx]);
+    const latitude = parseFloat(dataRow[latIdx]);
+
+    return { longitude, latitude };
   } catch (error) {
     console.error('❌ Error querying HORIZONS:', error.message);
     return null;
@@ -126,20 +137,21 @@ function displayComparison(yourData, horizons, astroEngine) {
   if (horizons) {
     console.log('\n🛰️  NASA HORIZONS (JPL):');
     console.log(`  Ecliptic Longitude: ${horizons.longitude.toFixed(6)}°`);
-    if (horizons.latitude !== null) {
-      console.log(`  Ecliptic Latitude:  ${horizons.latitude.toFixed(6)}°`);
-    }
+    console.log(`  Ecliptic Latitude:  ${horizons.latitude.toFixed(6)}°`);
     
-    const diff = Math.abs(yourData.moon.longitude - horizons.longitude);
+    const diffLon = Math.abs(yourData.moon.longitude - horizons.longitude);
+    const diffLat = Math.abs(yourData.moon.latitude - horizons.latitude);
+    
     console.log('\n📊 DIFFERENCE vs HORIZONS:');
-    console.log(`  Δ Longitude: ${diff.toFixed(6)}° (${(diff * 3600).toFixed(2)} arcsec)`);
+    console.log(`  Δ Longitude: ${diffLon.toFixed(6)}° (${(diffLon * 3600).toFixed(2)} arcsec)`);
+    console.log(`  Δ Latitude:  ${diffLat.toFixed(6)}° (${(diffLat * 3600).toFixed(2)} arcsec)`);
     
     // Moon diameter is ~0.5°, so ±0.1° is good precision
-    if (diff < 0.01) {
+    if (diffLon < 0.01 && diffLat < 0.01) {
       console.log('  ✅ EXCELLENT - Professional precision (<0.01°)');
-    } else if (diff < 0.1) {
+    } else if (diffLon < 0.1 && diffLat < 0.1) {
       console.log('  ✅ GOOD - Display quality precision (<0.1°)');
-    } else if (diff < 0.5) {
+    } else if (diffLon < 0.5 && diffLat < 0.5) {
       console.log('  ✓ ACCEPTABLE - Within moon diameter');
     } else {
       console.log('  ⚠️  WARNING - Exceeds expected tolerance');
@@ -165,7 +177,11 @@ async function main() {
   console.log(`Test Date: ${date.toISOString()}\n`);
   
   // Get our engine's calculation
-  const state = engine.getState(date);
+  // Use Athens by default (37.5N, 23E) to match our engine defaults
+  const latitude = 37.5;
+  const longitude = 23.0;
+
+  const state = engine.getState(date, latitude, longitude);
   const yourData = {
     timestamp: state.date,
     moon: state.moon
@@ -175,7 +191,7 @@ async function main() {
   const astroEngine = getEnginePosition(date);
   
   // Get HORIZONS data (gold standard)
-  const horizons = await queryHORIZONS(date);
+  const horizons = await queryHORIZONS(date, latitude, longitude);
   
   displayComparison(yourData, horizons, astroEngine);
   
