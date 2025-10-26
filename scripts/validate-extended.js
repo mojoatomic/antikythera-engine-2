@@ -122,7 +122,7 @@ async function main() {
           const dlat = Math.abs(h.lat - mine.lat) * 3600;
           perBody[body].lon.push(dlon);
           perBody[body].lat.push(dlat);
-        } catch (err) {
+        } catch (_err) {
           // Skip sample on error for this body
         }
       }

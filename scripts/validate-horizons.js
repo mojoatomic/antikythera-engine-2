@@ -94,7 +94,7 @@ function getEnginePosition(date) {
       longitude: ecliptic.elon,
       latitude: ecliptic.elat
     };
-  } catch (error) {
+  } catch (_error) {
     // astronomy-engine direct comparison not available - skip it
     return null;
   }
