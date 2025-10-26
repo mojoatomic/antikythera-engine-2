@@ -178,6 +178,20 @@ GET /api/state?date=2024-06-21T12:00:00Z
 - `GET /api/moon` - Moon position and phase
 - `GET /api/planets` - All planetary positions
 
+## Validation
+
+- Quick check (Moon):
+```bash path=null start=null
+node scripts/validate-simple.js
+```
+
+- Comprehensive (all bodies vs HORIZONS):
+```bash path=null start=null
+node scripts/validate-all-bodies.js
+```
+
+See `docs/VALIDATION.md` for details, coordinate frames, and expected output.
+
 ## Response Format
 
 ```json
