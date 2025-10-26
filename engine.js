@@ -2,13 +2,152 @@ const astronomy = require('astronomy-engine');
 
 class AntikytheraEngine {
   /**
+   * Calculate sun visibility and daylight information for a given location and time
+   */
+  getSunVisibility(date, observer) {
+    // Current sun position
+    const sunPos = this.getSunPosition(date, observer);
+    
+    // Find sunrise and sunset for this day
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    let sunrise = null;
+    let sunset = null;
+    
+    try {
+      // Search for sunrise (sun rising above horizon)
+      sunrise = astronomy.SearchRiseSet('Sun', observer, 1, startOfDay, 1);
+      // Search for sunset (sun setting below horizon)
+      sunset = astronomy.SearchRiseSet('Sun', observer, -1, startOfDay, 1);
+    } catch (e) {
+      // Handle polar day/night (no sunrise or sunset)
+      const noon = new Date(date);
+      noon.setHours(12, 0, 0, 0);
+      const noonSun = this.getSunPosition(noon, observer);
+      
+      if (noonSun.altitude > 0) {
+        // Polar day - sun never sets
+        return {
+          currentPosition: {
+            azimuth: sunPos.azimuth,
+            altitude: sunPos.altitude,
+            isVisible: true
+          },
+          sunrise: null,
+          sunset: null,
+          daylight: {
+            hours: 24,
+            percent: 1.0,
+            arcDegrees: 360,
+            type: 'polar_day'
+          }
+        };
+      } else {
+        // Polar night - sun never rises
+        return {
+          currentPosition: {
+            azimuth: sunPos.azimuth,
+            altitude: sunPos.altitude,
+            isVisible: false
+          },
+          sunrise: null,
+          sunset: null,
+          daylight: {
+            hours: 0,
+            percent: 0.0,
+            arcDegrees: 0,
+            type: 'polar_night'
+          }
+        };
+      }
+    }
+    
+    // Get sun positions at sunrise and sunset
+    const sunriseDate = sunrise ? (sunrise.date || sunrise) : null;
+    const sunsetDate = sunset ? (sunset.date || sunset) : null;
+    const sunrisePos = sunriseDate ? this.getSunPosition(sunriseDate, observer) : null;
+    const sunsetPos = sunsetDate ? this.getSunPosition(sunsetDate, observer) : null;
+    
+    // Calculate daylight duration
+    const daylightMs = sunsetDate - sunriseDate;
+    const daylightHours = daylightMs / (1000 * 60 * 60);
+    const daylightPercent = daylightHours / 24;
+    const arcDegrees = daylightPercent * 360;
+    
+    return {
+      currentPosition: {
+        azimuth: sunPos.azimuth,
+        altitude: sunPos.altitude,
+        isVisible: sunPos.altitude > 0
+      },
+      sunrise: sunrise ? {
+        time: sunrise.date || sunrise,
+        azimuth: sunrisePos.azimuth,
+        localTime: (sunrise.date || sunrise).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      } : null,
+      sunset: sunset ? {
+        time: sunset.date || sunset,
+        azimuth: sunsetPos.azimuth,
+        localTime: (sunset.date || sunset).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      } : null,
+      daylight: {
+        hours: daylightHours,
+        percent: daylightPercent,
+        arcDegrees: arcDegrees,
+        type: 'normal'
+      }
+    };
+  }
+
+  /**
+   * Calculate Equation of Time - difference between apparent and mean solar time
+   */
+  getEquationOfTime(date) {
+    // Calculate day of year
+    const startOfYear = new Date(date.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((date - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // B parameter (in radians)
+    const B = (2 * Math.PI / 365.25) * (dayOfYear - 81);
+    
+    // Equation of Time in minutes (simplified formula)
+    const EoT = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+    
+    // Mean sun longitude (uniform motion: 360° / 365.25 days)
+    const meanLongitude = ((dayOfYear - 1) * (360 / 365.25)) % 360;
+    
+    // Get actual sun position for apparent longitude
+    const observer = new astronomy.Observer(37.5, 23.0, 0);
+    const sunPos = this.getSunPosition(date, observer);
+    const apparentLongitude = sunPos.longitude;
+    
+    return {
+      equationOfTime: {
+        minutes: EoT,
+        degrees: EoT / 4,
+        status: EoT > 0 ? 'ahead' : 'behind'
+      },
+      meanSun: {
+        longitude: meanLongitude,
+        degreeOfYear: meanLongitude
+      },
+      apparentSun: {
+        longitude: apparentLongitude,
+        degreeOfYear: apparentLongitude
+      }
+    };
+  }
+
+  /**
    * Get the complete state of the Antikythera mechanism for a given date
    */
-  getState(date = new Date()) {
-    const observer = new astronomy.Observer(37.5, 23.0, 0); // Athens coordinates
+  getState(date = new Date(), latitude = 37.5, longitude = 23.0) {
+    const observer = new astronomy.Observer(latitude, longitude, 0);
     
     return {
       date: date.toISOString(),
+      location: { latitude, longitude },
       sun: this.getSunPosition(date, observer),
       moon: this.getMoonPosition(date, observer),
       planets: this.getPlanetaryPositions(date, observer),
@@ -16,7 +155,9 @@ class AntikytheraEngine {
       egyptianCalendar: this.getEgyptianCalendar(date),
       metonicCycle: this.getMetonicCycle(date),
       sarosCycle: this.getSarosCycle(date),
-      nextEclipse: this.getNextEclipse(date)
+      nextEclipse: this.getNextEclipse(date),
+      equationOfTime: this.getEquationOfTime(date),
+      sunVisibility: this.getSunVisibility(date, observer)
     };
   }
 
