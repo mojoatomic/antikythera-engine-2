@@ -169,63 +169,45 @@ class FrontFace {
       }
     }
     
-    // === 4. POINTERS showing current positions ===
+    // === 4. MARKERS showing current positions on rings ===
     
-    // Apparent Sun pointer (on outer ring) - BRIGHT GOLD
+    // Apparent Sun marker (on outer ring) - BRIGHT GOLD
     if (eot.apparentSun) {
       const apparentAngle = (eot.apparentSun.longitude - 90) * Math.PI / 180;
+      const markerX = this.centerX + Math.cos(apparentAngle) * outerRingRadius;
+      const markerY = this.centerY + Math.sin(apparentAngle) * outerRingRadius;
       
-      this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.9)';
-      this.ctx.lineWidth = 3;
-      this.ctx.beginPath();
-      this.ctx.moveTo(this.centerX, this.centerY);
-      this.ctx.lineTo(
-        this.centerX + Math.cos(apparentAngle) * outerRingRadius,
-        this.centerY + Math.sin(apparentAngle) * outerRingRadius
-      );
-      this.ctx.stroke();
-      
-      // Marker on ring
+      // Bright gold marker
       this.ctx.fillStyle = '#FFD700';
       this.ctx.beginPath();
-      this.ctx.arc(
-        this.centerX + Math.cos(apparentAngle) * outerRingRadius,
-        this.centerY + Math.sin(apparentAngle) * outerRingRadius,
-        5,
-        0,
-        Math.PI * 2
-      );
+      this.ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
       this.ctx.fill();
+      
+      // White border
       this.ctx.strokeStyle = '#ffffff';
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
+      
+      // Subtle glow
+      this.ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+      this.ctx.beginPath();
+      this.ctx.arc(markerX, markerY, 12, 0, Math.PI * 2);
+      this.ctx.fill();
     }
     
-    // Mean Sun pointer (on inner ring) - BRONZE
+    // Mean Sun marker (on inner ring) - BRONZE
     if (eot.meanSun) {
       const meanAngle = (eot.meanSun.longitude - 90) * Math.PI / 180;
+      const markerX = this.centerX + Math.cos(meanAngle) * innerRingRadius;
+      const markerY = this.centerY + Math.sin(meanAngle) * innerRingRadius;
       
-      this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.8)';
-      this.ctx.lineWidth = 3;
-      this.ctx.beginPath();
-      this.ctx.moveTo(this.centerX, this.centerY);
-      this.ctx.lineTo(
-        this.centerX + Math.cos(meanAngle) * innerRingRadius,
-        this.centerY + Math.sin(meanAngle) * innerRingRadius
-      );
-      this.ctx.stroke();
-      
-      // Marker on ring
+      // Bronze marker
       this.ctx.fillStyle = '#d4af37';
       this.ctx.beginPath();
-      this.ctx.arc(
-        this.centerX + Math.cos(meanAngle) * innerRingRadius,
-        this.centerY + Math.sin(meanAngle) * innerRingRadius,
-        5,
-        0,
-        Math.PI * 2
-      );
+      this.ctx.arc(markerX, markerY, 7, 0, Math.PI * 2);
       this.ctx.fill();
+      
+      // White border
       this.ctx.strokeStyle = '#ffffff';
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
