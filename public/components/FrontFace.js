@@ -4,7 +4,7 @@ class FrontFace {
     this.ctx = canvas.getContext('2d');
     this.centerX = canvas.width / 2;
     this.centerY = canvas.height / 2;
-    this.maxRadius = Math.min(canvas.width, canvas.height) / 2 - 40;
+    this.maxRadius = Math.min(canvas.width, canvas.height) / 2 - 80;
     
     // Planet orbital radii (concentric circles)
     this.orbits = {
@@ -140,14 +140,6 @@ class FrontFace {
       }
     }
     
-    // Label for outer ring
-    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
-    this.ctx.font = 'bold 11px Georgia';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('ΜΕΣΗ ΩΡΑ', this.centerX, this.centerY - outerRingRadius - 10);
-    this.ctx.font = '9px Georgia';
-    this.ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
-    this.ctx.fillText('(Mean Time)', this.centerX, this.centerY - outerRingRadius);
     
     // === 2. INNER RING - Apparent Solar Time (Sundial) ===
     this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
@@ -191,13 +183,6 @@ class FrontFace {
       }
     }
     
-    // Label for inner ring
-    this.ctx.fillStyle = '#FFD700';
-    this.ctx.font = 'bold 11px Georgia';
-    this.ctx.fillText('ΦΑΙΝΟΜΕΝΗ ΩΡΑ', this.centerX, this.centerY - innerRingRadius + 15);
-    this.ctx.font = '9px Georgia';
-    this.ctx.fillStyle = 'rgba(255, 215, 0, 0.7)';
-    this.ctx.fillText('(Apparent Time)', this.centerX, this.centerY - innerRingRadius + 25);
     
     // === 3. MARKERS showing current time of day positions ===
     
@@ -749,33 +734,89 @@ class FrontFace {
   }
   
   drawLabels(data) {
-    // Title in Greek style
-    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
-    this.ctx.font = 'bold 20px Georgia';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('ΠΡΟΣΟΨΙΣ', this.centerX, 25); // "FRONT FACE" in Greek
+    const padding = 15; // Distance from canvas edge
+    const lineHeight = 18;
     
-    // Current zodiac sign and detailed info
-    if (data.zodiac) {
-      this.ctx.font = '14px Georgia';
-      this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
-      const signIndex = data.zodiac.signIndex;
+    // ========== UPPER LEFT: Title and Apparent Time ==========
+    this.ctx.textAlign = 'left';
+    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
+    this.ctx.font = 'bold 14px Georgia';
+    this.ctx.fillText('ΠΡΟΣΟΨΙΣ', padding, padding + lineHeight);
+    
+    this.ctx.font = 'bold 12px Georgia';
+    this.ctx.fillStyle = '#FFD700';
+    this.ctx.fillText('ΦΑΙΝΟΜΕΝΗ ΩΡΑ', padding, padding + lineHeight * 2);
+    
+    this.ctx.font = '10px Georgia';
+    this.ctx.fillStyle = 'rgba(255, 215, 0, 0.7)';
+    this.ctx.fillText('(Apparent Time)', padding, padding + lineHeight * 3);
+    
+    // ========== UPPER RIGHT: Equation of Time ==========
+    if (data.equationOfTime) {
+      this.ctx.textAlign = 'right';
+      const eot = data.equationOfTime.equationOfTime;
+      const eotMins = Math.abs(eot.minutes);
+      const ahead = eot.minutes > 0 ? 'AHEAD' : 'BEHIND';
+      
+      this.ctx.fillStyle = '#ff6b35';
+      this.ctx.font = 'bold 16px Georgia';
       this.ctx.fillText(
-        `${this.zodiacSigns[signIndex].name} ${data.zodiac.degreeInSign.toFixed(1)}°`,
-        this.centerX,
-        this.canvas.height - 40
+        `${eot.minutes > 0 ? '+' : '−'}${eotMins.toFixed(1)} min`,
+        this.canvas.width - padding,
+        padding + lineHeight
+      );
+      
+      this.ctx.font = '11px Georgia';
+      this.ctx.fillStyle = 'rgba(255, 107, 53, 0.8)';
+      this.ctx.fillText(
+        `Sundial ${ahead}`,
+        this.canvas.width - padding,
+        padding + lineHeight * 2
       );
     }
     
-    // Egyptian month and day
+    // ========== LOWER LEFT: Zodiac + Egyptian Calendar ==========
+    this.ctx.textAlign = 'left';
+    
+    if (data.zodiac) {
+      const signIndex = data.zodiac.signIndex;
+      this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
+      this.ctx.font = 'bold 13px Georgia';
+      this.ctx.fillText(
+        `${this.zodiacSigns[signIndex].name} ${data.zodiac.degreeInSign.toFixed(1)}°`,
+        padding,
+        this.canvas.height - padding - lineHeight * 2
+      );
+    }
+    
     if (data.egyptianCalendar) {
-      this.ctx.font = '12px Georgia';
-      this.ctx.fillStyle = 'rgba(240, 230, 210, 0.8)';
       const monthIdx = Math.min(data.egyptianCalendar.month - 1, 11);
+      this.ctx.font = '11px Georgia';
+      this.ctx.fillStyle = 'rgba(240, 230, 210, 0.8)';
       this.ctx.fillText(
         `${this.monthNames[monthIdx]} ${data.egyptianCalendar.day}`,
-        this.centerX,
-        this.canvas.height - 20
+        padding,
+        this.canvas.height - padding - lineHeight
+      );
+    }
+    
+    // ========== LOWER RIGHT: Real-time Clock ==========
+    if (data.currentTime) {
+      this.ctx.textAlign = 'right';
+      this.ctx.fillStyle = 'var(--color-pointer, #ffaa00)';
+      this.ctx.font = 'bold 16px "Courier New", monospace';
+      this.ctx.fillText(
+        data.currentTime,
+        this.canvas.width - padding,
+        this.canvas.height - padding - lineHeight
+      );
+      
+      this.ctx.font = '10px Georgia';
+      this.ctx.fillStyle = 'rgba(255, 170, 0, 0.7)';
+      this.ctx.fillText(
+        'Local Time',
+        this.canvas.width - padding,
+        this.canvas.height - padding
       );
     }
   }

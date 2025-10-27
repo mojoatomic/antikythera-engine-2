@@ -120,6 +120,15 @@ async function updateDisplay() {
         const data = await response.json();
         currentData = data;
         
+        // Add current time for clock display
+        const now = new Date();
+        data.currentTime = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+        
         // Render all three faces
         frontFace.render(data);
         backUpperFace.render(data);
