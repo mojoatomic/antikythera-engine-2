@@ -241,6 +241,19 @@ class FrontFace {
       this.ctx.strokeStyle = '#ffffff';
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
+
+      // Sunrise label (local time) just outside the outer ring
+      const showLabels = !!(window.appSettings && window.appSettings.showSunriseSunset);
+      if (showLabels && vis.sunrise && vis.sunrise.localTime) {
+        this.ctx.font = '10px Georgia';
+        this.ctx.fillStyle = 'rgba(255, 107, 53, 0.9)';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        const srLabelR = outerRingRadius + 28;
+        const srLabelX = this.centerX + Math.cos(sunriseAngle) * srLabelR;
+        const srLabelY = this.centerY + Math.sin(sunriseAngle) * srLabelR;
+        this.ctx.fillText(vis.sunrise.localTime, srLabelX, srLabelY);
+      }
       
       // Sunrise line connecting rings
       this.ctx.strokeStyle = 'rgba(255, 107, 53, 0.4)';
@@ -279,6 +292,19 @@ class FrontFace {
       this.ctx.moveTo(sunsetInnerX, sunsetInnerY);
       this.ctx.lineTo(sunsetOuterX, sunsetOuterY);
       this.ctx.stroke();
+
+      // Sunset label (local time) just outside the outer ring, near moon marker
+      const showLabels2 = !!(window.appSettings && window.appSettings.showSunriseSunset);
+      if (showLabels2 && vis.sunset && vis.sunset.localTime) {
+        this.ctx.font = '10px Georgia';
+        this.ctx.fillStyle = 'rgba(240, 230, 210, 0.9)';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        const ssLabelR = outerRingRadius + 36;
+        const ssLabelX = this.centerX + Math.cos(sunsetAngle) * ssLabelR;
+        const ssLabelY = this.centerY + Math.sin(sunsetAngle) * ssLabelR;
+        this.ctx.fillText(vis.sunset.localTime, ssLabelX, ssLabelY);
+      }
       
       // Daylight arc (between sunrise and sunset on outer ring)
       this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)';

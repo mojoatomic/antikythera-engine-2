@@ -196,6 +196,20 @@ Returns Moon position only (subset of `/api/state`).
 
 Returns planetary positions only (subset of `/api/state`).
 
+**GET /api/language**
+
+Returns the UI language configured on the server.
+
+Response:
+- `{ "language": "english" }`
+
+**GET /api/settings**
+
+Returns UI feature toggles derived from `.env.local`.
+
+Response:
+- `{ "showSunriseSunset": true|false }`  // Controlled by `SHOW_SUNRISE_SUNSET=yes|no`
+
 ### 4.2 Request/Response Formats
 
 **Request Example:**
@@ -342,6 +356,16 @@ The `/api/display` endpoint provides data formatted for physical mechanism contr
 - No race conditions between bodies
 - Atomic state snapshot
 
+### 5.4 Front Face Time Rings and Solar Events
+
+- The Zodiac/time band is rotated each frame by the Sun’s ecliptic longitude: `eclipticRotation = (sunLongitude − 90)°`.
+- Outer ring (bronze): Mean Solar Time (clock time, unadjusted for EoT).
+- Inner ring (gold): Apparent Solar Time (sundial time, adjusted by the Equation of Time).
+- Bronze and gold markers show the same “now” on their respective scales; their angular separation visualizes the EoT value (also shown numerically in the upper-right corner).
+- Sunrise and sunset markers are placed using UTC event times converted to hour angles; their angles include the same `eclipticRotation` used by the rings.
+- Optional local-time labels (e.g., “07:16 AM”, “06:10 PM”) can be rendered next to the markers; toggled by `SHOW_SUNRISE_SUNSET` via `/api/settings`.
+- Calendar band: the pointer geometry is driven by smooth year progress (0–360), while the labels display modern Gregorian month/day (UTC).
+
 ---
 
 ## 6. Performance Characteristics
@@ -395,10 +419,13 @@ Variables affecting computation time:
 
 ### 7.1 Location Handling
 
-**Priority Order:**
-1. Query parameters (`?lat=X&lon=Y&elev=Z`)
-2. IP geolocation (ipapi.co)
-3. Fallback: Athens, Greece (37.5°N, 23.0°E)
+**Priority Order (current):**
+1. `.env.local` configuration (OBSERVER_LATITUDE, OBSERVER_LONGITUDE, etc.)
+2. Query parameters (`?lat=X&lon=Y&elev=Z`)
+3. IP geolocation (ipapi.co) with a 24h TTL cache (`IP_GEO_TTL_MS`), log noise suppressed on cache hits
+4. Fallback: Memphis, Tennessee (35.1184°N, −90.0489°)
+
+Both `/api/state` and `/api/state/:date` now use the same observer-resolution path, ensuring consistent sunrise/sunset and horizontal coordinates across endpoints.
 
 **IP Geolocation:**
 - Service: ipapi.co free tier
@@ -497,6 +524,18 @@ Variables affecting computation time:
 - Barycentric: Only relevant for precision orbital mechanics
 
 **Decision:** Geocentric coordinates match the historical context and intended use cases for visualization and education.
+
+---
+
+## 9. Command-Line Interface (CLI)
+
+Authoritative CLI documentation lives in `CLI.md`. Highlights:
+- Commands: `now`, `position <body>`, `compare <body> <source1> <source2>`, `watch [body]`, `validate` (stub)
+- Sources: embedded engine (local) or API (remote) with smart auto-selection
+- Formats: table (default), JSON, CSV
+- Debugging aids: `--debug`, `--verbose`, `--profile`, and `compare` for source diffs
+
+Refer to `CLI.md` for installation, usage examples, and output semantics. This manual intentionally avoids duplication.
 
 ---
 

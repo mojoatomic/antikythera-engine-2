@@ -1,6 +1,6 @@
 # Antikythera CLI Tool
 
-A feature-rich command-line interface for astronomical calculations and debugging. Built for developers who need fast, accurate celestial position data with powerful troubleshooting capabilities.
+A command-line interface for astronomical calculations and debugging. Provides access to the same VSOP87/ELP2000-based ephemeris used by the API, with tools for inspection, comparison, and monitoring.
 
 ## Table of Contents
 
@@ -31,16 +31,22 @@ cd antikythera-engine-2
 # Install dependencies
 npm install
 
-# Link for local use
+# Link for local use (adds `antikythera` to PATH)
 npm link
 
 # Verify installation
 antikythera --version
 ```
 
-### Global Installation (Future)
+### Global Installation (from repo)
 ```bash
-npm install -g antikythera
+# Install globally from the local repo checkout
+npm install -g .
+```
+
+### Direct Execution (no install)
+```bash
+node cli/index.js now
 ```
 
 ---
@@ -357,31 +363,42 @@ antikythera position mars --remote
 
 ---
 
-## Debug Features
+## Error Handling
 
-### Debug Flag
-Shows calculation source and date information.
+### Common Errors
+- Invalid body: The `position` and `watch` commands accept: sun, moon, mercury, venus, mars, jupiter, saturn.
+- API server not running: Start with `npm start` or use `--local`.
+- Invalid date format: Use ISO 8601 (e.g., `2025-12-25T12:00:00Z`).
+- Schema validation warnings (compare/remote): Output is returned but flagged.
+
+### Debug/Profiling Aids
 ```bash
+# Show source and timing
 antikythera position mars --debug
-```
 
-### Verbose Flag
-Includes raw astronomy-engine output.
-```bash
+# Include raw data
 antikythera position mars --verbose
-```
 
-### Profile Flag
-Shows calculation timing.
-```bash
+# Show calculation time
 antikythera position mars --profile
-# Calculation time: 14ms
-```
 
-### Combine Flags
-```bash
+# Combine
 antikythera position mars --debug --verbose --profile
 ```
+
+---
+
+## Performance Notes
+
+**Embedded Engine (`--local`)**
+- Computation time: 25–50ms
+- No HTTP latency
+- Best for tight loops / high-frequency polling
+
+**API Server (`--remote`)**
+- Typical end-to-end: 50–100ms (compute + HTTP)
+- Adds geolocation on initial call
+- Best for parity with deployed clients
 
 ---
 

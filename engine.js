@@ -323,21 +323,16 @@ class AntikytheraEngine {
   }
 
   getEgyptianCalendar(date) {
-    // Modern accurate solar year position
-    // Maps the full solar year (365.25 days) to 360 degrees for smooth display
-    
-    // Use centralized time utilities for accurate year progress
-    const egyptianDayFloat = TimeUtils.yearProgress360(date);
-    const _egyptianDay = Math.floor(egyptianDayFloat) + 1; // 1-360, 1-indexed
-    
-    // Traditional Egyptian month/day (12 months of 30 days)
-    const month = Math.floor(egyptianDayFloat / 30) + 1;
-    const day = Math.floor(egyptianDayFloat % 30) + 1;
-    
+    // Modern display: drive the calendar pointer by accurate year progress,
+    // but show Gregorian month/day in the label.
+    const yearProgress = TimeUtils.yearProgress360(date); // 0..360
+    const month = date.getUTCMonth() + 1; // 1-12 (Gregorian, UTC)
+    const day = date.getUTCDate();        // 1-31 (Gregorian, UTC)
+
     return {
-      month: Math.min(month, 13), // Month 13 = last 60 degrees
-      day: day,
-      dayOfYear: egyptianDayFloat // Return fractional value for smooth animation (0-360)
+      month,
+      day,
+      dayOfYear: yearProgress // used for ring geometry (outer pointer)
     };
   }
 

@@ -21,6 +21,12 @@ app.get('/api/language', (req, res) => {
   res.json({ language: language });
 });
 
+// UI settings
+app.get('/api/settings', (req, res) => {
+  const showSunriseSunset = String(process.env.SHOW_SUNRISE_SUNSET || 'no').toLowerCase() === 'yes';
+  res.json({ showSunriseSunset });
+});
+
 // Get current state
 app.get('/api/state', async (req, res) => {
   try {
