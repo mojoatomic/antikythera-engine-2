@@ -1,7 +1,9 @@
 // Global state
 let animationInterval = null;
+let clockInterval = null;
 let currentData = null;
 let currentFaceIndex = 0;
+let isRealTimeMode = false;
 
 // Component instances
 let frontFace = null;
@@ -14,6 +16,7 @@ window.addEventListener('load', () => {
     setCurrentDate();
     updateDisplay();
     setupEventListeners();
+    startRealTime(); // Auto-start in real-time mode
 });
 
 function initComponents() {
@@ -137,6 +140,9 @@ function showError(message) {
 function animateForward() {
     if (animationInterval) return; // Already animating
     
+    // Stop real-time mode if active
+    stopRealTime();
+    
     animationInterval = setInterval(() => {
         const dateInput = document.getElementById('dateInput');
         const currentDate = new Date(dateInput.value || new Date());
@@ -154,6 +160,65 @@ function stopAnimation() {
     if (animationInterval) {
         clearInterval(animationInterval);
         animationInterval = null;
+    }
+    stopRealTime();
+}
+
+function updateClock() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const clockDisplay = document.getElementById('clockDisplay');
+    if (clockDisplay) {
+        clockDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+    }
+}
+
+function startRealTime() {
+    // Stop any existing animation
+    stopAnimation();
+    
+    isRealTimeMode = true;
+    
+    // Update button state
+    const btn = document.getElementById('realTimeBtn');
+    if (btn) {
+        btn.style.backgroundColor = 'var(--color-accent)';
+        btn.style.fontWeight = 'bold';
+    }
+    
+    // Update clock every second
+    clockInterval = setInterval(() => {
+        updateClock();
+        setCurrentDate();
+        updateDisplay();
+    }, 1000);
+    
+    // Initial clock update
+    updateClock();
+}
+
+function stopRealTime() {
+    if (clockInterval) {
+        clearInterval(clockInterval);
+        clockInterval = null;
+    }
+    isRealTimeMode = false;
+    
+    // Reset button state
+    const btn = document.getElementById('realTimeBtn');
+    if (btn) {
+        btn.style.backgroundColor = '';
+        btn.style.fontWeight = '';
+    }
+}
+
+function toggleRealTime() {
+    if (isRealTimeMode) {
+        stopRealTime();
+    } else {
+        startRealTime();
     }
 }
 
@@ -174,6 +239,8 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         if (animationInterval) {
             stopAnimation();
+        } else if (isRealTimeMode) {
+            stopRealTime();
         } else {
             animateForward();
         }

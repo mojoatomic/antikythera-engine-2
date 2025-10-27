@@ -287,13 +287,18 @@
             </div>
             
             <div class="control-group">
+                <div id="clockDisplay" style="font-size: 1.2em; font-weight: bold; color: var(--color-accent); min-width: 100px; text-align: center;"></div>
+            </div>
+            
+            <div class="control-group">
                 <input type="datetime-local" id="dateInput" />
                 <button onclick="setCurrentDate()">Now</button>
                 <button onclick="updateDisplay()">Update</button>
             </div>
             
             <div class="control-group">
-                <button onclick="animateForward()">Play ▶</button>
+                <button onclick="toggleRealTime()" id="realTimeBtn">Real-Time ⏰</button>
+                <button onclick="animateForward()">Fast-Forward ▶▶</button>
                 <button onclick="stopAnimation()">Stop ⏸</button>
             </div>
         </div>
