@@ -13,6 +13,13 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/config', express.static('config'));
+
+// Get language setting
+app.get('/api/language', (req, res) => {
+  const language = process.env.LANGUAGE || 'english';
+  res.json({ language: language });
+});
 
 // Get current state
 app.get('/api/state', (req, res) => {
@@ -26,13 +33,14 @@ app.get('/api/state', (req, res) => {
 });
 
 // Get state for a specific date
-app.get('/api/state/:date', (req, res) => {
+app.get('/api/state/:date', async (req, res) => {
   try {
     const date = new Date(req.params.date);
     if (isNaN(date.getTime())) {
       return res.status(400).json({ error: 'Invalid date format' });
     }
-    const state = engine.getState(date);
+    const observer = await getObserverFromRequest(req);
+    const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -83,7 +91,7 @@ app.get('/api/display', async (req, res) => {
     const longitude = observer.longitude;
     const fullPrecision = req.query.precision === 'full';
     
-    const state = engine.getState(date, latitude, longitude);
+    const state = engine.getState(date, latitude, longitude, observer);
     
     // Build mechanical data - positions and velocities for stepper motors
     const mechanical = {

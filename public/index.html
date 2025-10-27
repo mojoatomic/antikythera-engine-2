@@ -230,11 +230,11 @@
         }
         
         .face-card {
-            background: rgba(0,0,0,0.4);
+            background: transparent;
             border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            backdrop-filter: blur(10px);
+            padding: 0;
+            box-shadow: none;
+            backdrop-filter: none;
         }
         
         .face-card canvas {
@@ -243,7 +243,7 @@
             height: 100%;
             background: var(--bg-dial);
             border-radius: 10px;
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+            box-shadow: none;
         }
         
         footer {
@@ -323,12 +323,15 @@
             </div>
         </div>
         
+        <!--
         <footer>
             <p>Based on the Antikythera Mechanism (~100 BCE)</p>
             <p>Discovered 1901 in a shipwreck off the Greek island of Antikythera</p>
         </footer>
+            -->
     </div>
     
+    <script src="components/LanguageManager.js"></script>
     <script src="components/FrontFace.js"></script>
     <script src="components/BackUpperFace.js"></script>
     <script src="components/BackLowerFace.js"></script>

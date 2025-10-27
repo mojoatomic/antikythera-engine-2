@@ -11,7 +11,10 @@ let backUpperFace = null;
 let backLowerFace = null;
 
 // Initialize on page load
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
+    // Load language system (reads .env.local via API)
+    await languageManager.load();
+    
     initComponents();
     setCurrentDate();
     updateDisplay();

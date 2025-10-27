@@ -28,42 +28,23 @@ class FrontFace {
       sun: '#FFD700'        // Bright gold
     };
     
-    // Zodiac with Greek names
-    this.zodiacSigns = [
-      { symbol: '♈', name: 'ΚΡΙΟΣ', latin: 'Aries' },
-      { symbol: '♉', name: 'ΤΑΥΡΟΣ', latin: 'Taurus' },
-      { symbol: '♊', name: 'ΔΙΔΥΜΟΙ', latin: 'Gemini' },
-      { symbol: '♋', name: 'ΚΑΡΚΙΝΟΣ', latin: 'Cancer' },
-      { symbol: '♌', name: 'ΛΕΩΝ', latin: 'Leo' },
-      { symbol: '♍', name: 'ΠΑΡΘΕΝΟΣ', latin: 'Virgo' },
-      { symbol: '♎', name: 'ΖΥΓΟΣ', latin: 'Libra' },
-      { symbol: '♏', name: 'ΣΚΟΡΠΙΟΣ', latin: 'Scorpio' },
-      { symbol: '♐', name: 'ΤΟΞΟΤΗΣ', latin: 'Sagittarius' },
-      { symbol: '♑', name: 'ΑΙΓΟΚΕΡΩΣ', latin: 'Capricorn' },
-      { symbol: '♒', name: 'ΥΔΡΟΧΟΟΣ', latin: 'Aquarius' },
-      { symbol: '♓', name: 'ΙΧΘΥΕΣ', latin: 'Pisces' }
-    ];
+    // Zodiac symbols (names come from language manager)
+    this.zodiacSymbols = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
     
-    // Egyptian/Greek month names
-    this.monthNames = [
-      'ΦΑΩΦΙ', 'ΑΘΥΡ', 'ΧΟΙΑΚ', 'ΤΥΒΙ', 'ΜΕΧΕΙΡ', 'ΦΑΜΕΝΩΘ',
-      'ΦΑΡΜΟΥΘΙ', 'ΠΑΧΩΝ', 'ΠΑΥΝΙ', 'ΕΠΕΙΦ', 'ΜΕΣΟΡΗ', 'ΘΩΥΘ'
-    ];
-    
-    // Parapegma - Star risings/settings (simplified examples)
+    // Parapegma - Star risings/settings (names from language manager)
     this.parapegma = [
-      { day: 15, text: 'ΠΛΕΙΑΔΕΣ', symbol: '★' },   // Pleiades
-      { day: 45, text: 'ΑΡΚΤΟΥΡΟΣ', symbol: '★' },  // Arcturus
-      { day: 75, text: 'ΣΕΙΡΙΟΣ', symbol: '★' },    // Sirius
-      { day: 105, text: 'ΥΑΔΕΣ', symbol: '★' },     // Hyades
-      { day: 135, text: 'ΩΡΙΩΝ', symbol: '★' },     // Orion
-      { day: 165, text: 'ΛΥΡΑ', symbol: '★' },      // Lyra
-      { day: 195, text: 'ΑΕΤΟΣ', symbol: '★' },     // Aquila
-      { day: 225, text: 'ΚΥΩΝ', symbol: '★' },      // Canis
-      { day: 255, text: 'ΚΑΣΣΙΟΠΕΙΑ', symbol: '★' }, // Cassiopeia
-      { day: 285, text: 'ΠΕΡΣΕΥΣ', symbol: '★' },   // Perseus
-      { day: 315, text: 'ΑΝΔΡΟΜΕΔΑ', symbol: '★' }, // Andromeda
-      { day: 345, text: 'ΠΗΓΑΣΟΣ', symbol: '★' }    // Pegasus
+      { day: 15, key: 'pleiades', symbol: '★' },
+      { day: 45, key: 'arcturus', symbol: '★' },
+      { day: 75, key: 'sirius', symbol: '★' },
+      { day: 105, key: 'hyades', symbol: '★' },
+      { day: 135, key: 'orion', symbol: '★' },
+      { day: 165, key: 'lyra', symbol: '★' },
+      { day: 195, key: 'aquila', symbol: '★' },
+      { day: 225, key: 'canis', symbol: '★' },
+      { day: 255, key: 'cassiopeia', symbol: '★' },
+      { day: 285, key: 'perseus', symbol: '★' },
+      { day: 315, key: 'andromeda', symbol: '★' },
+      { day: 345, key: 'pegasus', symbol: '★' }
     ];
   }
   
@@ -76,7 +57,6 @@ class FrontFace {
     this.drawMonthNames();
     this.drawParapegmaMarkers(data);
     this.drawZodiacRing();
-    this.drawZodiacNames();
     this.drawDegreeScale();
     this.drawOrbitalRings();
     this.drawPlanetPointers(data);
@@ -316,21 +296,15 @@ class FrontFace {
     
     // === 5. Current EoT value display (Top Right) ===
     const eotValue = eot.equationOfTime.minutes;
-    const eotStatus = eotValue > 0 ? 'AHEAD' : 'BEHIND';
-    
-    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
-    this.ctx.font = 'bold 14px Georgia';
-    this.ctx.textAlign = 'right';
-    this.ctx.fillText('Equation of Time:', this.canvas.width - 20, 60);
-    
-    this.ctx.font = 'bold 16px Georgia';
-    this.ctx.fillStyle = eotValue > 0 ? '#FFD700' : '#d4af37';
-    const eotText = eotValue > 0 ? `+${eotValue.toFixed(1)}` : eotValue.toFixed(1);
-    this.ctx.fillText(`${eotText} min`, this.canvas.width - 20, 80);
+    const eotStatusKey = eotValue > 0 ? 'sundial_ahead' : 'sundial_behind';
     
     this.ctx.font = '11px Georgia';
     this.ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
-    this.ctx.fillText(`Sundial ${eotStatus}`, this.canvas.width - 20, 95);
+    this.ctx.textAlign = 'right';
+    //this.ctx.fillText(languageManager.t(`front_face.${eotStatusKey}`), this.canvas.width - 20, 60);
+    const padding = 15;
+    const lineHeight = 18;
+    this.ctx.fillText(languageManager.t(`front_face.${eotStatusKey}`), this.canvas.width - padding, padding + lineHeight * 2);
   }
   
   drawEgyptianCalendar(data) {
@@ -427,7 +401,7 @@ class FrontFace {
   }
   
   drawMonthNames() {
-    // Draw Greek month names around the calendar
+    // Draw month names around the calendar (from language manager)
     const radius = this.maxRadius - 48;
     
     this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
@@ -443,36 +417,34 @@ class FrontFace {
       this.ctx.save();
       this.ctx.translate(x, y);
       this.ctx.rotate(angle + Math.PI / 2);
-      this.ctx.fillText(this.monthNames[i], 0, 0);
+      this.ctx.fillText(languageManager.getMonthName(i + 1), 0, 0);
       this.ctx.restore();
     }
   }
   
   drawParapegmaMarkers(_data) {
-    // Parapegma - star rising/setting calendar
-    const radius = this.maxRadius - 55;
+    // Parapegma - star rising/setting calendar (from language manager)
+    // Align with month names at same radius
+    const radius = this.maxRadius - 48;
     
-    this.ctx.fillStyle = 'rgba(240, 230, 210, 0.6)';
-    this.ctx.font = '10px Georgia';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
     
     this.parapegma.forEach(entry => {
       const angle = (entry.day - 90) * Math.PI / 180;
       const x = this.centerX + Math.cos(angle) * radius;
       const y = this.centerY + Math.sin(angle) * radius;
       
-      // Star symbol
-      this.ctx.fillStyle = 'rgba(255, 215, 0, 0.6)';
-      this.ctx.fillText(entry.symbol, x, y);
-      
-      // Greek text for star name
-      this.ctx.fillStyle = 'rgba(240, 230, 210, 0.5)';
-      this.ctx.font = '7px Georgia';
       this.ctx.save();
       this.ctx.translate(x, y);
       this.ctx.rotate(angle + Math.PI / 2);
-      this.ctx.fillText(entry.text, 8, 0);
+      
+      // Star name (from language manager) - below the month name position
+      this.ctx.fillStyle = 'rgba(240, 230, 210, 0.6)';
+      this.ctx.font = '9px Georgia';
+      this.ctx.fillText(languageManager.t(`parapegma.${entry.key}`), 0, 12);
+      
       this.ctx.restore();
-      this.ctx.font = '10px Georgia';
     });
   }
   
@@ -494,22 +466,24 @@ class FrontFace {
     
     // Draw zodiac signs
     this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
-    this.ctx.font = 'bold 32px Arial';
+    this.ctx.font = 'bold 20px Arial';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
     
     for (let i = 0; i < 12; i++) {
-      const angle = (i * 30 - 90) * Math.PI / 180;
+      // const angle = (i * 30 - 90) * Math.PI / 180;
+      const angle = (i * 30 - 15) * Math.PI / 180;
+
       const x = this.centerX + Math.cos(angle) * (radius - 15);
       const y = this.centerY + Math.sin(angle) * (radius - 15);
       
       // Zodiac symbol
-      this.ctx.fillText(this.zodiacSigns[i].symbol, x, y);
+      this.ctx.fillText(this.zodiacSymbols[i], x, y);
     }
   }
   
   drawZodiacNames() {
-    // Draw Greek zodiac names
+    // Draw zodiac names (from language manager)
     const radius = this.maxRadius - 115;
     
     this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
@@ -524,7 +498,7 @@ class FrontFace {
       this.ctx.save();
       this.ctx.translate(x, y);
       this.ctx.rotate(angle + Math.PI / 2);
-      this.ctx.fillText(this.zodiacSigns[i].name, 0, 0);
+      this.ctx.fillText(languageManager.getZodiacName(i), 0, 0);
       this.ctx.restore();
     }
   }
@@ -734,29 +708,40 @@ class FrontFace {
   }
   
   drawLabels(data) {
-    const padding = 15; // Distance from canvas edge
+    const padding = 15;
     const lineHeight = 18;
     
-    // ========== UPPER LEFT: Title and Apparent Time ==========
+    // ========== UPPER LEFT: Title and Time Labels ==========
     this.ctx.textAlign = 'left';
     this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
     this.ctx.font = 'bold 14px Georgia';
-    this.ctx.fillText('ΠΡΟΣΟΨΙΣ', padding, padding + lineHeight);
+    //this.ctx.fillText(
+    //  languageManager.t('front_face.title'),
+    //  padding,
+    //  padding + lineHeight
+    //);
     
+    // Apparent Time label
     this.ctx.font = 'bold 12px Georgia';
     this.ctx.fillStyle = '#FFD700';
-    this.ctx.fillText('ΦΑΙΝΟΜΕΝΗ ΩΡΑ', padding, padding + lineHeight * 2);
+    this.ctx.fillText(
+      languageManager.t('front_face.apparent_time'),
+      padding,
+      padding + lineHeight
+    );
     
-    this.ctx.font = '10px Georgia';
-    this.ctx.fillStyle = 'rgba(255, 215, 0, 0.7)';
-    this.ctx.fillText('(Apparent Time)', padding, padding + lineHeight * 3);
+    const apparentSubtitle = languageManager.t('front_face.apparent_time_subtitle');
+    if (apparentSubtitle) {
+      this.ctx.font = '10px Georgia';
+      this.ctx.fillStyle = 'rgba(255, 215, 0, 0.7)';
+      this.ctx.fillText(apparentSubtitle, padding, padding + lineHeight * 2);
+    }
     
     // ========== UPPER RIGHT: Equation of Time ==========
     if (data.equationOfTime) {
       this.ctx.textAlign = 'right';
       const eot = data.equationOfTime.equationOfTime;
       const eotMins = Math.abs(eot.minutes);
-      const ahead = eot.minutes > 0 ? 'AHEAD' : 'BEHIND';
       
       this.ctx.fillStyle = '#ff6b35';
       this.ctx.font = 'bold 16px Georgia';
@@ -765,58 +750,85 @@ class FrontFace {
         this.canvas.width - padding,
         padding + lineHeight
       );
-      
-      this.ctx.font = '11px Georgia';
-      this.ctx.fillStyle = 'rgba(255, 107, 53, 0.8)';
-      this.ctx.fillText(
-        `Sundial ${ahead}`,
-        this.canvas.width - padding,
-        padding + lineHeight * 2
-      );
     }
     
     // ========== LOWER LEFT: Zodiac + Egyptian Calendar ==========
     this.ctx.textAlign = 'left';
     
     if (data.zodiac) {
-      const signIndex = data.zodiac.signIndex;
+      const zodiacName = languageManager.getZodiacName(data.zodiac.signIndex);
       this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
       this.ctx.font = 'bold 13px Georgia';
       this.ctx.fillText(
-        `${this.zodiacSigns[signIndex].name} ${data.zodiac.degreeInSign.toFixed(1)}°`,
+        `${zodiacName} ${data.zodiac.degreeInSign.toFixed(1)}°`,
         padding,
         this.canvas.height - padding - lineHeight * 2
       );
     }
     
     if (data.egyptianCalendar) {
-      const monthIdx = Math.min(data.egyptianCalendar.month - 1, 11);
+      const monthName = languageManager.getMonthName(data.egyptianCalendar.month);
       this.ctx.font = '11px Georgia';
       this.ctx.fillStyle = 'rgba(240, 230, 210, 0.8)';
       this.ctx.fillText(
-        `${this.monthNames[monthIdx]} ${data.egyptianCalendar.day}`,
+        `${monthName} ${data.egyptianCalendar.day}`,
         padding,
         this.canvas.height - padding - lineHeight
       );
     }
     
-    // ========== LOWER RIGHT: Real-time Clock ==========
+    // ========== LOWER RIGHT: Location + Real-time Clock ==========
+    this.ctx.textAlign = 'right';
+    let lowerRightY = this.canvas.height - padding;
+    
+    // Real-time clock
     if (data.currentTime) {
-      this.ctx.textAlign = 'right';
       this.ctx.fillStyle = 'var(--color-pointer, #ffaa00)';
       this.ctx.font = 'bold 16px "Courier New", monospace';
       this.ctx.fillText(
         data.currentTime,
         this.canvas.width - padding,
-        this.canvas.height - padding - lineHeight
+        lowerRightY - lineHeight * 3
+      );
+    }
+    
+    // Location information
+    if (data.observer && data.observer.city) {
+      const source = data.observer.source || 'unknown';
+      
+      // Source icon based on source type
+      let sourceIcon = '📍';
+      if (source === 'env' || source === 'env_config') {
+        sourceIcon = '⚙️';
+      } else if (source === 'ip_geolocation') {
+        sourceIcon = '🌐';
+      } else if (source === 'fallback') {
+        sourceIcon = '📍';
+      }
+      
+      // City, State/Country
+      this.ctx.font = 'bold 11px Georgia';
+      this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
+      const locationText = data.observer.state 
+        ? `${data.observer.city}, ${data.observer.state}` 
+        : data.observer.city;
+      this.ctx.fillText(
+        `${sourceIcon} ${locationText}`,
+        this.canvas.width - padding,
+        lowerRightY - lineHeight * 2
       );
       
-      this.ctx.font = '10px Georgia';
-      this.ctx.fillStyle = 'rgba(255, 170, 0, 0.7)';
+      // Coordinates
+      this.ctx.font = '9px Georgia';
+      this.ctx.fillStyle = 'rgba(240, 230, 210, 0.6)';
+      const lat = Math.abs(data.observer.latitude).toFixed(2);
+      const latDir = data.observer.latitude >= 0 ? 'N' : 'S';
+      const lon = Math.abs(data.observer.longitude).toFixed(2);
+      const lonDir = data.observer.longitude >= 0 ? 'E' : 'W';
       this.ctx.fillText(
-        'Local Time',
+        `${lat}°${latDir} ${lon}°${lonDir}`,
         this.canvas.width - padding,
-        this.canvas.height - padding
+        lowerRightY - lineHeight
       );
     }
   }

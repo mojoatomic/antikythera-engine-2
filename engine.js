@@ -176,12 +176,13 @@ class AntikytheraEngine {
   /**
    * Get the complete state of the Antikythera mechanism for a given date
    */
-  getState(date = new Date(), latitude = 37.5, longitude = 23.0) {
+  getState(date = new Date(), latitude = 37.5, longitude = 23.0, observerInfo = null) {
     const observer = new astronomy.Observer(latitude, longitude, 0);
     
     return {
       date: date.toISOString(),
       location: { latitude, longitude },
+      observer: observerInfo || { latitude, longitude },
       sun: this.getSunPosition(date, observer),
       moon: this.getMoonPosition(date, observer),
       planets: this.getPlanetaryPositions(date, observer),
@@ -298,8 +299,11 @@ class AntikytheraEngine {
   }
 
   getZodiacPosition(date) {
-    const sun = astronomy.EclipticGeoMoon(date);
-    const longitude = sun.lon;
+    // Get Sun's ecliptic longitude (zodiac is based on Sun, not Moon!)
+    const observer = new astronomy.Observer(0, 0, 0); // Ecliptic position same from anywhere
+    const sunEquator = astronomy.Equator('Sun', date, observer, false, true); // EQJ
+    const sunEcliptic = this.eclipticFromEquatorVec_EQJ(sunEquator.vec);
+    const longitude = sunEcliptic.elon;
     
     // Zodiac signs, 30 degrees each
     const signs = [

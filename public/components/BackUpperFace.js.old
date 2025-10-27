@@ -1,11 +1,11 @@
-class BackLowerFace {
+class BackUpperFace {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.centerX = canvas.width / 2;
     this.centerY = canvas.height / 2;
     this.maxRadius = Math.min(canvas.width, canvas.height) / 2 - 60;
-    this.spiralTurns = 4.5; // 223 months in ~4.5 turns
+    this.spiralTurns = 4.75; // 19 years in ~5 turns looks good
   }
   
   render(data) {
@@ -13,8 +13,7 @@ class BackLowerFace {
     
     this.drawTitle();
     this.drawSpiral();
-    this.drawMonthMarkers();
-    this.drawEclipseGlyphs();
+    this.drawYearMarkers();
     this.drawCurrentPosition(data);
     this.drawSubDials(data);
     this.drawInfo(data);
@@ -24,13 +23,13 @@ class BackLowerFace {
     this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
     this.ctx.font = 'bold 18px Georgia';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('Saros Cycle', this.centerX, 30);
+    this.ctx.fillText('Metonic Cycle', this.centerX, 30);
     //this.ctx.font = '14px Georgia';
-    //this.ctx.fillText('Saros Cycle', this.centerX, 50);
+    //this.ctx.fillText('Metonic Cycle', this.centerX, 50);
   }
   
   drawSpiral() {
-    // Main Archimedean spiral (223 synodic months)
+    // Main Archimedean spiral
     this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
     this.ctx.lineWidth = 10;
     this.ctx.beginPath();
@@ -71,54 +70,42 @@ class BackLowerFace {
     this.ctx.stroke();
   }
   
-  drawMonthMarkers() {
-    // Mark every 10 months along the spiral
-    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
+  drawYearMarkers() {
+    this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
+    this.ctx.font = '12px Georgia';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
     
-    for (let month = 0; month <= 223; month += 10) {
-      const t = month / 223;
+    // Mark each year
+    for (let year = 1; year <= 19; year++) {
+      const t = year / 19;
       const angle = t * this.spiralTurns * Math.PI * 2;
       const r = t * this.maxRadius;
       const x = this.centerX + Math.cos(angle) * r;
       const y = this.centerY + Math.sin(angle) * r;
       
+      // Year dot
+      this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
       this.ctx.beginPath();
-      this.ctx.arc(x, y, 3, 0, Math.PI * 2);
+      this.ctx.arc(x, y, 4, 0, Math.PI * 2);
       this.ctx.fill();
+      
+      // Label every year
+      if (year % 2 === 1 || year === 19) {
+        this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
+        const labelAngle = angle + Math.PI / 2; // Perpendicular to spiral
+        const labelOffset = 20;
+        const labelX = x + Math.cos(labelAngle) * labelOffset;
+        const labelY = y + Math.sin(labelAngle) * labelOffset;
+        this.ctx.fillText(year.toString(), labelX, labelY);
+      }
     }
   }
   
-  drawEclipseGlyphs() {
-    // Draw eclipse symbols at key positions
-    // Solar eclipses = ☉, Lunar eclipses = ☽
-    this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
-    this.ctx.font = '16px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    
-    // Sample eclipse positions (simplified)
-    const eclipsePositions = [0, 30, 60, 90, 120, 150, 180, 210]; // months
-    
-    eclipsePositions.forEach((month, idx) => {
-      const t = month / 223;
-      const angle = t * this.spiralTurns * Math.PI * 2;
-      const r = t * this.maxRadius;
-      
-      // Offset perpendicular to spiral
-      const offsetAngle = angle + Math.PI / 2;
-      const x = this.centerX + Math.cos(angle) * r + Math.cos(offsetAngle) * 15;
-      const y = this.centerY + Math.sin(angle) * r + Math.sin(offsetAngle) * 15;
-      
-      // Alternate solar and lunar
-      const symbol = idx % 2 === 0 ? '☉' : '☽';
-      this.ctx.fillText(symbol, x, y);
-    });
-  }
-  
   drawCurrentPosition(data) {
-    if (!data.sarosCycle) return;
+    if (!data.metonicCycle) return;
     
-    const progress = data.sarosCycle.progress;
+    const progress = data.metonicCycle.progress;
     const angle = progress * this.spiralTurns * Math.PI * 2;
     const r = progress * this.maxRadius;
     const x = this.centerX + Math.cos(angle) * r;
@@ -151,7 +138,8 @@ class BackLowerFace {
   }
   
   drawSubDials(data) {
-    // Exeligmos sub-dial (triple Saros = 54 years)
+    // Callippic sub-dial (76-year cycle = 4 Metonic cycles)
+    // Draw small dial in upper right
     const subDialX = this.canvas.width - 80;
     const subDialY = 100;
     const subDialRadius = 50;
@@ -162,24 +150,10 @@ class BackLowerFace {
     this.ctx.arc(subDialX, subDialY, subDialRadius, 0, Math.PI * 2);
     this.ctx.stroke();
     
-    // Three divisions for triple Saros
-    for (let i = 0; i < 3; i++) {
-      const angle = (i * 120 - 90) * Math.PI / 180;
-      this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
-      this.ctx.lineWidth = 1;
-      this.ctx.beginPath();
-      this.ctx.moveTo(subDialX, subDialY);
-      this.ctx.lineTo(
-        subDialX + Math.cos(angle) * subDialRadius,
-        subDialY + Math.sin(angle) * subDialRadius
-      );
-      this.ctx.stroke();
-    }
-    
-    // Exeligmos position (3 Saros cycles)
-    if (data.sarosCycle) {
-      const exeligmosProgress = (data.sarosCycle.cycle % 3) / 3;
-      const angle = exeligmosProgress * Math.PI * 2 - Math.PI / 2;
+    // Callippic position (4 Metonic cycles)
+    if (data.metonicCycle) {
+      const callippicProgress = (data.metonicCycle.year % 76) / 76;
+      const angle = callippicProgress * Math.PI * 2 - Math.PI / 2;
       
       this.ctx.strokeStyle = 'var(--color-pointer, #ffaa00)';
       this.ctx.lineWidth = 2;
@@ -208,23 +182,21 @@ class BackLowerFace {
     this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
     this.ctx.font = '11px Georgia';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('Exeligmos', subDialX, subDialY + subDialRadius + 15);
-    this.ctx.fillText('54 years', subDialX, subDialY + subDialRadius + 28);
+    this.ctx.fillText('Callippic', subDialX, subDialY + subDialRadius + 15);
+    this.ctx.fillText('76 years', subDialX, subDialY + subDialRadius + 28);
   }
   
   drawInfo(data) {
-    if (!data.sarosCycle || !data.nextEclipse) return;
+    if (!data.metonicCycle) return;
     
-    const saros = data.sarosCycle;
-    const nextEclipse = data.nextEclipse;
+    const metonic = data.metonicCycle;
     
-    // Calculate months into current Saros cycle (0-223)
-    const monthsInCycle = Math.round(saros.progress * 223);
-    const monthsRemaining = 223 - monthsInCycle;
+    // Calculate months into current cycle (235 lunar months total)
+    const monthsInCycle = Math.round(metonic.progress * 235);
+    const monthsRemaining = 235 - monthsInCycle;
     
-    // Calculate years and days from cycle completion
-    const daysPerSaros = 223 * 29.53059; // 223 synodic months
-    const daysRemaining = (monthsRemaining / 223) * daysPerSaros;
+    // Calculate time remaining in cycle
+    const daysRemaining = monthsRemaining * 29.53059; // lunar month average
     const yearsRemaining = Math.floor(daysRemaining / 365.25);
     const daysInYearRemaining = Math.round(daysRemaining % 365.25);
     
@@ -233,40 +205,27 @@ class BackLowerFace {
     this.ctx.font = 'bold 16px Georgia';
     this.ctx.textAlign = 'center';
     this.ctx.fillText(
-      `Saros Cycle ${saros.cycle} — Month ${monthsInCycle}/223`,
+      `Year ${metonic.year}/19 — Month ${monthsInCycle}/235`,
       this.centerX,
-      this.canvas.height - 65
+      this.canvas.height - 50
     );
     
     this.ctx.font = '12px Georgia';
     this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
     this.ctx.fillText(
-      `Cycle ends in ${yearsRemaining}y ${daysInYearRemaining}d (≈ 6586.3 days total)`,
+      `Cycle ends in ${yearsRemaining}y ${daysInYearRemaining}d (19.0 solar years)`,
       this.centerX,
-      this.canvas.height - 45
-    );
-    
-    // Next eclipse info
-    this.ctx.font = 'bold 14px Georgia';
-    this.ctx.fillStyle = 'var(--color-pointer, #ffaa00)';
-    
-    const eclipseType = nextEclipse.type === 'lunar' ? 'Lunar ☽' : 'Solar ☉';
-    const daysUntil = Math.floor(nextEclipse.daysUntil || 0);
-    
-    this.ctx.fillText(
-      `Next Eclipse: ${eclipseType} in ${daysUntil} days`,
-      this.centerX,
-      this.canvas.height - 25
+      this.canvas.height - 30
     );
     
     // Progress percentage
     this.ctx.font = '11px Georgia';
     this.ctx.fillStyle = 'rgba(212, 175, 55, 0.8)';
-    const progressPercent = (saros.progress * 100).toFixed(1);
+    const progressPercent = (metonic.progress * 100).toFixed(1);
     this.ctx.fillText(
       `Progress: ${progressPercent}%`,
       this.centerX,
-      this.canvas.height - 8
+      this.canvas.height - 12
     );
   }
 }
