@@ -520,14 +520,6 @@ class FrontFace {
       
       // Zodiac symbol
       this.ctx.fillText(this.zodiacSigns[i].symbol, x, y);
-      
-      // Major division lines (30° boundaries)
-      this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
-      this.ctx.lineWidth = 3;
-      this.ctx.beginPath();
-      this.ctx.moveTo(this.centerX + Math.cos(angle) * (radius - 30), this.centerY + Math.sin(angle) * (radius - 30));
-      this.ctx.lineTo(this.centerX + Math.cos(angle) * (radius + 10), this.centerY + Math.sin(angle) * (radius + 10));
-      this.ctx.stroke();
     }
   }
   
