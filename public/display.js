@@ -214,6 +214,7 @@ function stopRealTime() {
     }
 }
 
+// eslint-disable-next-line no-unused-vars
 function toggleRealTime() {
     if (isRealTimeMode) {
         stopRealTime();
