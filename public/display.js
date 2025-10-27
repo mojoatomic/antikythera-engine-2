@@ -116,7 +116,10 @@ function setCurrentDate() {
 
 async function updateDisplay() {
     const dateInput = document.getElementById('dateInput').value;
-    const date = dateInput ? new Date(dateInput).toISOString() : new Date().toISOString();
+    // Parse local datetime and adjust for timezone to get correct UTC date
+    const date = dateInput 
+        ? new Date(new Date(dateInput).getTime() + new Date(dateInput).getTimezoneOffset() * 60000).toISOString()
+        : new Date().toISOString();
     
     try {
         const response = await fetch(`http://localhost:3000/api/state/${date}`);

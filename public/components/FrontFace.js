@@ -220,12 +220,12 @@ class FrontFace {
       // Calculate sunrise time in hours using UTC to avoid DST jumps
       const sunriseTime = new Date(vis.sunrise.time);
       const sunriseHours = sunriseTime.getUTCHours() + sunriseTime.getUTCMinutes() / 60;
-      const sunriseAngle = (sunriseHours * 15 - 90) * Math.PI / 180; // No ecliptic rotation - fixed to time of day
+      const sunriseAngle = (sunriseHours * 15 - 90) * Math.PI / 180 + eclipticRotation;
       
       // Calculate sunset time in hours using UTC to avoid DST jumps
       const sunsetTime = new Date(vis.sunset.time);
       const sunsetHours = sunsetTime.getUTCHours() + sunsetTime.getUTCMinutes() / 60;
-      const sunsetAngle = (sunsetHours * 15 - 90) * Math.PI / 180; // No ecliptic rotation - fixed to time of day
+      const sunsetAngle = (sunsetHours * 15 - 90) * Math.PI / 180 + eclipticRotation;
       
       // Sunrise marker (on both rings) - ORANGE
       const sunriseOuterX = this.centerX + Math.cos(sunriseAngle) * outerRingRadius;

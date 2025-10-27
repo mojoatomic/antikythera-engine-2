@@ -22,10 +22,11 @@ app.get('/api/language', (req, res) => {
 });
 
 // Get current state
-app.get('/api/state', (req, res) => {
+app.get('/api/state', async (req, res) => {
   try {
     const date = req.query.date ? new Date(req.query.date) : new Date();
-    const state = engine.getState(date);
+    const observer = await getObserverFromRequest(req);
+    const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -48,10 +49,11 @@ app.get('/api/state/:date', async (req, res) => {
 });
 
 // Get just sun position
-app.get('/api/sun', (req, res) => {
+app.get('/api/sun', async (req, res) => {
   try {
     const date = req.query.date ? new Date(req.query.date) : new Date();
-    const state = engine.getState(date);
+    const observer = await getObserverFromRequest(req);
+    const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state.sun);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -59,10 +61,11 @@ app.get('/api/sun', (req, res) => {
 });
 
 // Get just moon position
-app.get('/api/moon', (req, res) => {
+app.get('/api/moon', async (req, res) => {
   try {
     const date = req.query.date ? new Date(req.query.date) : new Date();
-    const state = engine.getState(date);
+    const observer = await getObserverFromRequest(req);
+    const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state.moon);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -70,10 +73,11 @@ app.get('/api/moon', (req, res) => {
 });
 
 // Get planetary positions
-app.get('/api/planets', (req, res) => {
+app.get('/api/planets', async (req, res) => {
   try {
     const date = req.query.date ? new Date(req.query.date) : new Date();
-    const state = engine.getState(date);
+    const observer = await getObserverFromRequest(req);
+    const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state.planets);
   } catch (err) {
     res.status(500).json({ error: err.message });
