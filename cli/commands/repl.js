@@ -357,19 +357,25 @@ class AntikytheraREPL {
   }
 
   completer(line) {
-    const l = line.trim();
-    const parts = l.split(/\s+/);
-    const last = parts[parts.length - 1] || '';
+    const raw = line || '';
+    const trimmed = raw.trim();
+    const parts = trimmed.length ? trimmed.split(/\s+/) : [];
+    const last = parts.length ? (parts[parts.length - 1] || '') : '';
     const startWith = (list) => list.filter(s => s.startsWith(last));
 
     // Contextual after 'set'
     if (parts[0] === 'set') {
-      if (parts.length === 1 || (parts.length === 2 && !l.endsWith(' '))) {
+      // If only 'set' typed, show all keys
+      if (parts.length === 1) {
+        return [[ 'format','source','tz','intent','tolerance' ], last];
+      }
+      // If typing second token and no trailing space, filter by current token
+      if (parts.length === 2 && !raw.endsWith(' ')) {
         return [startWith(['format','source','tz','intent','tolerance']), last];
       }
       if (parts.length >= 2) {
         const key = parts[1];
-        const after = l.endsWith(' ');
+        const after = raw.endsWith(' ');
         if (key === 'format') {
           const opts = ['table','json','compact'];
           return [after ? opts : startWith(opts), last];
@@ -396,7 +402,8 @@ class AntikytheraREPL {
     // After compare|watch → bodies
     if (parts[0] === 'compare' || parts[0] === 'watch') {
       const list = VALID_BODIES;
-      return [startWith(list), last];
+      const after = raw.endsWith(' ');
+      return [after ? list : startWith(list), last];
     }
 
     const base = [
@@ -422,4 +429,11 @@ class AntikytheraREPL {
 module.exports = function repl() {
   const r = new AntikytheraREPL();
   r.start();
+};
+
+// Test helpers
+module.exports.__getCompleter = (context = {}) => {
+  const r = new AntikytheraREPL();
+  r.context = { ...r.context, ...context };
+  return r.completer.bind(r);
 };
