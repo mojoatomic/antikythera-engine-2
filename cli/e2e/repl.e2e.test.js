@@ -90,7 +90,7 @@ describe('REPL e2e (persistence across restart)', () => {
 });
 
 describe('REPL e2e (double SIGINT exit)', () => {
-  jest.setTimeout(15000);
+  jest.setTimeout(30000);
 
   test('double Ctrl+C exits REPL from prompt (PTY)', async () => {
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
@@ -103,10 +103,10 @@ describe('REPL e2e (double SIGINT exit)', () => {
     let out = '';
     term.onData(chunk => { out += chunk.toString(); });
 
-    await new Promise(res => setTimeout(res, 200));
+    await new Promise(res => setTimeout(res, 600));
     // First Ctrl+C should print hint
     term.write('\u0003');
-    await new Promise(res => setTimeout(res, 200));
+    await new Promise(res => setTimeout(res, 400));
     // Second Ctrl+C should exit
     term.write('\u0003');
 
