@@ -23,3 +23,6 @@ npm-debug.log*
 # Build outputs (if any)
 dist/
 build/
+
+# Local submissions/ASCL metadata
+/ASCL/
