@@ -78,8 +78,23 @@ async function getData(date = new Date(), options = {}) {
   }
 }
 
+async function getDisplayFromAPI(date = new Date()) {
+  try {
+    const response = await axios.get(`http://localhost:3000/api/display?date=${encodeURIComponent(date.toISOString())}`, {
+      timeout: 5000
+    });
+    return response.data;
+  } catch (error) {
+    if (error.code === 'ECONNREFUSED') {
+      throw new Error('API server not running. Start with: npm start');
+    }
+    throw error;
+  }
+}
+
 module.exports = {
   getData,
   getFromEngine,
-  getFromAPI
+  getFromAPI,
+  getDisplayFromAPI
 };

@@ -1,7 +1,7 @@
 const readline = require('readline');
 const os = require('os');
 const chalk = require('chalk');
-const { getData, getFromAPI, getFromEngine } = require('../sources');
+const { getData, getFromAPI, getFromEngine, getDisplayFromAPI } = require('../sources');
 const { format } = require('../formatters');
 const { loadContext, saveContext, getHistoryPath, loadHistory, saveHistory } = require('../utils/repl-config');
 const { parseDateInput, echoParsedDate, addRelativeToDate } = require('../utils/date-parse');
@@ -115,6 +115,9 @@ class AntikytheraREPL {
     }
     if (cmd === 'context' || cmd === 'ctx') return this.showContext();
     if (cmd === 'history') return this.showHistory();
+
+    // next <thing>
+    if (cmd === 'next') return this.handleNext(tokens.slice(1));
 
     // goto / reset
     if (cmd === 'goto') {
@@ -312,6 +315,48 @@ class AntikytheraREPL {
     this.activeWatch = { timer, body, interval };
   }
 
+  async handleNext(args) {
+    const what = (args[0] || '').toLowerCase();
+    const now = this._currentDate();
+    try {
+      const data = await getDisplayFromAPI(now);
+      if (what === 'opposition') {
+        const body = (args[1] || this.context.lastBody || 'mars').toLowerCase();
+        const opp = data.next_opposition;
+        if (opp && (!body || (opp.planet || '').toLowerCase().includes(body))) {
+          console.log(chalk.cyan.bold('\nNEXT OPPOSITION'));
+          console.log(`planet: ${chalk.yellow(opp.planet || body)}`);
+          console.log(`date:   ${chalk.yellow(opp.date)}`);
+          if (typeof opp.daysUntil === 'number') console.log(`in:     ${chalk.yellow(opp.daysUntil.toFixed(1))} days`);
+          console.log();
+          return;
+        }
+        console.log(chalk.red('No next opposition data in API response'));
+        return;
+      }
+      if (what === 'eclipse') {
+        // Try common fields; fallback to display text hints
+        const next = data.next_eclipse || data.digital?.displays?.oled_main?.line1;
+        console.log(chalk.cyan.bold('\nNEXT ECLIPSE'));
+        if (typeof next === 'object' && next) {
+          if (next.type) console.log(`type:  ${chalk.yellow(next.type)}`);
+          if (next.date) console.log(`date:  ${chalk.yellow(next.date)}`);
+          if (typeof next.daysUntil === 'number') console.log(`in:    ${chalk.yellow(next.daysUntil.toFixed(1))} days`);
+        } else if (typeof next === 'string') {
+          console.log(next);
+        } else {
+          console.log(chalk.red('No next eclipse data in API response'));
+        }
+        console.log();
+        return;
+      }
+      console.log(chalk.red('Usage: next eclipse | next opposition [planet]'));
+    } catch (e) {
+      console.log(chalk.red('✗ API unavailable (timeout or error)'));
+      console.log(chalk.gray('  Try: set source local or start server: npm start'));
+    }
+  }
+
   async handleSet(args) {
     const key = (args[0] || '').toLowerCase();
     const val = args.slice(1).join(' ');
@@ -384,6 +429,8 @@ class AntikytheraREPL {
     console.log('  all                   show all bodies (compact)');
     console.log('  compare <body>        api vs engine (Δ with tolerance)');
     console.log('  watch <body> [interval N]');
+    console.log('  next eclipse          show next eclipse (API)');
+    console.log('  next opposition [p]   show next opposition (API)');
     console.log('  goto <date>           set context date (ISO | +2h | today 18:00)');
     console.log('  reset                 reset context date to now');
     console.log('  +2h / -30m            step context date by relative amount');

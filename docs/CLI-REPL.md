@@ -24,6 +24,8 @@ Provide an interactive REPL for the Antikythera CLI that accelerates exploration
 - `all` → sun, moon, planets (compact table)
 - `compare <body>` → api vs engine (Δ with tolerance)
 - `watch <body> [interval N]` → live updates; Ctrl+C to stop
+- `next eclipse` → next eclipse info (via API)
+- `next opposition [planet]` → next opposition info (via API)
 - `set format <table|json|compact>`
 - `set source <auto|local|api>`
 - `set tz <auto|IANA>`
