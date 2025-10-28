@@ -633,10 +633,18 @@ class AntikytheraREPL {
     const width = (process.stdout && process.stdout.columns) ? Math.max(20, process.stdout.columns - 10) : 70;
 
     // Determine range token (last token like 30d/12h/2w). Default 30d
-    const last = (args[args.length - 1] || '').toLowerCase();
+    // Allow optional trailing 'csv' flag
+    let tokens = args.map(a => String(a || '').toLowerCase());
+    let forceCsv = false;
+    if (tokens.includes('csv')) {
+      forceCsv = true;
+      tokens = tokens.filter(t => t !== 'csv');
+    }
+
+    const last = (tokens[tokens.length - 1] || '').toLowerCase();
     const rm = last.match(/^(\d+)([dhw])$/);
     const rangeStr = rm ? last : '30d';
-    const specTokens = rm ? args.slice(0, -1) : args.slice(0);
+    const specTokens = rm ? tokens.slice(0, -1) : tokens.slice(0);
     const spec = specTokens.join(' ').trim().toLowerCase();
 
     const mm = rangeStr.match(/^(\d+)([dhw])$/);
@@ -727,7 +735,24 @@ class AntikytheraREPL {
       }
     }
 
-    // JSON output
+    // CSV output (explicit) or JSON (format=json)
+    if (forceCsv) {
+      const headers = ['time', ...seriesDefs.map(d => {
+        if (d.type === 'longitude') return `${d.target.toUpperCase()}_lon`;
+        if (d.type === 'visibility') return `${d.target.toUpperCase()}_alt`;
+        if (d.type === 'illumination') return 'MOON_illum_%';
+        if (d.type === 'speed') return `${d.target.toUpperCase()}_vel`;
+        return 'series';
+      })];
+      const rows = [];
+      for (let i = 0; i < times.length; i++) {
+        const row = [times[i]];
+        for (let s = 0; s < seriesDefs.length; s++) row.push(allValues[s][i]);
+        rows.push(row.join(','));
+      }
+      console.log([headers.join(','), ...rows].join(os.EOL));
+      return;
+    }
     if (this.context.format === 'json') {
       const out = {
         start: start.toISOString(),
@@ -753,7 +778,28 @@ class AntikytheraREPL {
 
     console.log('\n' + chalk.cyan(header));
     console.log(asciichart.plot(allValues.length === 1 ? allValues[0] : allValues, config));
-    // Minimal time markers
+
+    // X-axis ticks and labels
+    const axisWidth = config.width;
+    const tickCount = Math.max(3, Math.min(6, Math.floor(axisWidth / 20)));
+    const positions = [];
+    for (let i = 0; i < tickCount; i++) positions.push(Math.round((axisWidth - 1) * (i / (tickCount - 1))));
+    // Axis line with ticks
+    let axis = ''.padEnd(axisWidth, ' ');
+    axis = axis.split('');
+    positions.forEach(p => { axis[p] = '|'; });
+    console.log(chalk.gray(axis.join('')));
+    // Labels line
+    let labels = ''.padEnd(axisWidth, ' ').split('');
+    for (let i = 0; i < positions.length; i++) {
+      const idx = Math.round((times.length - 1) * (i / (positions.length - 1)));
+      const lbl = times[idx].replace('T', ' ').slice(5, 16); // MM-DD HH:MM
+      const startCol = Math.max(0, Math.min(axisWidth - lbl.length, positions[i] - Math.floor(lbl.length / 2)));
+      for (let k = 0; k < lbl.length; k++) labels[startCol + k] = lbl[k];
+    }
+    console.log(chalk.gray(labels.join('')));
+
+    // Start/end markers for redundancy
     const first = times[0].replace('T', ' ').slice(0, 16);
     const lastTime = times[times.length - 1].replace('T', ' ').slice(0, 16);
     console.log(chalk.gray(`${first}  ...  ${lastTime}`) + '\n');
