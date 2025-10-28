@@ -11,6 +11,7 @@ const cmdPosition = require('./commands/position');
 const cmdWatch = require('./commands/watch');
 const cmdCompare = require('./commands/compare');
 const cmdValidate = require('./commands/validate');
+const cmdRepl = require('./commands/repl');
 
 program
   .name('antikythera')
@@ -66,5 +67,11 @@ program
   .option('--suite <name>', 'Test suite to run (dst, leap-year, full)', 'dst')
   .option('--format <type>', 'Output format (table, json)', 'table')
   .action(cmdValidate);
+
+// REPL command - interactive shell
+program
+  .command('repl')
+  .description('Start interactive REPL mode')
+  .action(cmdRepl);
 
 program.parse(process.argv);

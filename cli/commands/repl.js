@@ -1,0 +1,337 @@
+const readline = require('readline');
+const os = require('os');
+const chalk = require('chalk');
+const { getData, getFromAPI, getFromEngine } = require('../sources');
+const { format } = require('../formatters');
+const { loadContext, saveContext, getHistoryPath, loadHistory, saveHistory } = require('../utils/repl-config');
+const { parseDateInput, echoParsedDate } = require('../utils/date-parse');
+
+const VALID_BODIES = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
+
+function isTTY() {
+  return process.stdout && process.stdout.isTTY && process.stdin && process.stdin.isTTY;
+}
+
+class AntikytheraREPL {
+  constructor() {
+    this.rl = null;
+    this.context = loadContext();
+    // Defaults / new flags
+    if (this.context.showIntent === undefined) this.context.showIntent = true;
+    if (!this.context.compareToleranceDeg) this.context.compareToleranceDeg = 0.001;
+  }
+
+  start() {
+    if (!isTTY()) {
+      console.error('REPL requires an interactive TTY');
+      process.exit(1);
+    }
+
+    console.log(chalk.cyan.bold('\n🌌 Antikythera REPL (type "help" for commands, Ctrl+C to cancel, exit to quit)\n'));
+
+    this.rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      prompt: chalk.yellow('antikythera> '),
+      completer: this.completer.bind(this),
+      historySize: 1000
+    });
+
+    // Load history
+    const hist = loadHistory();
+    if (hist.length) {
+      // readline expects most recent first
+      this.rl.history = hist.slice(-1000).reverse();
+    }
+
+    // Ctrl+C handling
+    let lastSigint = 0;
+    this.rl.on('SIGINT', () => {
+      const now = Date.now();
+      if (now - lastSigint < 600) {
+        this.rl.close();
+      } else {
+        lastSigint = now;
+        process.stdout.write(chalk.gray('^C (press again to exit)\n'));
+        this.rl.prompt();
+      }
+    });
+
+    this.rl.on('line', (line) => this.handleLine(line));
+    this.rl.on('close', () => this.handleExit());
+
+    this.rl.prompt();
+  }
+
+  saveAndPrompt() {
+    saveContext(this.context);
+    saveHistory(this.rl);
+    this.rl.prompt();
+  }
+
+  async handleLine(line) {
+    const input = (line || '').trim();
+    if (!input) return this.rl.prompt();
+
+    try {
+      await this.execute(input);
+    } catch (err) {
+      console.error(chalk.red('Error:'), err.message);
+    }
+
+    this.saveAndPrompt();
+  }
+
+  async execute(input) {
+    const tokens = input.split(/\s+/);
+    const cmd = tokens[0].toLowerCase();
+
+    // Built-ins
+    if (['exit', 'quit', '.exit'].includes(cmd)) return this.rl.close();
+    if (cmd === 'help' || cmd === '?') return this.showHelp();
+    if (cmd === 'clear' || cmd === 'cls') {
+      console.clear();
+      return;
+    }
+    if (cmd === 'context' || cmd === 'ctx') return this.showContext();
+    if (cmd === 'history') return this.showHistory();
+
+    // set commands
+    if (cmd === 'set') return this.handleSet(tokens.slice(1));
+
+    // compare / watch
+    if (cmd === 'compare') return this.handleCompare(tokens.slice(1));
+    if (cmd === 'watch') return this.handleWatch(tokens.slice(1));
+
+    // all / now short-hands
+    if (cmd === 'all' || (cmd === 'now' && tokens.length === 1)) return this.showAllPositions();
+
+    // body queries: <body>, <body> at <date>, <body> now
+    if (VALID_BODIES.includes(cmd)) {
+      // <body> now
+      if (tokens[1] && tokens[1].toLowerCase() === 'now') {
+        return this.showPosition(cmd, new Date());
+      }
+      // <body> at <date>
+      if (tokens[1] && tokens[1].toLowerCase() === 'at') {
+        const dateStr = tokens.slice(2).join(' ');
+        const { date, echo } = parseDateInput(dateStr, this.context);
+        this.maybeEchoIntent(`${cmd} at ${echo}`);
+        return this.showPosition(cmd, date);
+      }
+      // <body>
+      this.maybeEchoIntent(`${cmd} at now`);
+      return this.showPosition(cmd, new Date());
+    }
+
+    console.log(chalk.yellow('Unknown command. Type "help".'));
+  }
+
+  maybeEchoIntent(text) {
+    if (this.context.showIntent && this.context.format !== 'json') {
+      console.log(chalk.gray(text));
+    }
+  }
+
+  async dataFor(date) {
+    const opts = { local: this.context.source === 'local', remote: this.context.source === 'api' };
+    // Timeout guard for API calls when source=auto
+    return await getData(date, opts);
+  }
+
+  async showPosition(body, date = new Date()) {
+    this.context.lastBody = body;
+    this.context.lastDate = date;
+    const data = await this.dataFor(date);
+    const d = (body === 'sun' || body === 'moon') ? data[body] : data.planets[body];
+    const out = format(d, this.context.format);
+    // Ensure JSON prints clean
+    if (this.context.format === 'json') process.stdout.write(out + os.EOL);
+    else console.log(out);
+  }
+
+  async showAllPositions() {
+    const data = await this.dataFor(new Date());
+    console.log(chalk.cyan.bold('\n=== ALL BODIES ==='));
+    console.log(chalk.gray(`Date: ${data.date}\n`));
+    // Sun/Moon
+    for (const body of ['sun', 'moon']) {
+      const d = data[body];
+      console.log(chalk.yellow(body.toUpperCase().padEnd(8)) +
+        `Lon: ${chalk.bold(d.longitude.toFixed(3))}° ` +
+        `Lat: ${d.latitude.toFixed(3)}°`);
+    }
+    // Planets
+    for (const body of ['mercury', 'venus', 'mars', 'jupiter', 'saturn']) {
+      const d = data.planets[body];
+      console.log(chalk.yellow(body.toUpperCase().padEnd(8)) +
+        `Lon: ${chalk.bold(d.longitude.toFixed(3))}° ` +
+        `Lat: ${d.latitude.toFixed(3)}°`);
+    }
+    console.log();
+  }
+
+  async handleCompare(args) {
+    const body = (args[0] || this.context.lastBody || 'moon').toLowerCase();
+    if (!VALID_BODIES.includes(body)) {
+      console.log(chalk.red(`Invalid body: ${body}`));
+      console.log(chalk.gray(`Valid: ${VALID_BODIES.join(', ')}`));
+      return;
+    }
+    const date = this.context.lastDate || new Date();
+
+    console.log(chalk.cyan(`Comparing ${body} (API vs Engine)`));
+    const [apiData, engineData] = await Promise.all([
+      getFromAPI(date).catch(() => null),
+      getFromEngine(date)
+    ]);
+
+    if (!apiData) {
+      console.log(chalk.red('✗ API unavailable (timeout or error)'));
+      console.log(chalk.gray('  Try: set source local or start server: npm start'));
+      return;
+    }
+    const api = (body === 'sun' || body === 'moon') ? apiData[body] : apiData.planets[body];
+    const eng = (body === 'sun' || body === 'moon') ? engineData[body] : engineData.planets[body];
+
+    const tol = this.context.compareToleranceDeg || 0.001;
+    const lonDiff = Math.abs(api.longitude - eng.longitude);
+    const latDiff = Math.abs(api.latitude - eng.latitude);
+    const ok = lonDiff < tol && latDiff < tol;
+
+    console.log(`${ok ? chalk.green('✓') : chalk.red('✗')} Sources ${ok ? 'match' : 'differ'}`);
+    console.log(`  Δ lon: ${lonDiff.toFixed(6)}°  Δ lat: ${latDiff.toFixed(6)}°  (tol ${tol})`);
+  }
+
+  async handleWatch(args) {
+    const body = (args[0] || this.context.lastBody || 'moon').toLowerCase();
+    if (!VALID_BODIES.includes(body)) {
+      console.log(chalk.red(`Invalid body: ${body}`));
+      return;
+    }
+    let interval = 1000;
+    const idx = args.findIndex(a => a.toLowerCase() === 'interval');
+    if (idx >= 0 && args[idx + 1]) interval = Number(args[idx + 1]) || interval;
+    if (interval < 250) {
+      console.log(chalk.gray('Interval too low; clamping to 250ms'));
+      interval = 250;
+    }
+
+    console.log(chalk.cyan.bold(`\nWatching ${body.toUpperCase()} (Ctrl+C to stop)\n`));
+
+    let timer = null;
+    const update = async () => {
+      try {
+        const data = await this.dataFor(new Date());
+        const d = (body === 'sun' || body === 'moon') ? data[body] : data.planets[body];
+        const line = `${new Date().toISOString()} ${d.longitude.toFixed(6)}°`;
+        console.log(this.context.format === 'json' ? JSON.stringify({ time: new Date().toISOString(), longitude: d.longitude }) : chalk.bold(line));
+      } catch (err) {
+        console.error(chalk.red('Watch error:'), err.message);
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+
+    await update();
+    timer = setInterval(update, interval);
+  }
+
+  async handleSet(args) {
+    const key = (args[0] || '').toLowerCase();
+    const val = args.slice(1).join(' ');
+    switch (key) {
+      case 'format': {
+        const ok = ['table', 'json', 'compact'].includes(val);
+        if (!ok) return console.log(chalk.red('Invalid format (table|json|compact)'));
+        this.context.format = val;
+        console.log(chalk.green(`format=${val}`));
+        break;
+      }
+      case 'source': {
+        const ok = ['auto', 'local', 'api'].includes(val);
+        if (!ok) return console.log(chalk.red('Invalid source (auto|local|api)'));
+        this.context.source = val;
+        console.log(chalk.green(`source=${val}`));
+        break;
+      }
+      case 'tz': {
+        // MVP: accept value and store; parsing uses system tz for now
+        this.context.tz = val || 'auto';
+        console.log(chalk.green(`tz=${this.context.tz}`));
+        break;
+      }
+      case 'intent': {
+        const on = val.toLowerCase();
+        if (!['on', 'off', 'true', 'false'].includes(on)) return console.log(chalk.red('Usage: set intent on|off'));
+        this.context.showIntent = ['on', 'true'].includes(on);
+        console.log(chalk.green(`intent=${this.context.showIntent ? 'on' : 'off'}`));
+        break;
+      }
+      case 'tolerance': {
+        const num = Number(val);
+        if (!isFinite(num) || num <= 0) return console.log(chalk.red('Usage: set tolerance <positive degrees>'));
+        this.context.compareToleranceDeg = num;
+        console.log(chalk.green(`tolerance=${num}`));
+        break;
+      }
+      default:
+        console.log(chalk.yellow('set keys: format, source, tz, intent, tolerance'));
+    }
+  }
+
+  showContext() {
+    const c = this.context;
+    console.log(chalk.cyan.bold('\n=== CONTEXT ==='));
+    console.log(`format: ${chalk.yellow(c.format)}`);
+    console.log(`source: ${chalk.yellow(c.source)}`);
+    console.log(`tz:     ${chalk.yellow(c.tz || 'auto')}`);
+    console.log(`intent: ${chalk.yellow(c.showIntent ? 'on' : 'off')}`);
+    console.log(`tolΔ:   ${chalk.yellow(c.compareToleranceDeg)}`);
+    if (c.lastBody) console.log(`lastBody: ${chalk.yellow(c.lastBody)}`);
+    if (c.lastDate) console.log(`lastDate: ${chalk.gray(new Date(c.lastDate).toISOString())}`);
+    console.log();
+  }
+
+  showHistory() {
+    const hp = getHistoryPath();
+    const lines = loadHistory();
+    console.log(chalk.cyan.bold(`\n=== HISTORY (${lines.length}) ===`));
+    lines.slice(-20).forEach((cmd, i) => console.log(chalk.gray(`${i + 1}.`), cmd));
+    console.log(chalk.gray(`file: ${hp}`));
+    console.log();
+  }
+
+  showHelp() {
+    console.log(chalk.cyan.bold('\nCommands'));
+    console.log('  <body>                show position now');
+    console.log('  <body> at <date>      show position at date (ISO | +2h | today 18:00)');
+    console.log('  all                   show all bodies (compact)');
+    console.log('  compare <body>        api vs engine (Δ with tolerance)');
+    console.log('  watch <body> [interval N]');
+    console.log('  set format <v> | set source <v> | set tz <v> | set intent on|off | set tolerance <deg>');
+    console.log('  context | history | help | clear | exit');
+    console.log();
+  }
+
+  completer(line) {
+    const base = [
+      ...VALID_BODIES,
+      'all','now','watch','compare','help','exit','quit','.exit','context','history','clear','set','format','source','tz','intent','tolerance'
+    ];
+    const hits = base.filter(c => c.startsWith(line));
+    return [hits.length ? hits : base, line];
+  }
+
+  handleExit() {
+    saveContext(this.context);
+    saveHistory(this.rl);
+    console.log(chalk.cyan('\nGoodbye! 🌙'));
+    process.exit(0);
+  }
+}
+
+module.exports = function repl() {
+  const r = new AntikytheraREPL();
+  r.start();
+};
