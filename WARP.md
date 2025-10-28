@@ -257,6 +257,24 @@ const startOfYear = TimeUtils.startOfYear(date);
 
 ## GitHub Workflow
 
+### GitHub Tooling Preference Order
+
+Use this order for all GitHub-related tasks:
+
+1) GitHub MCP tools (preferred)
+- Use MCP for reading/updating PRs/issues, comments, reviews, branches/files.
+- Examples: add_issue_comment, pull_request_read, pull_request_review_write, update_pull_request, list_issues, list_pull_requests, create_branch, push_files.
+- Non-interactive by design; no pagers.
+
+2) Fallback: GitHub CLI (gh)
+- Always add --no-pager and prefer --json when parsing.
+- For multi-line text, use --body-file (see Shell Command Quoting section).
+- Avoid interactive prompts; never inline secrets.
+
+3) Fallback: raw git
+- Use only for local repo inspection when MCP/gh are unavailable.
+- Avoid pagers (e.g., git --no-pager log) and destructive commands.
+
 ### Managing Labels
 
 Always check existing labels before creating GitHub issues to avoid errors:
