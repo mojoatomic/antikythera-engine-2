@@ -8,6 +8,9 @@ function parseRelative(input, base) {
   const msPer = { s: 1e3, m: 6e4, h: 3.6e6, d: 8.64e7, w: 6.048e8, y: 3.15576e10 };
   const delta = (msPer[unit] || 0) * n * sign;
   if (!delta) return null;
+  // Guard: relative offsets larger than ±100 years are rejected
+  const LIMIT_MS = 100 * 365.25 * 24 * 3600 * 1000;
+  if (Math.abs(delta) > LIMIT_MS) throw new Error('Relative offset too large (±100y max)');
   return new Date(base.getTime() + delta);
 }
 

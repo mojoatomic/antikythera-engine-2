@@ -359,7 +359,9 @@ class AntikytheraREPL {
         }
         if (key === 'tz') {
           const sys = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-          const opts = ['auto', sys, 'UTC', 'America/Chicago', 'America/New_York', 'Europe/London', 'Europe/Paris'];
+          const current = (this.context && this.context.tz && this.context.tz !== 'auto') ? this.context.tz : null;
+          const optsBase = ['auto', sys, 'UTC', 'America/Chicago', 'America/New_York', 'Europe/London', 'Europe/Paris'];
+          const opts = current && !optsBase.includes(current) ? [current, ...optsBase] : optsBase;
           return [after ? opts : startWith(opts), last];
         }
         if (key === 'intent') {
