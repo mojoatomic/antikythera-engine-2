@@ -1,6 +1,6 @@
 {
   "name": "antikythera-engine",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Modern reconstruction of the Antikythera mechanism with accurate astronomical calculations",
   "main": "server.js",
   "bin": {

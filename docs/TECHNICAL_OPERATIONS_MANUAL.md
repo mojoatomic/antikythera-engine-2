@@ -1,6 +1,6 @@
 # Antikythera Engine: Technical Operations Manual
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Date:** 2025-10-26  
 **Status:** Active Development
 
@@ -181,6 +181,8 @@ Query parameters:
 - `lat`, `lon`, `elev` (optional): Manual observer location
 - `precision=full` (optional): Include per-body validation errors
 - `include=astronomical` (optional): Include raw astronomical data
+- `dt` (optional): Interval in seconds; when provided with `stepsPerDegree`, each stepper includes `stepsForInterval`
+- `stepsPerDegree` (optional): Stepper resolution (steps/degree); used with `dt`
 
 Response time: 25-75ms typical
 
@@ -371,9 +373,12 @@ watch jupiter compare
 
 The `/api/display` endpoint provides data formatted for physical mechanism control:
 
-**Stepper Motors (`mechanical.steppers`):**
+**Stepper Motors (`mechanical.steppers`):
 - `position`: Ecliptic longitude [0, 360) degrees
 - `velocity`: Degrees per day (negative = retrograde motion)
+- `velocityDegPerSec`: Degrees per second (derived)
+- `direction`: 'CW' if `velocityDegPerSec ≥ 0`, otherwise 'CCW'
+- `stepsForInterval`: Present when `dt` and `stepsPerDegree` are provided; computed as `round(velocityDegPerSec × dt × stepsPerDegree)`
 - `altitude`: Degrees above horizon (for visibility calculations)
 - `azimuth`: Compass direction in degrees
 
@@ -384,6 +389,32 @@ The `/api/display` endpoint provides data formatted for physical mechanism contr
 **Update Hints:**
 - `mechanical`: 10000ms (10 seconds) - slow-moving astronomical positions
 - `digital`: 1000ms (1 second) - faster-updating display text
+
+Example: Microcontroller usage
+```json path=null start=null
+{
+  "mechanical": {
+    "steppers": {
+      "sun": {
+        "position": 215.78,
+        "velocity": 0.999,
+        "velocityDegPerSec": 0.00001157,
+        "direction": "CW",
+        "stepsForInterval": 12
+      }
+    }
+  },
+  "intervalSec": 5
+}
+```
+Control loop (pseudocode):
+```c path=null start=null
+// Given stepsPerDegree = 200 and poll every 5s
+if (resp.mechanical.steppers.sun.stepsForInterval != 0) {
+  stepper_move_steps(SUN, resp.mechanical.steppers.sun.stepsForInterval,
+                     resp.mechanical.steppers.sun.direction == 'CW');
+}
+```
 
 ### 5.3 Synchronization Guarantees
 

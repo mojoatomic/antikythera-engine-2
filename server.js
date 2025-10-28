@@ -100,62 +100,42 @@ app.get('/api/display', async (req, res) => {
     const latitude = observer.latitude;
     const longitude = observer.longitude;
     const fullPrecision = req.query.precision === 'full';
+
+    // Optional step computation params
+    const dtParam = req.query.dt;
+    const stepsPerDegParam = req.query.stepsPerDegree;
+    const dtSec = (dtParam !== undefined) ? Number(dtParam) : null;
+    const stepsPerDegree = (stepsPerDegParam !== undefined) ? Number(stepsPerDegParam) : null;
+    const computeSteps = Number.isFinite(dtSec) && Number.isFinite(stepsPerDegree) && dtSec > 0 && stepsPerDegree > 0;
     
     const state = engine.getState(date, latitude, longitude, observer);
     
+    // Helper to enrich a stepper entry
+    function makeStepper(pos, vel, alt, az) {
+      const velocityDegPerSec = Number(vel) / 86400;
+      const direction = velocityDegPerSec >= 0 ? 'CW' : 'CCW';
+      const s = { position: pos, velocity: vel, velocityDegPerSec, direction };
+      if (Number.isFinite(alt)) s.altitude = alt;
+      if (Number.isFinite(az)) s.azimuth = az;
+      if (computeSteps) {
+        const stepsForInterval = Math.round(velocityDegPerSec * dtSec * stepsPerDegree);
+        s.stepsForInterval = stepsForInterval;
+      }
+      return s;
+    }
+
     // Build mechanical data - positions and velocities for stepper motors
     const mechanical = {
       steppers: {
-        sun: {
-          position: state.sun.longitude,
-          velocity: state.sun.velocity,
-          altitude: state.sun.altitude,
-          azimuth: state.sun.azimuth
-        },
-        moon: {
-          position: state.moon.longitude,
-          velocity: state.moon.velocity,
-          altitude: state.moon.altitude,
-          azimuth: state.moon.azimuth
-        },
-        mercury: {
-          position: state.planets.mercury.longitude,
-          velocity: state.planets.mercury.velocity,
-          altitude: state.planets.mercury.altitude,
-          azimuth: state.planets.mercury.azimuth
-        },
-        venus: {
-          position: state.planets.venus.longitude,
-          velocity: state.planets.venus.velocity,
-          altitude: state.planets.venus.altitude,
-          azimuth: state.planets.venus.azimuth
-        },
-        mars: {
-          position: state.planets.mars.longitude,
-          velocity: state.planets.mars.velocity,
-          altitude: state.planets.mars.altitude,
-          azimuth: state.planets.mars.azimuth
-        },
-        jupiter: {
-          position: state.planets.jupiter.longitude,
-          velocity: state.planets.jupiter.velocity,
-          altitude: state.planets.jupiter.altitude,
-          azimuth: state.planets.jupiter.azimuth
-        },
-        saturn: {
-          position: state.planets.saturn.longitude,
-          velocity: state.planets.saturn.velocity,
-          altitude: state.planets.saturn.altitude,
-          azimuth: state.planets.saturn.azimuth
-        },
-        lunar_nodes_ascending: {
-          position: state.lunarNodes.ascendingNode,
-          velocity: state.lunarNodes.motionRate
-        },
-        lunar_nodes_descending: {
-          position: state.lunarNodes.descendingNode,
-          velocity: state.lunarNodes.motionRate
-        }
+        sun: makeStepper(state.sun.longitude, state.sun.velocity, state.sun.altitude, state.sun.azimuth),
+        moon: makeStepper(state.moon.longitude, state.moon.velocity, state.moon.altitude, state.moon.azimuth),
+        mercury: makeStepper(state.planets.mercury.longitude, state.planets.mercury.velocity, state.planets.mercury.altitude, state.planets.mercury.azimuth),
+        venus: makeStepper(state.planets.venus.longitude, state.planets.venus.velocity, state.planets.venus.altitude, state.planets.venus.azimuth),
+        mars: makeStepper(state.planets.mars.longitude, state.planets.mars.velocity, state.planets.mars.altitude, state.planets.mars.azimuth),
+        jupiter: makeStepper(state.planets.jupiter.longitude, state.planets.jupiter.velocity, state.planets.jupiter.altitude, state.planets.jupiter.azimuth),
+        saturn: makeStepper(state.planets.saturn.longitude, state.planets.saturn.velocity, state.planets.saturn.altitude, state.planets.saturn.azimuth),
+        lunar_nodes_ascending: makeStepper(state.lunarNodes.ascendingNode, state.lunarNodes.motionRate),
+        lunar_nodes_descending: makeStepper(state.lunarNodes.descendingNode, state.lunarNodes.motionRate)
       },
       servos: {
         mercury_retrograde: {
@@ -297,6 +277,7 @@ app.get('/api/display', async (req, res) => {
       timestamp: state.date,
       mechanical,
       digital,
+      ...(computeSteps ? { intervalSec: dtSec } : {}),
       next_eclipse: state.nextEclipse && !state.nextEclipse.error ? {
         type: state.nextEclipse.type,
         kind: state.nextEclipse.kind || null,

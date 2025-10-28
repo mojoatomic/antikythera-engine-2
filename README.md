@@ -87,6 +87,19 @@ Complete state for physical mechanism implementation, including stepper motor co
 curl http://localhost:3000/api/display
 ```
 
+Query parameters (optional):
+- `date`: ISO 8601 timestamp
+- `lat`, `lon`, `elev`: Manual observer location override
+- `precision=full`: Include per-body validation errors
+- `include=astronomical`: Include raw astronomical data
+- `dt`: Interval in seconds to compute `stepsForInterval` for steppers
+- `stepsPerDegree`: Stepper resolution (steps/degree) used with `dt`
+
+Example:
+```bash
+curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
+```
+
 **Response structure:**
 ```json
 {
@@ -219,7 +232,7 @@ curl http://localhost:3000/api/display
       "error_quantiles_arcsec": { "p50": 1.61, "p95": 8.3, "max": 8.62 }
     },
     "reproducibility": {
-      "api_version": "1.0.0",
+      "api_version": "1.1.0",
       "engine_version": "astronomy-engine v2.1.19",
       "git_sha": "f35c46e",
       "validation_span": { "start": "2025-10-26", "end": "2025-11-25" },
@@ -266,6 +279,9 @@ curl http://localhost:3000/api/display
 **Units and conventions:**
 - **position:** Ecliptic longitude in degrees [0, 360)
 - **velocity:** Degrees per day (negative values indicate retrograde motion)
+- **velocityDegPerSec:** Degrees per second (derived from `velocity`)
+- **direction:** 'CW' when `velocityDegPerSec ≥ 0`, else 'CCW'
+- **stepsForInterval:** Integer motor steps for window `dt` using `stepsPerDegree` (present only when both query params provided)
 - **altitude:** Degrees above horizon [-90, 90] (negative = below horizon)
 - **azimuth:** Compass direction in degrees [0, 360) (0=North, 90=East, 180=South, 270=West)
 - **angle:** Servo position in degrees (0=prograde, 180=retrograde)
@@ -386,7 +402,7 @@ curl http://localhost:3000/api/system
       "validation_url": "https://github.com/mojoatomic/antikythera-engine-2/blob/main/docs/VALIDATION.md"
     },
     "reproducibility": {
-      "api_version": "1.0.0",
+      "api_version": "1.1.0",
       "engine_version": "astronomy-engine v2.1.19",
       "git_sha": "fb764bd",
       "sample_count": 7,
