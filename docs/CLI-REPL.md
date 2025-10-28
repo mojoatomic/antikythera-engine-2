@@ -36,7 +36,18 @@ Provide an interactive REPL for the Antikythera CLI that accelerates exploration
 - `set tolerance <degrees>`
 - `context`, `history`, `help`, `clear`, `exit|quit|.exit`
 
-Reserved for Phase 2: `next`, `find`, `goto`, `reset`, `+/-`, `where`, `|`.
+Reserved for Phase 2: `next`, `find`, `goto`, `reset`, `+/-`, `where`.
+
+### Pipes & Filters (Phase 2)
+- Syntax: `all | <stage> | <stage> ...`
+- Stages: `visible`, `retrograde`, `rising`, `where <field> <op> <value>`, `sort <field> [asc|desc]`, `limit <N>`, `fields <list>`, `grep <substr>`, `json`
+- Ops: `>`, `>=`, `<`, `<=`, `==`, `!=` (numeric or string)
+- Field aliases: `lon`→longitude, `lat`→latitude, `alt`→altitude, `vel`→velocity
+- JSON: `set format json` or add stage `| json` to return `{ date, rows: [...] }`
+
+Examples:
+- `all | visible | sort alt desc | limit 3`
+- `all | fields name lon alt | grep MAR`
 
 ### Completion
 - Global: help, exit, clear, context, history, set, format, source, tz, watch, compare, all, bodies
@@ -109,7 +120,7 @@ Examples:
 
 ### Plot Examples
 
-#### Planetary Motion
+#### Planetary Motion (single series)
 ```text
 antikythera> plot mars 90d
 
@@ -151,13 +162,23 @@ ALT (°)
 ```
 Altitude timeline over a day (horizon crossing shows sunrise/sunset).
 
+#### Multi-series and Unwrap
+```text
+antikythera> plot mars,jupiter 30d
+MARS | JUPITER
+<ascii chart with two colored lines>
+2025-10-01 12:00  ...  2025-10-31 12:00
+```
+- Multiple comma-separated bodies supported (also `planets` alias)
+- Longitude series are unwrapped to avoid 360° jumps for continuity
+
 ### Plot Implementation Notes
 - Library: `asciichart` (lightweight, no dependencies)
 - Width: responsive to terminal width via `process.stdout.columns`, with a conservative margin
   - Example: `asciichart.plot(values, { height: 12, width: (process.stdout.columns || 80) - 10 })`
 - Height: default 12 rows; future work may auto-scale per series
 - Color: plots themselves are plain ASCII (no colors), headings may use minimal styling
-- JSON: when `format=json`, REPL returns pure JSON (no ANSI), plots are not rendered
+- JSON: when `format=json`, REPL returns pure JSON (no ANSI) for plots as `{ start, stepMs, series[{def, values}], times }`
 - Data source:
   - `plot <body> <Nd>` → body ecliptic longitude samples across N days/weeks/hours
   - `plot moon.illumination <Nd>` → percent illumination × 100

@@ -92,9 +92,25 @@ async function getDisplayFromAPI(date = new Date()) {
   }
 }
 
+async function getNextConjunction(date = new Date(), a = 'moon', b = 'sun') {
+  const A = String(a || 'moon');
+  const B = String(b || 'sun');
+  return engine.getNextConjunction(date, A, B);
+}
+
+async function getNextEquinox(date = new Date()) {
+  return engine.getNextEquinox(date);
+}
+async function getNextSolstice(date = new Date()) {
+  return engine.getNextSolstice(date);
+}
+
 module.exports = {
   getData,
   getFromEngine,
   getFromAPI,
-  getDisplayFromAPI
+  getDisplayFromAPI,
+  getNextConjunction,
+  getNextEquinox,
+  getNextSolstice
 };

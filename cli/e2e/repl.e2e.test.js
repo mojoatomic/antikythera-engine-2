@@ -170,7 +170,7 @@ term.write('exit\r');
   });
 });
 
-describe('REPL e2e (time navigation, watch cancel, JSON purity)', () => {
+describe('REPL e2e (time navigation, watch cancel, JSON purity, pipes)', () => {
   jest.setTimeout(15000);
 
 test('time navigation: goto, step, reset updates context date', async () => {
@@ -268,6 +268,30 @@ test('plot moon.illumination 5d renders ASCII without crash', async () => {
     expect(lines.length).toBeGreaterThan(5);
   });
 
+  test('multi-series: plot mars,jupiter 5d renders without crash', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('plot mars,jupiter 5d\r');
+    await new Promise(res => setTimeout(res, 500));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    // Expect header with both series names
+    expect(clean).toMatch(/MARS/i);
+    expect(clean).toMatch(/JUPITER/i);
+  });
+
   test('JSON purity: format=json for moon has no ANSI', async () => {
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
     const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
@@ -295,6 +319,186 @@ test('plot moon.illumination 5d renders ASCII without crash', async () => {
     expect(jsonStr).not.toMatch(/\u001b|\x1b/); // no ANSI
     expect(() => JSON.parse(jsonStr)).not.toThrow();
     expect(code).toBe(0);
+  });
+
+  test('pipeline: all | visible | sort alt desc | limit 3 outputs filtered list', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('set format table\r');
+    await new Promise(res => setTimeout(res, 120));
+    term.write('all | visible | sort alt desc | limit 3\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/ALL BODIES \(filtered\)/i);
+    // Expect at most 3 body lines after header (approx check)
+    const lines = clean.split(/\r?\n/).filter(l => /^(SUN|MOON|MERCURY|VENUS|MARS|JUPITER|SATURN)\s/.test(l));
+    expect(lines.length).toBeLessThanOrEqual(3);
+  });
+
+  test('pipeline: all | fields name lon alt | grep MAR reduces columns', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('set format table\r');
+    await new Promise(res => setTimeout(res, 120));
+    term.write('all | fields name lon alt | grep MAR\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    // Should contain MARS line with only Lon and Alt displayed
+    const marsLine = clean.split(/\r?\n/).find(l => /^MARS\s/.test(l));
+    expect(marsLine).toBeTruthy();
+    expect(marsLine).toMatch(/Lon:/);
+    expect(marsLine).toMatch(/Alt:/);
+  });
+
+  test('pipeline: all | where alt > 0 | fields name alt | limit 2 filters numerically', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('set format table\r');
+    await new Promise(res => setTimeout(res, 120));
+    term.write('all | where alt > 0 | fields name alt | limit 2\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    const bodyLines = clean.split(/\r?\n/).filter(l => /^(SUN|MOON|MERCURY|VENUS|MARS|JUPITER|SATURN)\s/.test(l));
+    // Should be <= 2 lines based on limit
+    expect(bodyLines.length).toBeLessThanOrEqual(2);
+    // Each line should contain Alt:
+    bodyLines.forEach(l => expect(l).toMatch(/Alt:/));
+  });
+
+  test('pipeline: all | visible | json outputs JSON rows array', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('all | visible | json\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const idx = out.indexOf('{');
+    const last = out.lastIndexOf('}');
+    const jsonStr = out.slice(idx, last + 1);
+    const parsed = JSON.parse(jsonStr);
+    expect(code).toBe(0);
+    expect(Array.isArray(parsed.rows)).toBe(true);
+  });
+
+  test('find next conjunction moon sun prints result', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('find next conjunction moon sun\r');
+    await new Promise(res => setTimeout(res, 800));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/NEXT CONJUNCTION/i);
+    expect(clean).toMatch(/bodies:\s+moon \& sun/i);
+  });
+
+  test('conjunction aliases: "mars with sun" and "with sun mars" both work', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('find next conjunction mars with sun\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('find next conjunction with sun mars\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean.match(/NEXT CONJUNCTION/gi)?.length || 0).toBeGreaterThanOrEqual(2);
+  });
+
+  test('find next equinox and solstice print results', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('find next equinox\r');
+    await new Promise(res => setTimeout(res, 300));
+    term.write('find next solstice\r');
+    await new Promise(res => setTimeout(res, 500));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/NEXT EQUINOX/i);
+    expect(clean).toMatch(/NEXT SOLSTICE/i);
   });
 
   test.skip('auto source prints fallback message when API unavailable', async () => {

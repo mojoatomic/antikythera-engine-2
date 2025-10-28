@@ -95,6 +95,10 @@ class AntikytheraREPL {
   }
 
   async execute(input) {
+    // Pipeline support: detect '|' and delegate
+    if (input.includes('|')) {
+      return this.handlePipeline(input);
+    }
     const tokens = input.split(/\s+/);
     const cmd = tokens[0].toLowerCase();
 
@@ -119,6 +123,8 @@ class AntikytheraREPL {
 
     // next <thing>
     if (cmd === 'next') return this.handleNext(tokens.slice(1));
+    // find next <event>
+    if (cmd === 'find') return this.handleFind(tokens.slice(1));
 
     // goto / reset
     if (cmd === 'goto') {
@@ -263,6 +269,157 @@ class AntikytheraREPL {
     console.log();
   }
 
+  // Build rows for 'all' command
+  async buildAllRows(date) {
+    const data = await this.dataFor(date || this._currentDate());
+    const rows = [];
+    const push = (name, d) => {
+      if (!d) return;
+      rows.push({
+        name: name.toUpperCase(),
+        longitude: d.longitude,
+        latitude: d.latitude,
+        altitude: d.altitude,
+        azimuth: d.azimuth,
+        velocity: d.velocity,
+        isRetrograde: d.isRetrograde
+      });
+    };
+    push('sun', data.sun);
+    push('moon', data.moon);
+    for (const p of ['mercury','venus','mars','jupiter','saturn']) push(p, data.planets[p]);
+    return { date: data.date, rows };
+  }
+
+  // Parse and execute pipeline starting with 'all'
+  async handlePipeline(input) {
+    const stages = input.split('|').map(s => s.trim()).filter(Boolean);
+    if (!stages.length || !/^all\b/i.test(stages[0])) {
+      console.log(chalk.red('Pipelines must start with: all'));
+      return;
+    }
+
+    // Base data
+    const { rows, date } = await this.buildAllRows(this._currentDate());
+    let out = rows.slice();
+
+    // Helpers
+    const fieldAlias = (k) => ({ lon:'longitude', long:'longitude', longitude:'longitude',
+                                 lat:'latitude', latitude:'latitude',
+                                 alt:'altitude', altitude:'altitude',
+                                 az:'azimuth', azimuth:'azimuth',
+                                 vel:'velocity', velocity:'velocity',
+                                 name:'name' }[k] || k);
+    const parseVal = (s) => {
+      const str = String(s).trim();
+      if (/^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(str)) return Number(str);
+      if (/^(true|false)$/i.test(str)) return /^true$/i.test(str);
+      return str;
+    };
+    const cmp = (op, a, b) => {
+      if (typeof a === 'number' && typeof b === 'number') {
+        if (op === '>') return a > b;
+        if (op === '>=') return a >= b;
+        if (op === '<') return a < b;
+        if (op === '<=') return a <= b;
+        if (op === '==') return a === b;
+        if (op === '!=') return a !== b;
+      } else {
+        const as = String(a).toLowerCase();
+        const bs = String(b).toLowerCase();
+        if (op === '==') return as === bs;
+        if (op === '!=') return as !== bs;
+      }
+      return false;
+    };
+
+    let forceJson = false;
+
+    // Apply each stage
+    for (let i = 1; i < stages.length; i++) {
+      const s = stages[i];
+      const parts = s.split(/\s+/);
+      const cmd = parts[0].toLowerCase();
+
+      if (cmd === 'visible') {
+        out = out.filter(r => typeof r.altitude === 'number' && r.altitude > 0);
+        continue;
+      }
+      if (cmd === 'retrograde') {
+        out = out.filter(r => typeof r.velocity === 'number' && r.velocity < 0);
+        continue;
+      }
+      if (cmd === 'rising') {
+        // Cheap placeholder: require altitude present (implies computed); real rising requires derivative
+        out = out.filter(r => r.altitude !== undefined);
+        continue;
+      }
+      if (cmd === 'grep' && parts[1]) {
+        const pat = parts.slice(1).join(' ').toLowerCase();
+        out = out.filter(r => r.name.toLowerCase().includes(pat));
+        continue;
+      }
+      if (cmd === 'sort' && parts[1]) {
+        const key = fieldAlias(parts[1].toLowerCase());
+        const desc = (parts[2] || '').toLowerCase() === 'desc';
+        out.sort((a,b) => {
+          const av = a[key]; const bv = b[key];
+          const an = (typeof av === 'number') ? av : -Infinity;
+          const bn = (typeof bv === 'number') ? bv : -Infinity;
+          return desc ? (bn - an) : (an - bn);
+        });
+        continue;
+      }
+      if (cmd === 'limit' && parts[1]) {
+        const n = Math.max(0, parseInt(parts[1], 10) || 0);
+        out = out.slice(0, n);
+        continue;
+      }
+      if (cmd === 'fields' && parts[1]) {
+        const list = parts.slice(1).join(' ').split(/[\s,]+/).map(x => fieldAlias(x.toLowerCase())).filter(Boolean);
+        const uniq = Array.from(new Set(['name', ...list]));
+        out = out.map(r => {
+          const o = {}; uniq.forEach(k => { if (k in r) o[k] = r[k]; }); return o;
+        });
+        continue;
+      }
+      if (cmd === 'where' && parts.length >= 4) {
+        const key = fieldAlias(parts[1].toLowerCase());
+        const op = parts[2];
+        const rhs = parseVal(parts.slice(3).join(' '));
+        out = out.filter(r => {
+          const lhs = r[key];
+          if (lhs === undefined || lhs === null) return false;
+          const lv = (typeof lhs === 'number') ? lhs : String(lhs);
+          return cmp(op, lv, rhs);
+        });
+        continue;
+      }
+      if (cmd === 'json') {
+        forceJson = true;
+        continue;
+      }
+      console.log(chalk.yellow(`Unknown stage: ${s}`));
+    }
+
+    if (forceJson || this.context.format === 'json') {
+      process.stdout.write(JSON.stringify({ date, rows: out }, null, 2) + os.EOL);
+      return;
+    }
+
+    console.log(chalk.cyan.bold('\n=== ALL BODIES (filtered) ==='));
+    console.log(chalk.gray(`Date: ${date}\n`));
+    for (const r of out) {
+      const parts = [];
+      if (typeof r.longitude === 'number') parts.push(`Lon: ${chalk.bold(r.longitude.toFixed(3))}°`);
+      if (typeof r.latitude === 'number') parts.push(`Lat: ${r.latitude.toFixed(3)}°`);
+      if (typeof r.altitude === 'number') parts.push(`Alt: ${r.altitude.toFixed(1)}°`);
+      if (typeof r.velocity === 'number') parts.push(`Vel: ${r.velocity.toFixed(3)}°/d`);
+      console.log(chalk.yellow(String(r.name).padEnd(8)) + parts.join(' '));
+    }
+    console.log();
+  }
+
   async handleCompare(args) {
     const body = (args[0] || this.context.lastBody || 'moon').toLowerCase();
     if (!VALID_BODIES.includes(body)) {
@@ -319,12 +476,39 @@ class AntikytheraREPL {
       this.activeWatch = null;
     }
 
+    let prevLon = null;
     const update = async () => {
       try {
+        // Clear current prompt line to avoid collision
+        if (this.rl && this.rl.output && this.rl.output.clearLine) {
+          this.rl.output.clearLine(0);
+          this.rl.output.cursorTo(0);
+        } else {
+          process.stdout.write('\x1B[2K\r');
+        }
+        const nowIso = new Date().toISOString();
         const data = await this.dataFor(new Date());
         const d = (body === 'sun' || body === 'moon') ? data[body] : data.planets[body];
-        const line = `${new Date().toISOString()} ${d.longitude.toFixed(6)}°`;
-        console.log(this.context.format === 'json' ? JSON.stringify({ time: new Date().toISOString(), longitude: d.longitude }) : chalk.bold(line));
+        const lon = d.longitude;
+        const delta = (prevLon == null) ? null : (lon - prevLon);
+        prevLon = lon;
+
+        if (this.context.format === 'json') {
+          const payload = { time: nowIso, body, longitude: lon, delta: typeof delta === 'number' ? delta : undefined };
+          process.stdout.write(JSON.stringify(payload) + os.EOL);
+          return;
+        }
+
+        if (this.context.format === 'compact') {
+          const arrow = (delta == null) ? '→' : (delta > 0 ? '↑' : (delta < 0 ? '↓' : '→'));
+          const deltaStr = (delta == null) ? '' : ` ${arrow} ${(delta).toFixed(6)}°`;
+          console.log(`${nowIso} ${lon.toFixed(6)}°${deltaStr}`);
+          return;
+        }
+
+        // table/default
+        const deltaStr = (delta == null) ? '' : ` (Δ ${(delta).toFixed(6)}°)`;
+        console.log(`${chalk.gray(nowIso)} ${chalk.cyan(body.toUpperCase())}: ${chalk.bold(lon.toFixed(6))}°${chalk.gray(deltaStr)}`);
       } catch (err) {
         console.error(chalk.red('Watch error:'), err.message);
         if (this.activeWatch && this.activeWatch.timer) {
@@ -340,40 +524,139 @@ class AntikytheraREPL {
   }
 
   async handlePlot(args) {
-    // Supported: plot <body> <Nd>, plot moon.illumination <Nd>, plot visibility sun 1d
+    // Examples:
+    // - plot mars 90d
+    // - plot moon.illumination 30d
+    // - plot mars,jupiter 60d
+    // - plot visibility sun 1d
+    // - plot speed mars,jupiter 30d
     const width = (process.stdout && process.stdout.columns) ? Math.max(20, process.stdout.columns - 10) : 70;
-    const series = (args[0] || '').toLowerCase();
-    const range = (args[1] || '30d').toLowerCase();
-    const m = range.match(/^(\d+)([dhw])$/);
-    if (!m) {
-      console.log(chalk.red('Usage: plot <body> <Nd> | plot moon.illumination <Nd> | plot visibility sun 1d'));
+
+    // Determine range token (last token like 30d/12h/2w). Default 30d
+    const last = (args[args.length - 1] || '').toLowerCase();
+    const rm = last.match(/^(\d+)([dhw])$/);
+    const rangeStr = rm ? last : '30d';
+    const specTokens = rm ? args.slice(0, -1) : args.slice(0);
+    const spec = specTokens.join(' ').trim().toLowerCase();
+
+    const mm = rangeStr.match(/^(\d+)([dhw])$/);
+    if (!mm || (!spec || !spec.length)) {
+      console.log(chalk.red('Usage: plot <body[,body...]> <N[d|h|w]> | plot moon.illumination <N..> | plot visibility sun <N..> | plot speed <body[,..]> <N..>'));
       return;
     }
-    const count = parseInt(m[1], 10);
-    const unit = m[2];
+    const count = parseInt(mm[1], 10);
+    const unit = mm[2];
 
     const start = this._currentDate();
     const msPer = { d: 86400e3, h: 3600e3, w: 7 * 86400e3 };
     const stepMs = msPer[unit] || 86400e3;
     const samples = Math.max(5, Math.min(300, count));
 
-    const values = [];
+    // Build series definitions
+    const expandBodies = (list) => {
+      if (!list || !list.length) return [];
+      const parts = list.split(',').map(s => s.trim()).filter(Boolean);
+      return parts.flatMap(p => (p === 'planets') ? ['mercury','venus','mars','jupiter','saturn'] : [p]);
+    };
+
+    const seriesDefs = [];
+    if (spec.startsWith('visibility ')) {
+      const target = spec.split(/\s+/)[1] || 'sun';
+      seriesDefs.push({ type: 'visibility', target });
+    } else if (spec.startsWith('speed ')) {
+      const list = spec.slice('speed '.length);
+      const bodies = expandBodies(list);
+      bodies.forEach(b => seriesDefs.push({ type: 'speed', target: b }));
+    } else if (spec.includes('illum')) {
+      seriesDefs.push({ type: 'illumination', target: 'moon' });
+    } else {
+      const bodies = expandBodies(spec);
+      bodies.forEach(b => seriesDefs.push({ type: 'longitude', target: b }));
+    }
+
+    if (!seriesDefs.length) {
+      console.log(chalk.red('No series to plot'));
+      return;
+    }
+
+    // Helper to unwrap angles for continuity
+    const unwrap = (arr) => {
+      if (!arr.length) return arr;
+      const out = [arr[0]];
+      for (let i = 1; i < arr.length; i++) {
+        let delta = arr[i] - arr[i - 1];
+        if (delta > 180) delta -= 360;
+        else if (delta < -180) delta += 360;
+        out.push(out[i - 1] + delta);
+      }
+      return out;
+    };
+
+    const times = [];
+    const allValues = seriesDefs.map(() => []);
+
     for (let i = 0; i < samples; i++) {
       const t = new Date(start.getTime() + i * stepMs);
+      times.push(t.toISOString());
       const data = await this.dataFor(t);
-      if (series.includes('illum')) {
-        values.push((data.moon?.illumination || 0) * 100);
-      } else if (series === 'visibility' && (args[1] || '').toLowerCase() === 'sun') {
-        values.push(data.sun?.altitude || 0);
-      } else {
-        const body = series;
-        const d = (body === 'sun' || body === 'moon') ? data[body] : data.planets[body];
-        values.push(d?.longitude ?? 0);
+
+      for (let s = 0; s < seriesDefs.length; s++) {
+        const def = seriesDefs[s];
+        if (def.type === 'illumination') {
+          allValues[s].push((data.moon?.illumination || 0) * 100);
+        } else if (def.type === 'visibility') {
+          if (def.target === 'sun') allValues[s].push(data.sun?.altitude || 0);
+          else {
+            const d = (def.target === 'moon' || def.target === 'sun') ? data[def.target] : data.planets[def.target];
+            allValues[s].push(d?.altitude ?? 0);
+          }
+        } else if (def.type === 'speed') {
+          const d = (def.target === 'moon' || def.target === 'sun') ? data[def.target] : data.planets[def.target];
+          allValues[s].push(d?.velocity ?? 0);
+        } else if (def.type === 'longitude') {
+          const d = (def.target === 'moon' || def.target === 'sun') ? data[def.target] : data.planets[def.target];
+          allValues[s].push(d?.longitude ?? 0);
+        }
       }
     }
 
-    const config = { height: 12, width };
-    console.log('\n' + asciichart.plot(values, config) + '\n');
+    // Unwrap longitudes only
+    for (let s = 0; s < seriesDefs.length; s++) {
+      if (seriesDefs[s].type === 'longitude') {
+        allValues[s] = unwrap(allValues[s]);
+      }
+    }
+
+    // JSON output
+    if (this.context.format === 'json') {
+      const out = {
+        start: start.toISOString(),
+        stepMs,
+        series: seriesDefs.map((def, idx) => ({ def, values: allValues[idx] })),
+        times
+      };
+      process.stdout.write(JSON.stringify(out, null, 2) + os.EOL);
+      return;
+    }
+
+    // Colors for multiple series
+    const colors = [asciichart.blue, asciichart.red, asciichart.green, asciichart.yellow, asciichart.cyan, asciichart.magenta];
+    const config = { height: 12, width, colors: seriesDefs.map((_, i) => colors[i % colors.length]) };
+
+    const header = seriesDefs.map(d => {
+      if (d.type === 'longitude') return d.target.toUpperCase();
+      if (d.type === 'visibility') return `VIS(${d.target.toUpperCase()})`;
+      if (d.type === 'illumination') return 'MOON.ILLUM';
+      if (d.type === 'speed') return `SPEED(${d.target.toUpperCase()})`;
+      return 'SERIES';
+    }).join(' | ');
+
+    console.log('\n' + chalk.cyan(header));
+    console.log(asciichart.plot(allValues.length === 1 ? allValues[0] : allValues, config));
+    // Minimal time markers
+    const first = times[0].replace('T', ' ').slice(0, 16);
+    const lastTime = times[times.length - 1].replace('T', ' ').slice(0, 16);
+    console.log(chalk.gray(`${first}  ...  ${lastTime}`) + '\n');
   }
 
   async handleNext(args) {
@@ -386,9 +669,14 @@ class AntikytheraREPL {
         const opp = data.next_opposition;
         if (opp && (!body || (opp.planet || '').toLowerCase().includes(body))) {
           console.log(chalk.cyan.bold('\nNEXT OPPOSITION'));
-          console.log(`planet: ${chalk.yellow(opp.planet || body)}`);
-          console.log(`date:   ${chalk.yellow(opp.date)}`);
-          if (typeof opp.daysUntil === 'number') console.log(`in:     ${chalk.yellow(opp.daysUntil.toFixed(1))} days`);
+          console.log(`planet:      ${chalk.yellow(opp.planet || body)}`);
+          console.log(`date (UTC):  ${chalk.yellow(opp.date)}`);
+          try {
+            const tz = (this.context && this.context.tz && this.context.tz !== 'auto') ? this.context.tz : Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const local = new Date(opp.date).toLocaleString('en-US', { timeZone: tz, hour12: false }).replace(',', '');
+            console.log(`local (${tz}): ${chalk.yellow(local)}`);
+          } catch (_) {}
+          if (typeof opp.daysUntil === 'number') console.log(`in:          ${chalk.yellow(opp.daysUntil.toFixed(1))} days`);
           console.log();
           return;
         }
@@ -396,15 +684,32 @@ class AntikytheraREPL {
         return;
       }
       if (what === 'eclipse') {
-        // Try common fields; fallback to display text hints
-        const next = data.next_eclipse || data.digital?.displays?.oled_main?.line1;
+        // Prefer structured object; fallback to display text
+        const next = data.next_eclipse || null;
         console.log(chalk.cyan.bold('\nNEXT ECLIPSE'));
-        if (typeof next === 'object' && next) {
-          if (next.type) console.log(`type:  ${chalk.yellow(next.type)}`);
-          if (next.date) console.log(`date:  ${chalk.yellow(next.date)}`);
-          if (typeof next.daysUntil === 'number') console.log(`in:    ${chalk.yellow(next.daysUntil.toFixed(1))} days`);
-        } else if (typeof next === 'string') {
-          console.log(next);
+        if (next && typeof next === 'object') {
+          const type = (next.type || '').toString();
+          const kind = (next.kind || (next.local && next.local.kind) || '').toString();
+          if (type) console.log(`type:        ${chalk.yellow(type)}`);
+          if (kind) console.log(`kind:        ${chalk.yellow(kind)}`);
+          if (next.date) {
+            const utc = new Date(next.date).toISOString();
+            console.log(`date (UTC):  ${chalk.yellow(utc)}`);
+            // local echo using context tz
+            try {
+              const tz = (this.context && this.context.tz && this.context.tz !== 'auto') ? this.context.tz : Intl.DateTimeFormat().resolvedOptions().timeZone;
+              const local = new Date(next.date).toLocaleString('en-US', { timeZone: tz, hour12: false }).replace(',', '');
+              console.log(`local (${tz}): ${chalk.yellow(local)}`);
+            } catch (_) {}
+          }
+          if (typeof next.daysUntil === 'number') console.log(`in:          ${chalk.yellow(next.daysUntil.toFixed(1))} days`);
+          if (next.local && typeof next.local.obscuration === 'number') {
+            console.log(`obscuration: ${chalk.yellow((next.local.obscuration * 100).toFixed(1))}% (local)`);
+          } else if (next.details && typeof next.details.obscuration === 'number') {
+            console.log(`obscuration: ${chalk.yellow((next.details.obscuration * 100).toFixed(1))}%`);
+          }
+        } else if (data.digital?.displays?.oled_main?.line1) {
+          console.log(data.digital.displays.oled_main.line1);
         } else {
           console.log(chalk.red('No next eclipse data in API response'));
         }
@@ -416,6 +721,99 @@ class AntikytheraREPL {
       console.log(chalk.red('✗ API unavailable (timeout or error)'));
       console.log(chalk.gray('  Try: set source local or start server: npm start'));
     }
+  }
+
+  async handleFind(args) {
+    // Usage: find next conjunction [A] [B]
+    const sub = (args[0] || '').toLowerCase();
+    const what = (args[1] || '').toLowerCase();
+
+    if (sub !== 'next') {
+      console.log(chalk.red('Usage: find next <conjunction|equinox|solstice> [...]'));
+      return;
+    }
+
+    if (what === 'conjunction') {
+      const valid = ['sun','moon','mercury','venus','mars','jupiter','saturn'];
+      // Flexible parsing:
+      // - find next conjunction A B
+      // - find next conjunction A with B
+      // - find next conjunction with B A
+      // - find next conjunction A  (defaults B=sun)
+      const tail = args.slice(2).map(s => (s || '').toLowerCase()).filter(Boolean);
+      let bodyA = 'moon';
+      let bodyB = 'sun';
+      const idxWith = tail.indexOf('with');
+      if (idxWith === 0) {
+        // with B A  -> treat as A with B (sun-first common case)
+        const b = tail[1];
+        const a = tail[2];
+        if (a) { bodyA = a; bodyB = b || 'sun'; }
+        else if (b) { bodyA = b; bodyB = 'sun'; }
+      } else if (idxWith > 0) {
+        // A with B
+        bodyA = tail[0] || 'moon';
+        bodyB = tail[idxWith + 1] || 'sun';
+      } else if (tail.length === 1) {
+        bodyA = tail[0]; bodyB = 'sun';
+      } else if (tail.length >= 2) {
+        bodyA = tail[0]; bodyB = tail[1];
+      }
+
+      if (!valid.includes(bodyA) || !valid.includes(bodyB)) {
+        console.log(chalk.red('Invalid bodies. Valid: sun, moon, mercury, venus, mars, jupiter, saturn'));
+        return;
+      }
+      try {
+        const now = this._currentDate();
+        const { getNextConjunction } = require('../sources');
+        const res = await getNextConjunction(now, bodyA, bodyB);
+        if (res && !res.error) {
+          console.log(chalk.cyan.bold('\nNEXT CONJUNCTION'));
+          console.log(`bodies:      ${chalk.yellow(res.bodies.join(' & '))}`);
+          console.log(`date (UTC):  ${chalk.yellow(res.date)}`);
+          try {
+            const tz = (this.context && this.context.tz && this.context.tz !== 'auto') ? this.context.tz : Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const local = new Date(res.date).toLocaleString('en-US', { timeZone: tz, hour12: false }).replace(',', '');
+            console.log(`local (${tz}): ${chalk.yellow(local)}`);
+          } catch (_) {}
+          if (typeof res.daysUntil === 'number') console.log(`in:          ${chalk.yellow(res.daysUntil.toFixed(1))} days`);
+          console.log();
+        } else {
+          console.log(chalk.red(res.error || 'No conjunction found'));
+        }
+      } catch (err) {
+        console.log(chalk.red('Error finding conjunction:'), err.message);
+      }
+      return;
+    }
+
+    if (what === 'equinox' || what === 'solstice') {
+      try {
+        const now = this._currentDate();
+        const { getNextEquinox, getNextSolstice } = require('../sources');
+        const res = what === 'equinox' ? await getNextEquinox(now) : await getNextSolstice(now);
+        if (res && !res.error) {
+          console.log(chalk.cyan.bold(`\nNEXT ${what.toUpperCase()}`));
+          console.log(`type:        ${chalk.yellow(res.type)}`);
+          console.log(`date (UTC):  ${chalk.yellow(res.date)}`);
+          try {
+            const tz = (this.context && this.context.tz && this.context.tz !== 'auto') ? this.context.tz : Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const local = new Date(res.date).toLocaleString('en-US', { timeZone: tz, hour12: false }).replace(',', '');
+            console.log(`local (${tz}): ${chalk.yellow(local)}`);
+          } catch (_) {}
+          if (typeof res.daysUntil === 'number') console.log(`in:          ${chalk.yellow(res.daysUntil.toFixed(1))} days`);
+          console.log();
+        } else {
+          console.log(chalk.red(res.error || `No ${what} found`));
+        }
+      } catch (err) {
+        console.log(chalk.red(`Error finding ${what}:`), err.message);
+      }
+      return;
+    }
+
+    console.log(chalk.red('Usage: find next conjunction [A] [B] | find next equinox | find next solstice'));
   }
 
   async handleSet(args) {
@@ -492,6 +890,9 @@ class AntikytheraREPL {
     console.log('  watch <body> [interval N]');
     console.log('  next eclipse          show next eclipse (API)');
     console.log('  next opposition [p]   show next opposition (API)');
+    console.log('  find next conjunction [A] [B]   geocentric ecliptic conjunction');
+    console.log('                         [A] with [B] (defaults to with sun)');
+    console.log('  find next equinox|solstice      seasonal events (UTC/local)');
     console.log('  goto <date>           set context date (ISO | +2h | today 18:00)');
     console.log('  reset                 reset context date to now');
     console.log('  +2h / -30m            step context date by relative amount');
@@ -555,6 +956,16 @@ class AntikytheraREPL {
       const list = VALID_BODIES;
       const after = raw.endsWith(' ');
       return [after ? list : startWith(list), last];
+    }
+
+    // After 'all |' suggest pipeline stages
+    if (raw.includes('|')) {
+      const before = raw.split('|')[0].trim();
+      if (/^all\b/i.test(before)) {
+        const after = raw.endsWith(' ');
+        const stages = ['visible','retrograde','rising','where','sort','limit','fields','grep','json'];
+        return [after ? stages : startWith(stages), last];
+      }
     }
 
     const base = [
