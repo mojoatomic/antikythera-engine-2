@@ -1,4 +1,8 @@
-# CLI-REPL Design (MVP)
+# CLI REPL User Guide (Educators and NASA)
+
+This guide explains how to use the Antikythera CLI and interactive REPL without reading code. It includes step-by-step examples, ready-to-copy commands, and links to the Technical Operations Manual for deeper reference.
+
+See also: Technical Operations Manual → REPL Operations (docs/TECHNICAL_OPERATIONS_MANUAL.md#repl-operations)
 
 Status: Implemented (MVP)
 Owner: CLI team
@@ -11,46 +15,75 @@ Provide an interactive REPL for the Antikythera CLI that accelerates exploration
 - Event search DSL, scripting/macros, plotting
 - Heavy dependencies beyond Node builtin readline and chalk
 
-## UX
-- Start: `antikythera repl` (TTY only; exit with non-zero if non-interactive)
-- Prompt: `antikythera>` with history (persisted) and tab completion
-- Ctrl+C: cancel current op/watch; double Ctrl+C exits REPL
-- Echo intent lines for clarity: `Moon at 2025-12-25T00:00:00Z (source: api, format: table)`
+## Quick Start for Educators
 
-### Commands (Grammar)
-- `<body>` → position now (uses context)
-- `<body> at <date>` → position at date
-- `<body> now` → explicit now
-- `all [visible|rising|retrograde]` → sun, moon, planets (compact table; optional filters)
-- `compare <body>` → api vs engine (Δ with tolerance)
-- `watch <body[,body...]> [interval N] [compare]` → live updates; `compare` shows API vs Engine Δ; Ctrl+C to stop
-- `pause` / `resume` control the current watch session
-- `next eclipse` → next eclipse info (via API)
-- `next opposition [planet]` → next opposition info (via API)
-- `set format <table|json|compact>`
-- `plot <body> <Nd>` (e.g., `plot mars 90d`) – ecliptic longitude
-- `plot moon.illumination <Nd>` – lunar phase
-- `plot visibility sun 1d` – altitude timeline
-- `sample <body> from <date> to <date> every <step> [json|csv]` – export time series
-- `set source <auto|local|api>`
-- `set tz <auto|IANA>`
-- `set location <lat,lon[,elev]>`
+1) Start the API server (new terminal)
+```bash
+npm start
+```
+2) Open the REPL
+```bash
+antikythera repl
+```
+3) Set your location and preferred source/format
+```bash
+set location 29.9792,31.1342      # Giza Pyramids (lat,lon)
+set source auto                   # auto uses API with circuit-breaker fallback
+set format table                  # table | json | compact
+```
+4) Try the basics (copy/paste at the `antikythera>` prompt)
+```bash
+sun                 # Sun position now
+moon at 2025-12-25  # Moon at a specific date
+all | visible       # Show only bodies above the horizon
+watch mars compare  # Live API vs Engine delta (Ctrl+C to stop)
+```
+5) Plot and export
+```bash
+plot mars 30d                     # ASCII chart
+plot mars,jupiter 30d csv         # CSV export of multi-series plot
+sample moon from now to +2h every 15m csv   # Time series export
+```
+
+Notes
+- Double Ctrl+C exits the REPL.
+- History and settings persist across sessions (~/.config/antikythera).
+- Use `context` anytime to see your current settings.
+
+### Command Reference (copy/paste)
+- `<body>` → position now (sun, moon, mercury, venus, mars, jupiter, saturn)
+- `<body> at <date>` → position at date (ISO | relative | natural)
+- `all` → sun, moon, planets (compact)
+- `compare <body>` → API vs Engine (Δ with tolerance)
+- `watch <body[,body...]> [interval N] [compare]` → live updates; `pause` / `resume`; Ctrl+C to stop
+- `next eclipse` | `next opposition [planet]`
+- `find next conjunction [A] [B]` (aliases: `A with B`, `with sun A`)
+- `find next equinox` | `find next solstice`
+- `plot <body|list|planets> <Nd|Nh|Nw> [csv]`
+- `plot moon.illumination <Nd>` | `plot visibility sun 1d`
+- `sample <body> from <date> to <date> every <step> [json|csv]`
+- `set source <auto|local|api>` | `set location <lat,lon[,elev]>` | `set tz <auto|IANA>`
+- `set format <table|json|compact>` | `set intent <on|off>` | `set tolerance <deg>`
+- `context` | `history` | `help` | `clear` | `exit`
 - `set intent <on|off>`
 - `set tolerance <degrees>`
 - `context`, `history`, `help`, `clear`, `exit|quit|.exit`
 
 Reserved for Phase 2: `next`, `find`, `goto`, `reset`, `+/-`, `where`.
 
-### Pipes & Filters (Phase 2)
+### Pipes & Filters
 - Syntax: `all | <stage> | <stage> ...`
 - Stages: `visible`, `retrograde`, `rising`, `where <field> <op> <value>`, `sort <field> [asc|desc]`, `limit <N>`, `fields <list>`, `grep <substr>`, `json`
 - Ops: `>`, `>=`, `<`, `<=`, `==`, `!=` (numeric or string)
 - Field aliases: `lon`→longitude, `lat`→latitude, `alt`→altitude, `vel`→velocity
 - JSON: `set format json` or add stage `| json` to return `{ date, rows: [...] }`
 
-Examples:
-- `all | visible | sort alt desc | limit 3`
-- `all | fields name lon alt | grep MAR`
+Examples
+```text
+all | visible | sort alt desc | limit 3
+all | fields name lon alt | grep MAR
+all | where alt > 0 | fields name alt | json
+```
 
 ### Completion
 - Global: help, exit, clear, context, history, set, format, source, tz, watch, compare, all, bodies
@@ -177,14 +210,15 @@ MARS | JUPITER
 
 ### Plot Implementation Notes
 - Library: `asciichart` (lightweight, no dependencies)
-- Width: responsive to terminal width via `process.stdout.columns`, with a conservative margin
-  - Example: `asciichart.plot(values, { height: 12, width: (process.stdout.columns || 80) - 10 })`
-- Height: default 12 rows; future work may auto-scale per series
-- Color: plots themselves are plain ASCII (no colors), headings may use minimal styling
-- JSON: when `format=json`, REPL returns pure JSON (no ANSI) for plots as `{ start, stepMs, series[{def, values}], times }`
-- Data source:
-  - `plot <body> <Nd>` → body ecliptic longitude samples across N days/weeks/hours
-  - `plot moon.illumination <Nd>` → percent illumination × 100
+- Width: responsive to terminal width (`process.stdout.columns`)
+- Height: default 12 rows
+- Colors: series colored; ASCII only
+- JSON: `format=json` → `{ start, stepMs, series[{def, values}], times }`
+- CSV export: append `csv` to plot command (e.g., `plot mars,jupiter 30d csv`)
+- X-axis: labeled with tick marks and time labels
+- Data sources:
+  - `plot <body> <Nd>` → body ecliptic longitude
+  - `plot moon.illumination <Nd>` → percent illumination ×100
   - `plot visibility sun 1d` → solar altitude (°) across a day
 
 ## Architecture
