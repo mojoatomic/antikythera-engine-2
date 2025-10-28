@@ -17,6 +17,7 @@ A command-line interface for astronomical calculations and debugging. Provides a
 - [Debug Features](#debug-features)
 - [Use Cases](#use-cases)
 - [Examples](#examples)
+- [Interactive REPL](#interactive-repl)
 
 ---
 
@@ -54,6 +55,9 @@ node cli/index.js now
 ## Quick Start
 
 ```bash
+# Start interactive REPL (see docs/CLI-REPL.md)
+antikythera repl
+
 # Get current astronomical state
 antikythera now
 
@@ -363,6 +367,16 @@ antikythera position mars --remote
 
 ---
 
+### Resilience Demo (API Fallback)
+
+```bash
+antikythera repl
+set source auto
+# stop the API server (or ensure it is not running)
+moon
+# → "API timeout... Falling back to local engine"
+```
+
 ## Error Handling
 
 ### Common Errors
@@ -582,10 +596,18 @@ API response validation warnings are informational. The CLI will still display r
 - [ ] Snapshot comparison
 - [ ] Range queries (batch export)
 - [ ] Custom location support
-- [ ] Interactive REPL mode (maybe)
+
+### Interactive REPL
+See `docs/CLI-REPL.md` for REPL usage, grammar, and tests.
 
 ### Suggestions Welcome
 Open an issue or PR with feature requests!
+
+---
+
+## Interactive REPL
+
+See `docs/CLI-REPL.md` for the interactive REPL design, commands, and acceptance tests.
 
 ---
 

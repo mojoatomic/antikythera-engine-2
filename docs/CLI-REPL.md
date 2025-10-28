@@ -1,6 +1,6 @@
 # CLI-REPL Design (MVP)
 
-Status: Draft
+Status: Implemented (MVP)
 Owner: CLI team
 Related: Issue #21
 
@@ -27,6 +27,8 @@ Provide an interactive REPL for the Antikythera CLI that accelerates exploration
 - `set format <table|json|compact>`
 - `set source <auto|local|api>`
 - `set tz <auto|IANA>`
+- `set intent <on|off>`
+- `set tolerance <degrees>`
 - `context`, `history`, `help`, `clear`, `exit|quit|.exit`
 
 Reserved for Phase 2: `next`, `find`, `goto`, `reset`, `+/-`, `where`, `|`.
@@ -34,10 +36,11 @@ Reserved for Phase 2: `next`, `find`, `goto`, `reset`, `+/-`, `where`, `|`.
 ### Completion
 - Global: help, exit, clear, context, history, set, format, source, tz, watch, compare, all, bodies
 - Contextual:
-  - after `set` → `format|source|tz`
+  - after `set` → `format|source|tz|intent|tolerance`
   - after `format` → `table|json|compact`
   - after `source` → `auto|local|api`
   - after `tz` → `auto|<IANA>` (suggest current + a few common)
+  - after `intent` → `on|off`
   - after `compare|watch` → bodies
 
 ## Context & Persistence
@@ -48,12 +51,16 @@ Schema (persist to JSON):
   "format": "table",
   "source": "auto",
   "tz": "auto",
+  "showIntent": true,
+  "compareToleranceDeg": 0.001,
   "lastBody": "moon",
   "lastDate": "2025-10-28T14:40:00Z"
 }
 ```
 - Unknown fields ignored on load; on mismatch: migrate or reset with warning.
 - History: max 1000 lines when saving (trim oldest).
+- `showIntent`: controls echo of parsed commands (default on).
+- `compareToleranceDeg`: tolerance for `compare` diffs in degrees (default 0.001).
 
 ### Config Paths
 - Unix/macOS: `~/.config/antikythera/{history,repl.json}` (XDG)
@@ -104,7 +111,7 @@ Examples:
 
 ## Tests
 - Unit: parser (bodies, dates, set commands), date parser (fixtures), error messages
-- E2E: basic PTY session (start/help/exit), watch cancel, compare output
+- E2E: basic PTY session (start/help/exit), persistence across restart (context/history), compare behavior (API unavailable), API fallback message, watch cancel (SIGINT)
 - Snapshots: formatted outputs with ANSI stripped in tests
 
 ## Acceptance (MVP)
@@ -113,6 +120,24 @@ Examples:
 - `set format/source/tz` persist across sessions
 - JSON output contains no ANSI; compact under 80 cols
 - Ctrl+C cancels watch; double Ctrl+C exits REPL
+- On API timeout/unavailable in auto source, show: `API timeout... Falling back to local engine`
+
+## Demo: API Fallback
+
+To validate resilience:
+
+```bash
+# Start REPL
+antikythera repl
+
+# Use auto source
+set source auto
+
+# Stop API server in another terminal (or ensure it isn't running)
+# Then run a body command
+moon
+# Expected: "API timeout... Falling back to local engine"
+```
 
 ## Task Breakdown
 1) Add `repl` command entry in `cli/index.js`

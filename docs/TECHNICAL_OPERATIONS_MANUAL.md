@@ -529,7 +529,9 @@ Both `/api/state` and `/api/state/:date` now use the same observer-resolution pa
 
 ## 9. Command-Line Interface (CLI)
 
-Authoritative CLI documentation lives in `CLI.md`. Highlights:
+Authoritative CLI documentation lives in `CLI.md`. The interactive REPL is documented in `docs/CLI-REPL.md`.
+
+Highlights:
 - Commands: `now`, `position <body>`, `compare <body> <source1> <source2>`, `watch [body]`, `validate` (stub)
 - Sources: embedded engine (local) or API (remote) with smart auto-selection
 - Formats: table (default), JSON, CSV

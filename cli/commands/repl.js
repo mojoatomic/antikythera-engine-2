@@ -9,6 +9,7 @@ const { parseDateInput } = require('../utils/date-parse');
 const VALID_BODIES = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
 
 function isTTY() {
+  if (process.env.ANTIKYTHERA_TEST_ALLOW_NON_TTY === '1') return true;
   return process.stdout && process.stdout.isTTY && process.stdin && process.stdin.isTTY;
 }
 
@@ -19,6 +20,8 @@ class AntikytheraREPL {
     // Defaults / new flags
     if (this.context.showIntent === undefined) this.context.showIntent = true;
     if (!this.context.compareToleranceDeg) this.context.compareToleranceDeg = 0.001;
+    // Watch state
+    this.activeWatch = null; // { timer, body, interval }
   }
 
   start() {
@@ -47,6 +50,14 @@ class AntikytheraREPL {
     // Ctrl+C handling
     let lastSigint = 0;
     this.rl.on('SIGINT', () => {
+      // If watch is active: cancel it on first Ctrl+C
+      if (this.activeWatch && this.activeWatch.timer) {
+        clearInterval(this.activeWatch.timer);
+        this.activeWatch = null;
+        process.stdout.write(chalk.gray('Watch canceled.\n'));
+        this.rl.prompt();
+        return;
+      }
       const now = Date.now();
       if (now - lastSigint < 600) {
         this.rl.close();
@@ -199,7 +210,9 @@ class AntikytheraREPL {
       console.log(chalk.gray(`Valid: ${VALID_BODIES.join(', ')}`));
       return;
     }
-    const date = this.context.lastDate || new Date();
+    const date = (this.context.lastDate instanceof Date)
+      ? this.context.lastDate
+      : (this.context.lastDate ? new Date(this.context.lastDate) : new Date());
 
     console.log(chalk.cyan(`Comparing ${body} (API vs Engine)`));
     const [apiData, engineData] = await Promise.all([
@@ -240,7 +253,12 @@ class AntikytheraREPL {
 
     console.log(chalk.cyan.bold(`\nWatching ${body.toUpperCase()} (Ctrl+C to stop)\n`));
 
-    let timer = null;
+    // Clear any existing watch first
+    if (this.activeWatch && this.activeWatch.timer) {
+      clearInterval(this.activeWatch.timer);
+      this.activeWatch = null;
+    }
+
     const update = async () => {
       try {
         const data = await this.dataFor(new Date());
@@ -249,13 +267,16 @@ class AntikytheraREPL {
         console.log(this.context.format === 'json' ? JSON.stringify({ time: new Date().toISOString(), longitude: d.longitude }) : chalk.bold(line));
       } catch (err) {
         console.error(chalk.red('Watch error:'), err.message);
-        clearInterval(timer);
-        timer = null;
+        if (this.activeWatch && this.activeWatch.timer) {
+          clearInterval(this.activeWatch.timer);
+          this.activeWatch = null;
+        }
       }
     };
 
     await update();
-    timer = setInterval(update, interval);
+    const timer = setInterval(update, interval);
+    this.activeWatch = { timer, body, interval };
   }
 
   async handleSet(args) {
@@ -387,6 +408,10 @@ class AntikytheraREPL {
   }
 
   handleExit() {
+    if (this.activeWatch && this.activeWatch.timer) {
+      clearInterval(this.activeWatch.timer);
+      this.activeWatch = null;
+    }
     saveContext(this.context);
     saveHistory(this.rl);
     console.log(chalk.cyan('\nGoodbye! 🌙'));

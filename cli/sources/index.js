@@ -4,6 +4,15 @@ const { APIResponseSchema } = require('../schemas');
 const chalk = require('chalk');
 
 const engine = new AntikytheraEngine();
+let fallbackNotified = false;
+function notifyFallbackOnce() {
+  if (fallbackNotified) return;
+  try {
+    // Keep this plain for easy grepping in demos/tests
+    console.log('API timeout... Falling back to local engine');
+  } catch (_) {}
+  fallbackNotified = true;
+}
 
 /**
  * Get astronomical data from embedded engine
@@ -59,10 +68,12 @@ async function getData(date = new Date(), options = {}) {
     return getFromAPI(date);
   }
   
-  // Smart: try API first, fallback to engine
+// Smart: try API first, fallback to engine
   try {
     return await getFromAPI(date);
   } catch (_error) {
+    // Notify once for demo/UX visibility
+    notifyFallbackOnce();
     return getFromEngine(date);
   }
 }
