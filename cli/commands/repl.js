@@ -144,6 +144,27 @@ class AntikytheraREPL {
     this.context.lastDate = date;
     const data = await this.dataFor(date);
     const d = (body === 'sun' || body === 'moon') ? data[body] : data.planets[body];
+
+    if (this.context.format === 'compact') {
+      const cols = (process.stdout && process.stdout.columns) ? process.stdout.columns : 80;
+      const fields = [];
+      const to3 = (x) => (typeof x === 'number' && isFinite(x)) ? x.toFixed(3) : String(x);
+      if (typeof d.longitude === 'number') fields.push(`lon ${to3(d.longitude)}°`);
+      if (typeof d.latitude === 'number') fields.push(`lat ${to3(d.latitude)}°`);
+      if (typeof d.altitude === 'number') fields.push(`alt ${to3(d.altitude)}°`);
+      if (body === 'moon' && typeof d.illumination === 'number') fields.push(`illum ${(d.illumination*100).toFixed(1)}%`);
+      let line = `${body.toUpperCase()}: ` + fields.join('  ');
+      if (line.length > cols) {
+        // Trim from rightmost fields
+        while (line.length > cols && fields.length > 1) {
+          fields.pop();
+          line = `${body.toUpperCase()}: ` + fields.join('  ');
+        }
+      }
+      console.log(line);
+      return;
+    }
+
     const out = format(d, this.context.format);
     // Ensure JSON prints clean
     if (this.context.format === 'json') process.stdout.write(out + os.EOL);
@@ -315,12 +336,52 @@ class AntikytheraREPL {
   }
 
   completer(line) {
+    const l = line.trim();
+    const parts = l.split(/\s+/);
+    const last = parts[parts.length - 1] || '';
+    const startWith = (list) => list.filter(s => s.startsWith(last));
+
+    // Contextual after 'set'
+    if (parts[0] === 'set') {
+      if (parts.length === 1 || (parts.length === 2 && !l.endsWith(' '))) {
+        return [startWith(['format','source','tz','intent','tolerance']), last];
+      }
+      if (parts.length >= 2) {
+        const key = parts[1];
+        const after = l.endsWith(' ');
+        if (key === 'format') {
+          const opts = ['table','json','compact'];
+          return [after ? opts : startWith(opts), last];
+        }
+        if (key === 'source') {
+          const opts = ['auto','local','api'];
+          return [after ? opts : startWith(opts), last];
+        }
+        if (key === 'tz') {
+          const sys = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+          const opts = ['auto', sys, 'UTC', 'America/Chicago', 'America/New_York', 'Europe/London', 'Europe/Paris'];
+          return [after ? opts : startWith(opts), last];
+        }
+        if (key === 'intent') {
+          const opts = ['on','off'];
+          return [after ? opts : startWith(opts), last];
+        }
+        return [[''], last];
+      }
+    }
+
+    // After compare|watch → bodies
+    if (parts[0] === 'compare' || parts[0] === 'watch') {
+      const list = VALID_BODIES;
+      return [startWith(list), last];
+    }
+
     const base = [
       ...VALID_BODIES,
       'all','now','watch','compare','help','exit','quit','.exit','context','history','clear','set','format','source','tz','intent','tolerance'
     ];
-    const hits = base.filter(c => c.startsWith(line));
-    return [hits.length ? hits : base, line];
+    const hits = base.filter(c => c.startsWith(last));
+    return [hits.length ? hits : base, last];
   }
 
   handleExit() {
