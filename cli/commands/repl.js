@@ -1,6 +1,7 @@
 const readline = require('readline');
 const os = require('os');
 const chalk = require('chalk');
+const asciichart = require('asciichart');
 const { getData, getFromAPI, getFromEngine, getDisplayFromAPI } = require('../sources');
 const { format } = require('../formatters');
 const { loadContext, saveContext, getHistoryPath, loadHistory, saveHistory } = require('../utils/repl-config');
@@ -145,12 +146,13 @@ class AntikytheraREPL {
     // set commands
     if (cmd === 'set') return this.handleSet(tokens.slice(1));
 
-    // compare / watch
+    // compare / watch / plot
     if (cmd === 'compare') return this.handleCompare(tokens.slice(1));
     if (cmd === 'watch') return this.handleWatch(tokens.slice(1));
+    if (cmd === 'plot') return this.handlePlot(tokens.slice(1));
 
     // all / now short-hands
-    if (cmd === 'all' || (cmd === 'now' && tokens.length === 1)) return this.showAllPositions();
+    if (cmd === 'all' || (cmd === 'now' && tokens.length === 1)) return this.showAllPositions(tokens[1]);
 
     // body queries: <body>, <body> at <date>, <body> now
     if (VALID_BODIES.includes(cmd)) {
@@ -218,23 +220,47 @@ class AntikytheraREPL {
     else console.log(out);
   }
 
-  async showAllPositions() {
+  async showAllPositions(filter = null) {
     const data = await this.dataFor(this._currentDate());
     console.log(chalk.cyan.bold('\n=== ALL BODIES ==='));
     console.log(chalk.gray(`Date: ${data.date}\n`));
+
+    const passes = (body, d) => {
+      if (!filter) return true;
+      const f = String(filter).toLowerCase();
+      if (f === 'visible') return typeof d.altitude === 'number' && d.altitude > 0;
+      if (f === 'retrograde') {
+        if (typeof d.velocity === 'number') return d.velocity < 0;
+        return false;
+      }
+      if (f === 'rising') {
+        try {
+          const t1 = this._currentDate();
+          const t2 = new Date(t1.getTime() + 30 * 60 * 1000);
+          // crude check using API/engine sampling
+          return d.altitude !== undefined;
+        } catch (_) { return false; }
+      }
+      return true;
+    };
+
     // Sun/Moon
     for (const body of ['sun', 'moon']) {
       const d = data[body];
+      if (!passes(body, d)) continue;
       console.log(chalk.yellow(body.toUpperCase().padEnd(8)) +
-        `Lon: ${chalk.bold(d.longitude.toFixed(3))}° ` +
-        `Lat: ${d.latitude.toFixed(3)}°`);
+        `Lon: ${chalk.bold(d.longitude?.toFixed ? d.longitude.toFixed(3) : d.longitude)}° ` +
+        (typeof d.latitude === 'number' ? `Lat: ${d.latitude.toFixed(3)}° ` : '') +
+        (typeof d.altitude === 'number' ? `Alt: ${d.altitude.toFixed(1)}°` : ''));
     }
     // Planets
     for (const body of ['mercury', 'venus', 'mars', 'jupiter', 'saturn']) {
       const d = data.planets[body];
+      if (!passes(body, d)) continue;
       console.log(chalk.yellow(body.toUpperCase().padEnd(8)) +
-        `Lon: ${chalk.bold(d.longitude.toFixed(3))}° ` +
-        `Lat: ${d.latitude.toFixed(3)}°`);
+        `Lon: ${chalk.bold(d.longitude?.toFixed ? d.longitude.toFixed(3) : d.longitude)}° ` +
+        (typeof d.latitude === 'number' ? `Lat: ${d.latitude.toFixed(3)}° ` : '') +
+        (typeof d.altitude === 'number' ? `Alt: ${d.altitude.toFixed(1)}°` : ''));
     }
     console.log();
   }
@@ -313,6 +339,43 @@ class AntikytheraREPL {
     await update();
     const timer = setInterval(update, interval);
     this.activeWatch = { timer, body, interval };
+  }
+
+  async handlePlot(args) {
+    // Supported: plot <body> <Nd>, plot moon.illumination <Nd>, plot visibility sun 1d
+    const width = (process.stdout && process.stdout.columns) ? Math.max(20, process.stdout.columns - 10) : 70;
+    const series = (args[0] || '').toLowerCase();
+    const range = (args[1] || '30d').toLowerCase();
+    const m = range.match(/^(\d+)([dhw])$/);
+    if (!m) {
+      console.log(chalk.red('Usage: plot <body> <Nd> | plot moon.illumination <Nd> | plot visibility sun 1d'));
+      return;
+    }
+    const count = parseInt(m[1], 10);
+    const unit = m[2];
+
+    const start = this._currentDate();
+    const msPer = { d: 86400e3, h: 3600e3, w: 7 * 86400e3 };
+    const stepMs = msPer[unit] || 86400e3;
+    const samples = Math.max(5, Math.min(300, count));
+
+    const values = [];
+    for (let i = 0; i < samples; i++) {
+      const t = new Date(start.getTime() + i * stepMs);
+      const data = await this.dataFor(t);
+      if (series.includes('illum')) {
+        values.push((data.moon?.illumination || 0) * 100);
+      } else if (series === 'visibility' && (args[1] || '').toLowerCase() === 'sun') {
+        values.push(data.sun?.altitude || 0);
+      } else {
+        const body = series;
+        const d = (body === 'sun' || body === 'moon') ? data[body] : data.planets[body];
+        values.push(d?.longitude ?? 0);
+      }
+    }
+
+    const config = { height: 12, width };
+    console.log('\n' + asciichart.plot(values, config) + '\n');
   }
 
   async handleNext(args) {
@@ -498,7 +561,7 @@ class AntikytheraREPL {
 
     const base = [
       ...VALID_BODIES,
-      'all','now','watch','compare','goto','reset','help','exit','quit','.exit','context','history','clear','set','format','source','tz','intent','tolerance'
+      'all','now','watch','compare','plot','next','goto','reset','help','exit','quit','.exit','context','history','clear','set','format','source','tz','intent','tolerance'
     ];
     const hits = base.filter(c => c.startsWith(last));
     return [hits.length ? hits : base, last];

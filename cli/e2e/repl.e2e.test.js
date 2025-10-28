@@ -246,6 +246,28 @@ term.write('exit\r');
     expect(clean).toMatch(/Watch canceled/i);
   });
 
+test('plot moon.illumination 5d renders ASCII without crash', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('plot moon.illumination 5d\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const lines = out.split(/\r?\n/).filter(l => l.trim().length);
+    expect(code).toBe(0);
+    expect(lines.length).toBeGreaterThan(5);
+  });
+
   test('JSON purity: format=json for moon has no ANSI', async () => {
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
     const term = pty.spawn(process.execPath, [cliPath, 'repl'], {

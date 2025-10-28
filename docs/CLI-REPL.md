@@ -21,12 +21,15 @@ Provide an interactive REPL for the Antikythera CLI that accelerates exploration
 - `<body>` → position now (uses context)
 - `<body> at <date>` → position at date
 - `<body> now` → explicit now
-- `all` → sun, moon, planets (compact table)
+- `all [visible|rising|retrograde]` → sun, moon, planets (compact table; optional filters)
 - `compare <body>` → api vs engine (Δ with tolerance)
 - `watch <body> [interval N]` → live updates; Ctrl+C to stop
 - `next eclipse` → next eclipse info (via API)
 - `next opposition [planet]` → next opposition info (via API)
 - `set format <table|json|compact>`
+- `plot <body> <Nd>` (e.g., `plot mars 90d`) – ecliptic longitude
+- `plot moon.illumination <Nd>` – lunar phase
+- `plot visibility sun 1d` – altitude timeline
 - `set source <auto|local|api>`
 - `set tz <auto|IANA>`
 - `set intent <on|off>`
