@@ -23,7 +23,7 @@ Provide an interactive REPL for the Antikythera CLI that accelerates exploration
 - `<body> now` → explicit now
 - `all [visible|rising|retrograde]` → sun, moon, planets (compact table; optional filters)
 - `compare <body>` → api vs engine (Δ with tolerance)
-- `watch <body> [interval N]` → live updates; Ctrl+C to stop
+- `watch <body> [interval N] [compare]` → live updates; `compare` shows API vs Engine Δ; Ctrl+C to stop
 - `next eclipse` → next eclipse info (via API)
 - `next opposition [planet]` → next opposition info (via API)
 - `set format <table|json|compact>`

@@ -268,6 +268,33 @@ test('plot moon.illumination 5d renders ASCII without crash', async () => {
     expect(lines.length).toBeGreaterThan(5);
   });
 
+  test('watch compare: shows Δ or API unavailable and cancels cleanly', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('watch moon compare\r');
+    await new Promise(res => setTimeout(res, 700));
+    term.write('\u0003');
+    await new Promise(res => setTimeout(res, 200));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/Watching MOON/i);
+    expect(clean).toMatch(/Watch canceled/i);
+    // Either we saw a diff symbol or an API unavailable notice
+    expect(/Δ|API unavailable/i.test(clean)).toBe(true);
+  });
+
   test('multi-series: plot mars,jupiter 5d renders without crash', async () => {
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
     const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
