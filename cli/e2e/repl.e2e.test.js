@@ -268,6 +268,36 @@ test('plot moon.illumination 5d renders ASCII without crash', async () => {
     expect(lines.length).toBeGreaterThan(5);
   });
 
+  test('watch multi-body pause/resume works', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('watch sun moon interval 300\r');
+    await new Promise(res => setTimeout(res, 600));
+    term.write('pause\r');
+    await new Promise(res => setTimeout(res, 200));
+    term.write('resume\r');
+    await new Promise(res => setTimeout(res, 600));
+    term.write('\u0003');
+    await new Promise(res => setTimeout(res, 200));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/Watching SUN, MOON/i);
+    expect(clean).toMatch(/Watch paused/i);
+    expect(clean).toMatch(/Watch canceled/i);
+  });
+
   test('watch compare: shows Δ or API unavailable and cancels cleanly', async () => {
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
     const term = pty.spawn(process.execPath, [cliPath, 'repl'], {

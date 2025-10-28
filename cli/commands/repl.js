@@ -102,6 +102,10 @@ class AntikytheraREPL {
     const tokens = input.split(/\s+/);
     const cmd = tokens[0].toLowerCase();
 
+    // Pause/Resume for watch
+    if (cmd === 'pause') return this.handlePause();
+    if (cmd === 'resume') return this.handleResume();
+
     // Time navigation: relative step like +2h / -30m
     if (/^[+-]\d+(s|m|h|d|w|y)$/i.test(cmd)) {
       const base = this._currentDate();
@@ -456,10 +460,20 @@ class AntikytheraREPL {
   }
 
   async handleWatch(args) {
-    const body = (args[0] || this.context.lastBody || 'moon').toLowerCase();
-    if (!VALID_BODIES.includes(body)) {
-      console.log(chalk.red(`Invalid body: ${body}`));
-      return;
+    // Collect bodies until a known flag
+    const bodies = [];
+    for (const a of args) {
+      const low = String(a || '').toLowerCase();
+      if (['interval','compare','--compare'].includes(low)) break;
+      if (VALID_BODIES.includes(low)) bodies.push(low);
+    }
+    const list = bodies.length ? bodies : [this.context.lastBody || 'moon'];
+    // Validate
+    for (const b of list) {
+      if (!VALID_BODIES.includes(b)) {
+        console.log(chalk.red(`Invalid body: ${b}`));
+        return;
+      }
     }
     let interval = 1000;
     const idx = args.findIndex(a => a.toLowerCase() === 'interval');
@@ -470,7 +484,7 @@ class AntikytheraREPL {
     }
     const doCompare = args.some(a => a.toLowerCase() === 'compare' || a.toLowerCase() === '--compare');
 
-    console.log(chalk.cyan.bold(`\nWatching ${body.toUpperCase()} (Ctrl+C to stop)${doCompare ? ' [compare]' : ''}\n`));
+    console.log(chalk.cyan.bold(`\nWatching ${list.map(b => b.toUpperCase()).join(', ')} (Ctrl+C to stop)${doCompare ? ' [compare]' : ''}\n`));
 
     // Clear any existing watch first
     if (this.activeWatch && this.activeWatch.timer) {
@@ -478,7 +492,7 @@ class AntikytheraREPL {
       this.activeWatch = null;
     }
 
-    let prevLon = null;
+    const prevMap = new Map();
     let warnedApi = false;
     const update = async () => {
       try {
@@ -504,43 +518,47 @@ class AntikytheraREPL {
                 warnedApi = true;
               }
               // Fallback to non-compare print using engine
-              const d = (body === 'sun' || body === 'moon') ? engData[body] : engData.planets[body];
-              const lon = d.longitude;
-              const delta = (prevLon == null) ? null : (lon - prevLon);
-              prevLon = lon;
-              if (this.context.format === 'json') {
-                const payload = { time: nowIso, body, engine: { longitude: lon } };
-                process.stdout.write(JSON.stringify(payload) + os.EOL);
-              } else if (this.context.format === 'compact') {
-                const arrow = (delta == null) ? '→' : (delta > 0 ? '↑' : (delta < 0 ? '↓' : '→'));
-                const deltaStr = (delta == null) ? '' : ` ${arrow} ${(delta).toFixed(6)}°`;
-                console.log(`${nowIso} ${lon.toFixed(6)}°${deltaStr}`);
-              } else {
-                const deltaStr = (delta == null) ? '' : ` (Δ ${(delta).toFixed(6)}°)`;
-                console.log(`${chalk.gray(nowIso)} ${chalk.cyan(body.toUpperCase())}: ${chalk.bold(lon.toFixed(6))}°${chalk.gray(deltaStr)}`);
+              const lines = [];
+              for (const b of list) {
+                const dd = (b === 'sun' || b === 'moon') ? engData[b] : engData.planets[b];
+                const prev = prevMap.get(b);
+                const lon = dd.longitude;
+                const delta = (prev == null) ? null : (lon - prev);
+                prevMap.set(b, lon);
+                if (this.context.format === 'json') {
+                  lines.push({ body: b, engine: { longitude: lon } });
+                } else if (this.context.format === 'compact') {
+                  const arrow = (delta == null) ? '→' : (delta > 0 ? '↑' : (delta < 0 ? '↓' : '→'));
+                  const deltaStr = (delta == null) ? '' : ` ${arrow} ${(delta).toFixed(6)}°`;
+                  lines.push(`${b.toUpperCase()} ${lon.toFixed(6)}°${deltaStr}`);
+                } else {
+                  const deltaStr = (delta == null) ? '' : ` (Δ ${(delta).toFixed(6)}°)`;
+                  lines.push(`${chalk.cyan(b.toUpperCase())}: ${chalk.bold(lon.toFixed(6))}°${chalk.gray(deltaStr)}`);
+                }
               }
+              if (this.context.format === 'json') process.stdout.write(JSON.stringify({ time: nowIso, list: lines }) + os.EOL);
+              else console.log(`${chalk.gray(nowIso)} ${lines.join('  |  ')}`);
               return;
             }
-            const eng = (body === 'sun' || body === 'moon') ? engData[body] : engData.planets[body];
-            const api = (body === 'sun' || body === 'moon') ? apiData[body] : apiData.planets[body];
-            const lonDiff = (typeof eng.longitude === 'number' && typeof api.longitude === 'number') ? (api.longitude - eng.longitude) : null;
-            const tol = this.context.compareToleranceDeg || 0.001;
-            const ok = (typeof lonDiff === 'number') ? Math.abs(lonDiff) < tol : false;
-
-            if (this.context.format === 'json') {
-              const payload = { time: nowIso, body, engine: { longitude: eng.longitude }, api: { longitude: api.longitude }, diff: { longitude: lonDiff }, ok };
-              process.stdout.write(JSON.stringify(payload) + os.EOL);
-            } else if (this.context.format === 'compact') {
-              const sign = lonDiff == null ? '' : (lonDiff > 0 ? '+' : '');
-              const diffStr = lonDiff == null ? '' : ` Δ ${sign}${lonDiff.toFixed(6)}°`;
-              const status = ok ? chalk.green('✓') : chalk.red('✗');
-              console.log(`${nowIso} eng ${eng.longitude.toFixed(6)}° | api ${api.longitude.toFixed(6)}°${diffStr} ${status}`);
-            } else {
-              const sign = lonDiff == null ? '' : (lonDiff > 0 ? '+' : '');
-              const diffStr = lonDiff == null ? '' : ` Δ ${sign}${lonDiff.toFixed(6)}°`;
-              const status = ok ? chalk.green('✓') : chalk.red('✗');
-              console.log(`${chalk.gray(nowIso)} ${chalk.cyan(body.toUpperCase())}: eng ${eng.longitude.toFixed(6)}° | api ${api.longitude.toFixed(6)}°${diffStr} ${status}`);
+            // Compare available
+            const lines = [];
+            for (const b of list) {
+              const eng = (b === 'sun' || b === 'moon') ? engData[b] : engData.planets[b];
+              const api = (b === 'sun' || b === 'moon') ? apiData[b] : apiData.planets[b];
+              const lonDiff = (typeof eng.longitude === 'number' && typeof api.longitude === 'number') ? (api.longitude - eng.longitude) : null;
+              const tol = this.context.compareToleranceDeg || 0.001;
+              const ok = (typeof lonDiff === 'number') ? Math.abs(lonDiff) < tol : false;
+              if (this.context.format === 'json') {
+                lines.push({ body: b, engine: { longitude: eng.longitude }, api: { longitude: api.longitude }, diff: { longitude: lonDiff }, ok });
+              } else {
+                const sign = lonDiff == null ? '' : (lonDiff > 0 ? '+' : '');
+                const diffStr = lonDiff == null ? '' : ` Δ ${sign}${lonDiff.toFixed(6)}°`;
+                const status = ok ? chalk.green('✓') : chalk.red('✗');
+                lines.push(`${b.toUpperCase()} eng ${eng.longitude.toFixed(6)}° | api ${api.longitude.toFixed(6)}°${diffStr} ${status}`);
+              }
             }
+            if (this.context.format === 'json') process.stdout.write(JSON.stringify({ time: nowIso, list: lines }) + os.EOL);
+            else console.log(`${chalk.gray(nowIso)} ${lines.join('  ||  ')}`);
             return;
           } catch (e) {
             console.error(chalk.red('Compare error:'), e.message);
@@ -550,27 +568,26 @@ class AntikytheraREPL {
 
         // Non-compare path
         const data = await this.dataFor(now);
-        const d = (body === 'sun' || body === 'moon') ? data[body] : data.planets[body];
-        const lon = d.longitude;
-        const delta = (prevLon == null) ? null : (lon - prevLon);
-        prevLon = lon;
-
-        if (this.context.format === 'json') {
-          const payload = { time: nowIso, body, longitude: lon, delta: typeof delta === 'number' ? delta : undefined };
-          process.stdout.write(JSON.stringify(payload) + os.EOL);
-          return;
+        const lines = [];
+        for (const b of list) {
+          const d = (b === 'sun' || b === 'moon') ? data[b] : data.planets[b];
+          const prev = prevMap.get(b);
+          const lon = d.longitude;
+          const delta = (prev == null) ? null : (lon - prev);
+          prevMap.set(b, lon);
+          if (this.context.format === 'json') {
+            lines.push({ body: b, longitude: lon, delta });
+          } else if (this.context.format === 'compact') {
+            const arrow = (delta == null) ? '→' : (delta > 0 ? '↑' : (delta < 0 ? '↓' : '→'));
+            const deltaStr = (delta == null) ? '' : ` ${arrow} ${(delta).toFixed(6)}°`;
+            lines.push(`${b.toUpperCase()} ${lon.toFixed(6)}°${deltaStr}`);
+          } else {
+            const deltaStr = (delta == null) ? '' : ` (Δ ${(delta).toFixed(6)}°)`;
+            lines.push(`${chalk.cyan(b.toUpperCase())}: ${chalk.bold(lon.toFixed(6))}°${chalk.gray(deltaStr)}`);
+          }
         }
-
-        if (this.context.format === 'compact') {
-          const arrow = (delta == null) ? '→' : (delta > 0 ? '↑' : (delta < 0 ? '↓' : '→'));
-          const deltaStr = (delta == null) ? '' : ` ${arrow} ${(delta).toFixed(6)}°`;
-          console.log(`${nowIso} ${lon.toFixed(6)}°${deltaStr}`);
-          return;
-        }
-
-        // table/default
-        const deltaStr = (delta == null) ? '' : ` (Δ ${(delta).toFixed(6)}°)`;
-        console.log(`${chalk.gray(nowIso)} ${chalk.cyan(body.toUpperCase())}: ${chalk.bold(lon.toFixed(6))}°${chalk.gray(deltaStr)}`);
+        if (this.context.format === 'json') process.stdout.write(JSON.stringify({ time: nowIso, list: lines }) + os.EOL);
+        else console.log(`${chalk.gray(nowIso)} ${lines.join('  |  ')}`);
       } catch (err) {
         console.error(chalk.red('Watch error:'), err.message);
         if (this.activeWatch && this.activeWatch.timer) {
@@ -582,7 +599,28 @@ class AntikytheraREPL {
 
     await update();
     const timer = setInterval(update, interval);
-    this.activeWatch = { timer, body, interval };
+    this.activeWatch = { timer, bodies: list, interval, compare: doCompare, paused: false };
+  }
+
+  handlePause() {
+    if (this.activeWatch && this.activeWatch.timer) {
+      clearInterval(this.activeWatch.timer);
+      this.activeWatch.paused = true;
+      this.activeWatch.timer = null;
+      console.log(chalk.gray('Watch paused.'));
+    } else {
+      console.log(chalk.gray('No active watch.'));
+    }
+  }
+
+  handleResume() {
+    if (this.activeWatch && this.activeWatch.paused) {
+      const { bodies, interval, compare } = this.activeWatch;
+      // Reconstruct args to reuse handleWatch
+      const args = [...bodies, 'interval', String(interval), ...(compare ? ['compare'] : [])];
+      return this.handleWatch(args);
+    }
+    console.log(chalk.gray('Nothing to resume.'));
   }
 
   async handlePlot(args) {
