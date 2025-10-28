@@ -191,7 +191,7 @@ class AntikytheraEngine {
       metonicCycle: this.getMetonicCycle(date),
       sarosCycle: this.getSarosCycle(date),
       lunarNodes: this.getLunarNodes(date),
-      nextEclipse: this.getNextEclipse(date),
+      nextEclipse: this.getNextEclipse(date, observer),
       nextOpposition: this.getNextOpposition(date),
       equationOfTime: this.getEquationOfTime(date),
       sunVisibility: this.getSunVisibility(date, observer)
@@ -370,20 +370,60 @@ class AntikytheraEngine {
     };
   }
 
-  getNextEclipse(date) {
+  getNextEclipse(date, observer) {
     try {
       const lunarEclipse = astronomy.SearchLunarEclipse(date);
       const solarEclipse = astronomy.SearchGlobalSolarEclipse(date);
-      
-      const nextEclipse = lunarEclipse.peak.date < solarEclipse.peak.date ? 
-        { type: 'lunar', data: lunarEclipse } : 
-        { type: 'solar', data: solarEclipse };
-      
-      return {
-        type: nextEclipse.type,
-        date: nextEclipse.data.peak.date.toISOString(),
-        daysUntil: (nextEclipse.data.peak.date - date) / (1000 * 60 * 60 * 24)
+
+      const next = (lunarEclipse.peak.date < solarEclipse.peak.date)
+        ? { type: 'lunar', data: lunarEclipse }
+        : { type: 'solar', data: solarEclipse };
+
+      const peakDate = next.data.peak && (next.data.peak.date || (next.data.peak.time && next.data.peak.time.date))
+        ? (next.data.peak.date || next.data.peak.time.date)
+        : null;
+
+      const base = {
+        type: next.type,
+        kind: next.data.kind || null,
+        date: peakDate ? peakDate.toISOString() : null,
+        daysUntil: peakDate ? ((peakDate - date) / (1000 * 60 * 60 * 24)) : null
       };
+
+      // Add local observer context when solar eclipse is next
+      if (next.type === 'solar' && observer) {
+        try {
+          const local = astronomy.SearchLocalSolarEclipse(date, observer);
+          const toIso = (ev) => {
+            if (!ev) return null;
+            const t = ev.date || (ev.time && ev.time.date) || ev.time || ev;
+            return t instanceof Date ? t.toISOString() : null;
+          };
+          base.local = {
+            kind: local.kind || null,
+            obscuration: typeof local.obscuration === 'number' ? local.obscuration : null,
+            partialBegin: toIso(local.partialBegin),
+            totalBegin: toIso(local.totalBegin),
+            peak: toIso(local.peak),
+            totalEnd: toIso(local.totalEnd),
+            partialEnd: toIso(local.partialEnd)
+          };
+        } catch (_e) {
+          // ignore local failure
+        }
+      }
+
+      // Add extra lunar details if available
+      if (next.type === 'lunar') {
+        base.details = {
+          sdPenum: next.data.sdPenum || null,
+          sdPartial: next.data.sdPartial || null,
+          sdTotal: next.data.sdTotal || null,
+          obscuration: typeof next.data.obscuration === 'number' ? next.data.obscuration : null
+        };
+      }
+
+      return base;
     } catch (_err) {
       return { error: 'Could not calculate next eclipse' };
     }
@@ -459,6 +499,92 @@ class AntikytheraEngine {
     if (!results.length) return { error: 'No oppositions found', searchedDays: maxDays };
     results.sort((a, b) => a.daysUntil - b.daysUntil);
     return results[0];
+  }
+
+  /**
+   * Find the next conjunction between two bodies (geocentric ecliptic longitude equality)
+   */
+  getNextConjunction(date, bodyA = 'Moon', bodyB = 'Sun', maxDays = 1095) {
+    const cap = (s) => String(s || '').toLowerCase().replace(/^(\w)/, (m, c) => c.toUpperCase());
+    const A = cap(bodyA);
+    const B = cap(bodyB);
+
+    const norm = (a) => ((a % 360) + 360) % 360;
+    const diff = (a, b) => {
+      let d = norm(a) - norm(b);
+      if (d > 180) d -= 360;
+      if (d < -180) d += 360;
+      return d;
+    };
+
+    const rel = (t) => astronomy.PairLongitude(A, B, t);
+
+    const end = new Date(date.getTime() + maxDays * 86400000);
+    let t0 = new Date(date);
+    let f0 = diff(rel(t0), 0);
+    for (let t = new Date(t0.getTime() + 86400000); t <= end; t = new Date(t.getTime() + 86400000)) {
+      const f1 = diff(rel(t), 0);
+      if (f0 === 0) return { bodies: [A, B], date: t0.toISOString(), daysUntil: (t0 - date) / 86400000 };
+      if (f0 * f1 <= 0) {
+        let lo = t0, hi = t;
+        for (let i = 0; i < 30; i++) {
+          const mid = new Date((lo.getTime() + hi.getTime()) / 2);
+          const fm = diff(rel(mid), 0);
+          if (f0 * fm <= 0) hi = mid; else { lo = mid; f0 = fm; }
+          if ((hi.getTime() - lo.getTime()) < 1000) break;
+        }
+        const when = new Date((lo.getTime() + hi.getTime()) / 2);
+        return { bodies: [A, B], date: when.toISOString(), daysUntil: (when - date) / 86400000 };
+      }
+      t0 = t; f0 = f1;
+    }
+    return { error: `No conjunction found for ${A}-${B} within ${maxDays} days` };
+  }
+
+  /**
+   * Next equinox after given date (March/Sep) using Astronomy.Seasons.
+   */
+  getNextEquinox(date) {
+    try {
+      const y = date.getUTCFullYear();
+      const s1 = astronomy.Seasons(y);
+      const s2 = astronomy.Seasons(y + 1);
+      const events = [
+        { type: 'March equinox', t: s1.mar_equinox?.date || s1.mar_equinox },
+        { type: 'September equinox', t: s1.sep_equinox?.date || s1.sep_equinox },
+        { type: 'March equinox', t: s2.mar_equinox?.date || s2.mar_equinox },
+        { type: 'September equinox', t: s2.sep_equinox?.date || s2.sep_equinox },
+      ].filter(e => e.t instanceof Date);
+      events.sort((a,b) => a.t - b.t);
+      const next = events.find(e => e.t > date);
+      if (!next) return { error: 'No equinox found' };
+      return { type: next.type, date: next.t.toISOString(), daysUntil: (next.t - date) / 86400000 };
+    } catch (_e) {
+      return { error: 'Could not compute equinox' };
+    }
+  }
+
+  /**
+   * Next solstice after given date (June/Dec) using Astronomy.Seasons.
+   */
+  getNextSolstice(date) {
+    try {
+      const y = date.getUTCFullYear();
+      const s1 = astronomy.Seasons(y);
+      const s2 = astronomy.Seasons(y + 1);
+      const events = [
+        { type: 'June solstice', t: s1.jun_solstice?.date || s1.jun_solstice },
+        { type: 'December solstice', t: s1.dec_solstice?.date || s1.dec_solstice },
+        { type: 'June solstice', t: s2.jun_solstice?.date || s2.jun_solstice },
+        { type: 'December solstice', t: s2.dec_solstice?.date || s2.dec_solstice },
+      ].filter(e => e.t instanceof Date);
+      events.sort((a,b) => a.t - b.t);
+      const next = events.find(e => e.t > date);
+      if (!next) return { error: 'No solstice found' };
+      return { type: next.type, date: next.t.toISOString(), daysUntil: (next.t - date) / 86400000 };
+    } catch (_e) {
+      return { error: 'Could not compute solstice' };
+    }
   }
 
   /**

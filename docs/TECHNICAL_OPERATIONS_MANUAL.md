@@ -312,7 +312,43 @@ Error response format:
 
 ---
 
-## 5. Display Architecture
+## 5. REPL Operations
+
+This section summarizes educator-ready CLI/REPL operations. For full end-user guide see docs/CLI-REPL.md.
+
+### 5.1 Startup
+- Start API: `npm start`
+- Launch REPL: `antikythera repl`
+
+### 5.2 Configuration
+- `set location <lat,lon[,elev]>` (persisted)
+- `set source <auto|local|api>` (auto includes circuit breaker)
+- `set format <table|json|compact>`
+- `context` to view settings
+
+### 5.3 Navigation & Events
+- Time: `goto <date>`, `+2h`, `reset`
+- Events: `next eclipse`, `next opposition [planet]`, `find next conjunction [A] [B]`, `find next equinox|solstice`
+
+### 5.4 Monitoring
+- `watch <body[,body...]> [interval N] [compare]` (Ctrl+C cancel; `pause`/`resume`)
+- `compare <body>` shows Δ with tolerance
+
+### 5.5 Data Products
+- Plots: `plot <body|list|planets> <Nd|Nh|Nw> [csv]`
+- Exports: `sample <body> from <date> to <date> every <step> [json|csv]`
+- Pipes: `all | visible | where alt > 0 | sort alt desc | limit 3 | fields name alt`
+
+### 5.6 Educator Examples
+```text
+set location 29.9792,31.1342
+find next solstice
+plot moon.illumination 30d
+sample mars from 2025-01-01T00:00:00Z to +14d every 1d csv
+watch jupiter compare
+```
+
+## 6. Display Architecture
 
 ### 5.1 Animation Polling Strategy
 

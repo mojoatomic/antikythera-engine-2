@@ -90,53 +90,59 @@ curl http://localhost:3000/api/display
 **Response structure:**
 ```json
 {
-  "timestamp": "2025-10-26T15:28:33.459Z",
+  "timestamp": "2025-10-28T23:01:45.595Z",
   "mechanical": {
     "steppers": {
-      "sun": { 
-        "position": 213.47, 
-        "velocity": 0.998,
-        "altitude": 1.26,
-        "azimuth": 253.23
+      "sun": {
+        "position": 215.781796586325,
+        "velocity": 0.998847784120528,
+        "altitude": 1.03761647984169,
+        "azimuth": 253.005425613381
       },
-      "moon": { 
-        "position": 270.00, 
-        "velocity": 11.97,
-        "altitude": 20.28,
-        "azimuth": 200.07
+      "moon": {
+        "position": 297.396513944196,
+        "velocity": 12.6810427226211,
+        "altitude": 29.1465404202494,
+        "azimuth": 172.636428072449
       },
-      "mercury": { 
-        "position": 236.97, 
-        "velocity": 1.113,
-        "altitude": -15.47,
-        "azimuth": 290.12
+      "mercury": {
+        "position": 239.484014822145,
+        "velocity": 1.01726211710803,
+        "altitude": 11.1210731625624,
+        "azimuth": 231.789630987122
       },
-      "venus": { 
-        "position": 195.88, 
-        "velocity": 1.248,
-        "altitude": -8.33,
-        "azimuth": 270.45
+      "venus": {
+        "position": 198.765298995648,
+        "velocity": 1.24892443025954,
+        "altitude": -7.17447701477178,
+        "azimuth": 268.329661272134
       },
-      "mars": { 
-        "position": 233.67, 
-        "velocity": 0.708,
-        "altitude": -12.89,
-        "azimuth": 285.67
+      "mars": {
+        "position": 235.305780166959,
+        "velocity": 0.710306073897129,
+        "altitude": 11.0088598845841,
+        "azimuth": 236.729874161838
       },
-      "jupiter": { 
-        "position": 114.73, 
-        "velocity": 0.050,
-        "altitude": 45.21,
-        "azimuth": 145.33
+      "jupiter": {
+        "position": 114.843230101557,
+        "velocity": 0.0429114248708373,
+        "altitude": -33.058690320916,
+        "azimuth": 356.159190320464
       },
-      "saturn": { 
-        "position": 356.06, 
-        "velocity": -0.052,
-        "altitude": 22.14,
-        "azimuth": 98.76
+      "saturn": {
+        "position": 355.938734706034,
+        "velocity": -0.0490251765785956,
+        "altitude": 18.5780781054604,
+        "azimuth": 109.053947533835
       },
-      "lunar_nodes_ascending": { "position": 345.67, "velocity": -0.053 },
-      "lunar_nodes_descending": { "position": 165.67, "velocity": -0.053 }
+      "lunar_nodes_ascending": {
+        "position": 345.549624261153,
+        "velocity": -0.0529544147843943
+      },
+      "lunar_nodes_descending": {
+        "position": 165.549624261153,
+        "velocity": -0.0529544147843943
+      }
     },
     "servos": {
       "mercury_retrograde": { "angle": 0, "state": "prograde" },
@@ -150,17 +156,17 @@ curl http://localhost:3000/api/display
     "displays": {
       "oled_main": {
         "line1": "Next Eclipse: solar",
-        "line2": "114 days",
+        "line2": "112 days",
         "line3": "2026-02-17"
       },
       "oled_secondary": {
         "line1": "Next Opposition: Mars",
-        "line2": "75 days",
+        "line2": "73 days",
         "line3": "2026-01-09"
       },
       "lcd_cycles": {
         "line1": "Metonic: Year 7/19",
-        "line2": "Saros: 43.1% complete"
+        "line2": "Saros: 43.2% complete"
       }
     },
     "leds": {
@@ -173,14 +179,86 @@ curl http://localhost:3000/api/display
       }
     }
   },
+  "next_eclipse": {
+    "type": "solar",
+    "kind": "annular",
+    "date": "2026-02-17T12:11:53.939Z",
+    "daysUntil": 111.548707685185,
+    "local": {
+      "kind": "partial",
+      "obscuration": 0.0619434435634973,
+      "partialBegin": null,
+      "totalBegin": null,
+      "peak": "2028-01-26T14:13:37.002Z",
+      "totalEnd": null,
+      "partialEnd": null
+    },
+    "details": null
+  },
   "next_opposition": {
     "planet": "Mars",
-    "date": "2026-01-09T08:30:00.000Z",
-    "daysUntil": 75.2
+    "date": "2026-01-09T11:41:19.629Z",
+    "daysUntil": 72.5274772453704
   },
   "update_hints": {
     "mechanical": 10000,
     "digital": 1000
+  },
+  "system": {
+    "healthy": true,
+    "cached": false,
+    "computation_time_ms": 22,
+    "precision": {
+      "validated_against": "NASA JPL HORIZONS",
+      "validation_date": "2025-10-28",
+      "coordinate_frame": "J2000 ecliptic",
+      "calculation_method": "astronomy-engine (VSOP87/ELP2000)",
+      "typical_error_arcsec": 1.61,
+      "max_error_arcsec": 8.62,
+      "validation_url": "https://github.com/mojoatomic/antikythera-engine-2/blob/main/docs/VALIDATION.md",
+      "error_quantiles_arcsec": { "p50": 1.61, "p95": 8.3, "max": 8.62 }
+    },
+    "reproducibility": {
+      "api_version": "1.0.0",
+      "engine_version": "astronomy-engine v2.1.19",
+      "git_sha": "f35c46e",
+      "validation_span": { "start": "2025-10-26", "end": "2025-11-25" },
+      "sample_count": 336,
+      "conventions": {
+        "angle_units": "degrees",
+        "error_units": "arcsec",
+        "longitude_wrap": "[0,360)",
+        "apparent": true,
+        "frame": "J2000 ecliptic"
+      }
+    },
+    "debug": {
+      "sun_altitude": 1.03761647984169,
+      "twilight_stage": "day",
+      "visibility_threshold": -6,
+      "planets_above_horizon": 3,
+      "sunrise": "2025-10-28T12:17:53.373Z",
+      "sunset": "2025-10-28T23:09:15.655Z",
+      "next_visibility_window": "2025-10-28T23:39:15.655Z",
+      "ecliptic_coordinates": {
+        "sun": { "lon": 215.781796586325, "lat": -0.00198583299563959 },
+        "moon": { "lon": 297.396513944196, "lat": -4.71419906148846 },
+        "mercury": { "lon": 239.484014822145, "lat": -2.83192440229897 },
+        "venus": { "lon": 198.765298995648, "lat": 1.50313271290408 },
+        "mars": { "lon": 235.305780166959, "lat": -0.363904907936811 },
+        "jupiter": { "lon": 114.843230101557, "lat": 0.0778131485971996 },
+        "saturn": { "lon": 355.938734706034, "lat": -2.47241398027667 }
+      }
+    },
+    "observer": {
+      "latitude": 35.1387,
+      "longitude": -90.0095,
+      "elevation": 0,
+      "city": "Memphis",
+      "country": "United States",
+      "source": "ip_geolocation",
+      "time_scale": "UTC"
+    }
   }
 }
 ```

@@ -297,6 +297,14 @@ app.get('/api/display', async (req, res) => {
       timestamp: state.date,
       mechanical,
       digital,
+      next_eclipse: state.nextEclipse && !state.nextEclipse.error ? {
+        type: state.nextEclipse.type,
+        kind: state.nextEclipse.kind || null,
+        date: state.nextEclipse.date,
+        daysUntil: state.nextEclipse.daysUntil,
+        local: state.nextEclipse.local || null,
+        details: state.nextEclipse.details || null
+      } : null,
       next_opposition: state.nextOpposition && !state.nextOpposition.error ? {
         planet: state.nextOpposition.planet,
         date: state.nextOpposition.date,
