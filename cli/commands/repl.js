@@ -351,7 +351,7 @@ class AntikytheraREPL {
         return;
       }
       console.log(chalk.red('Usage: next eclipse | next opposition [planet]'));
-    } catch (e) {
+    } catch (_err) {
       console.log(chalk.red('✗ API unavailable (timeout or error)'));
       console.log(chalk.gray('  Try: set source local or start server: npm start'));
     }
