@@ -235,9 +235,7 @@ class AntikytheraREPL {
       }
       if (f === 'rising') {
         try {
-          const t1 = this._currentDate();
-          const t2 = new Date(t1.getTime() + 30 * 60 * 1000);
-          // crude check using API/engine sampling
+          // crude check (placeholder): treat "rising" as having altitude field present
           return d.altitude !== undefined;
         } catch (_) { return false; }
       }
