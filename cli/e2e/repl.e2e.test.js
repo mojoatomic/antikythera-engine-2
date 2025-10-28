@@ -170,8 +170,53 @@ term.write('exit\r');
   });
 });
 
-describe('REPL e2e (watch cancel, JSON purity, and fallback message)', () => {
+describe('REPL e2e (time navigation, watch cancel, JSON purity)', () => {
   jest.setTimeout(15000);
+
+test('time navigation: goto, step, reset updates context date', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    // goto a fixed ISO date
+    await new Promise(res => setTimeout(res, 150));
+    term.write('goto 2025-12-25T00:00:00Z\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('context\r');
+    await new Promise(res => setTimeout(res, 150));
+
+    // step +2h
+    term.write('+2h\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('context\r');
+    await new Promise(res => setTimeout(res, 150));
+
+    // reset
+    term.write('reset\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('context\r');
+    await new Promise(res => setTimeout(res, 150));
+
+    term.write('exit\r');
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    // After goto
+    expect(clean).toMatch(/lastDate: .*2025-12-25T00:00:00\.000Z/);
+    // After +2h
+    expect(clean).toMatch(/lastDate: .*2025-12-25T02:00:00\.000Z/);
+    // After reset: lastDate no longer equals the +2h date (check final context block)
+    const lastIdx = clean.lastIndexOf('lastDate: ');
+    const tail = lastIdx >= 0 ? clean.slice(lastIdx, lastIdx + 100) : '';
+    expect(tail).not.toMatch(/2025-12-25T02:00:00\.000Z/);
+  });
 
 test('watch cancels on Ctrl+C and returns to prompt (PTY)', async () => {
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');

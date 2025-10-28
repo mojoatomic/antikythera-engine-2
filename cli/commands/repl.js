@@ -4,7 +4,7 @@ const chalk = require('chalk');
 const { getData, getFromAPI, getFromEngine } = require('../sources');
 const { format } = require('../formatters');
 const { loadContext, saveContext, getHistoryPath, loadHistory, saveHistory } = require('../utils/repl-config');
-const { parseDateInput } = require('../utils/date-parse');
+const { parseDateInput, echoParsedDate, addRelativeToDate } = require('../utils/date-parse');
 
 const VALID_BODIES = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
 
@@ -97,6 +97,15 @@ class AntikytheraREPL {
     const tokens = input.split(/\s+/);
     const cmd = tokens[0].toLowerCase();
 
+    // Time navigation: relative step like +2h / -30m
+    if (/^[+-]\d+(s|m|h|d|w|y)$/i.test(cmd)) {
+      const base = this._currentDate();
+      const next = addRelativeToDate(cmd, base);
+      this.context.lastDate = next;
+      console.log(chalk.gray(echoParsedDate(next, this.context)));
+      return;
+    }
+
     // Built-ins
     if (['exit', 'quit', '.exit'].includes(cmd)) return this.rl.close();
     if (cmd === 'help' || cmd === '?') return this.showHelp();
@@ -106,6 +115,29 @@ class AntikytheraREPL {
     }
     if (cmd === 'context' || cmd === 'ctx') return this.showContext();
     if (cmd === 'history') return this.showHistory();
+
+    // goto / reset
+    if (cmd === 'goto') {
+      const dateStr = tokens.slice(1).join(' ');
+      if (!dateStr) {
+        console.log(chalk.red('Usage: goto <date> (ISO, relative, or natural)'));
+        return;
+      }
+      if (dateStr.toLowerCase() === 'now') {
+        this.context.lastDate = new Date();
+        console.log(chalk.gray(echoParsedDate(this.context.lastDate, this.context)));
+        return;
+      }
+      const { date, echo } = parseDateInput(dateStr, this.context);
+      this.context.lastDate = date;
+      console.log(chalk.gray(echo));
+      return;
+    }
+    if (cmd === 'reset') {
+      this.context.lastDate = new Date();
+      console.log(chalk.gray(echoParsedDate(this.context.lastDate, this.context)));
+      return;
+    }
 
     // set commands
     if (cmd === 'set') return this.handleSet(tokens.slice(1));
@@ -150,10 +182,11 @@ class AntikytheraREPL {
     return await getData(date, opts);
   }
 
-  async showPosition(body, date = new Date()) {
+  async showPosition(body, date = null) {
     this.context.lastBody = body;
-    this.context.lastDate = date;
-    const data = await this.dataFor(date);
+    const effectiveDate = date || this._currentDate();
+    this.context.lastDate = effectiveDate;
+    const data = await this.dataFor(effectiveDate);
     const d = (body === 'sun' || body === 'moon') ? data[body] : data.planets[body];
 
     if (this.context.format === 'compact') {
@@ -183,7 +216,7 @@ class AntikytheraREPL {
   }
 
   async showAllPositions() {
-    const data = await this.dataFor(new Date());
+    const data = await this.dataFor(this._currentDate());
     console.log(chalk.cyan.bold('\n=== ALL BODIES ==='));
     console.log(chalk.gray(`Date: ${data.date}\n`));
     // Sun/Moon
@@ -351,9 +384,19 @@ class AntikytheraREPL {
     console.log('  all                   show all bodies (compact)');
     console.log('  compare <body>        api vs engine (Δ with tolerance)');
     console.log('  watch <body> [interval N]');
+    console.log('  goto <date>           set context date (ISO | +2h | today 18:00)');
+    console.log('  reset                 reset context date to now');
+    console.log('  +2h / -30m            step context date by relative amount');
     console.log('  set format <v> | set source <v> | set tz <v> | set intent on|off | set tolerance <deg>');
     console.log('  context | history | help | clear | exit');
     console.log();
+  }
+
+  _currentDate() {
+    if (this.context && this.context.lastDate) {
+      return (this.context.lastDate instanceof Date) ? this.context.lastDate : new Date(this.context.lastDate);
+    }
+    return new Date();
   }
 
   completer(line) {
@@ -408,7 +451,7 @@ class AntikytheraREPL {
 
     const base = [
       ...VALID_BODIES,
-      'all','now','watch','compare','help','exit','quit','.exit','context','history','clear','set','format','source','tz','intent','tolerance'
+      'all','now','watch','compare','goto','reset','help','exit','quit','.exit','context','history','clear','set','format','source','tz','intent','tolerance'
     ];
     const hits = base.filter(c => c.startsWith(last));
     return [hits.length ? hits : base, last];

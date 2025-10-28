@@ -85,4 +85,12 @@ function echoParsedDate(d, context) {
   }
 }
 
-module.exports = { parseDateInput, echoParsedDate };
+// Apply a relative offset like +2h/-30m to a base date
+function addRelativeToDate(input, baseDate) {
+  const base = baseDate instanceof Date ? baseDate : new Date(baseDate);
+  const d = parseRelative(String(input), base);
+  if (!d) throw new Error('Invalid relative offset. Use +2h, -30m, +7d, etc.');
+  return d;
+}
+
+module.exports = { parseDateInput, echoParsedDate, addRelativeToDate };
