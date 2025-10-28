@@ -1,4 +1,3 @@
-const chalk = require('chalk');
 
 function parseRelative(input, base) {
   const m = input.match(/^([+-])(\d+)([smhdwy])$/i);
@@ -71,7 +70,7 @@ function parseDateInput(input, context) {
   throw new Error('Invalid date. Use ISO (YYYY-MM-DDTHH:mm:ssZ) or relative (+2h, -30m).');
 }
 
-function echoParsedDate(d, context, raw) {
+function echoParsedDate(d, context) {
   try {
     // We only echo UTC here; local side is the system tz or context tz label
     const tzLabel = (context && context.tz && context.tz !== 'auto') ? context.tz : Intl.DateTimeFormat().resolvedOptions().timeZone;

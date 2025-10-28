@@ -4,7 +4,7 @@ const chalk = require('chalk');
 const { getData, getFromAPI, getFromEngine } = require('../sources');
 const { format } = require('../formatters');
 const { loadContext, saveContext, getHistoryPath, loadHistory, saveHistory } = require('../utils/repl-config');
-const { parseDateInput, echoParsedDate } = require('../utils/date-parse');
+const { parseDateInput } = require('../utils/date-parse');
 
 const VALID_BODIES = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
 
