@@ -24,15 +24,15 @@ class BackLowerFace {
     this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
     this.ctx.font = 'bold 18px Georgia';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('BACK LOWER FACE', this.centerX, 30);
-    this.ctx.font = '14px Georgia';
-    this.ctx.fillText('Saros Cycle', this.centerX, 50);
+    this.ctx.fillText('Saros Cycle', this.centerX, 30);
+    //this.ctx.font = '14px Georgia';
+    //this.ctx.fillText('Saros Cycle', this.centerX, 50);
   }
   
   drawSpiral() {
     // Main Archimedean spiral (223 synodic months)
     this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
-    this.ctx.lineWidth = 3;
+    this.ctx.lineWidth = 10;
     this.ctx.beginPath();
     
     for (let i = 0; i <= 1000; i++) {
@@ -215,12 +215,25 @@ class BackLowerFace {
   drawInfo(data) {
     if (!data.sarosCycle || !data.nextEclipse) return;
     
+    const saros = data.sarosCycle;
+    const nextEclipse = data.nextEclipse;
+    
+    // Calculate months into current Saros cycle (0-223)
+    const monthsInCycle = Math.round(saros.progress * 223);
+    const monthsRemaining = 223 - monthsInCycle;
+    
+    // Calculate years and days from cycle completion
+    const daysPerSaros = 223 * 29.53059; // 223 synodic months
+    const daysRemaining = (monthsRemaining / 223) * daysPerSaros;
+    const yearsRemaining = Math.floor(daysRemaining / 365.25);
+    const daysInYearRemaining = Math.round(daysRemaining % 365.25);
+    
     // Info panel at bottom
     this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
     this.ctx.font = 'bold 16px Georgia';
     this.ctx.textAlign = 'center';
     this.ctx.fillText(
-      `Saros Cycle ${data.sarosCycle.cycle}`,
+      `Saros Cycle ${saros.cycle} — Month ${monthsInCycle}/223`,
       this.centerX,
       this.canvas.height - 65
     );
@@ -228,7 +241,7 @@ class BackLowerFace {
     this.ctx.font = '12px Georgia';
     this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
     this.ctx.fillText(
-      '223 Synodic Months ≈ 18 years, 11 days',
+      `Cycle ends in ${yearsRemaining}y ${daysInYearRemaining}d (≈ 6586.3 days total)`,
       this.centerX,
       this.canvas.height - 45
     );
@@ -237,18 +250,21 @@ class BackLowerFace {
     this.ctx.font = 'bold 14px Georgia';
     this.ctx.fillStyle = 'var(--color-pointer, #ffaa00)';
     
-    const eclipseType = data.nextEclipse.type === 'lunar' ? 'Lunar ☽' : 'Solar ☉';
-    const daysUntil = Math.floor(data.nextEclipse.daysUntil || 0);
+    const eclipseType = nextEclipse.type === 'lunar' ? 'Lunar ☽' : 'Solar ☉';
+    const daysUntil = Math.floor(nextEclipse.daysUntil || 0);
     
     this.ctx.fillText(
-      `Next Eclipse: ${eclipseType}`,
+      `Next Eclipse: ${eclipseType} in ${daysUntil} days`,
       this.centerX,
       this.canvas.height - 25
     );
     
-    this.ctx.font = '12px Georgia';
+    // Progress percentage
+    this.ctx.font = '11px Georgia';
+    this.ctx.fillStyle = 'rgba(212, 175, 55, 0.8)';
+    const progressPercent = (saros.progress * 100).toFixed(1);
     this.ctx.fillText(
-      `in ${daysUntil} days`,
+      `Progress: ${progressPercent}%`,
       this.centerX,
       this.canvas.height - 8
     );

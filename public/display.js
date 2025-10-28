@@ -11,13 +11,29 @@ let backUpperFace = null;
 let backLowerFace = null;
 
 // Initialize on page load
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
+    // Load language system (reads .env.local via API)
+    await languageManager.load();
+
+    // Load UI settings from server
+    await loadSettings();
+    
     initComponents();
     setCurrentDate();
     updateDisplay();
     setupEventListeners();
     startRealTime(); // Auto-start in real-time mode
 });
+
+async function loadSettings() {
+    try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        window.appSettings = data || { showSunriseSunset: false };
+    } catch (_e) {
+        window.appSettings = { showSunriseSunset: false };
+    }
+}
 
 function initComponents() {
     // Initialize all three face components
@@ -111,9 +127,22 @@ function setCurrentDate() {
     document.getElementById('dateInput').value = localDateTime;
 }
 
+function parseLocalDateTime(value) {
+    // Safely parse 'YYYY-MM-DDTHH:mm' as a LOCAL time and return Date
+    if (!value) return new Date();
+    const [datePart, timePart] = value.split('T');
+    const [y, m, d] = datePart.split('-').map(n => parseInt(n, 10));
+    const [hh, mm] = timePart.split(':').map(n => parseInt(n, 10));
+    return new Date(y, m - 1, d, hh, mm, 0, 0); // Local time -> Date
+}
+
 async function updateDisplay() {
     const dateInput = document.getElementById('dateInput').value;
-    const date = dateInput ? new Date(dateInput).toISOString() : new Date().toISOString();
+    // Parse local datetime as local without manual timezone adjustment
+    const date = dateInput 
+        ? parseLocalDateTime(dateInput).toISOString()
+        : new Date().toISOString();
+    
     
     try {
         const response = await fetch(`http://localhost:3000/api/state/${date}`);

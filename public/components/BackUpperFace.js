@@ -23,15 +23,15 @@ class BackUpperFace {
     this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
     this.ctx.font = 'bold 18px Georgia';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('BACK UPPER FACE', this.centerX, 30);
-    this.ctx.font = '14px Georgia';
-    this.ctx.fillText('Metonic Cycle', this.centerX, 50);
+    this.ctx.fillText('Metonic Cycle', this.centerX, 30);
+    //this.ctx.font = '14px Georgia';
+    //this.ctx.fillText('Metonic Cycle', this.centerX, 50);
   }
   
   drawSpiral() {
     // Main Archimedean spiral
     this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
-    this.ctx.lineWidth = 3;
+    this.ctx.lineWidth = 10;
     this.ctx.beginPath();
     
     for (let i = 0; i <= 1000; i++) {
@@ -189,12 +189,23 @@ class BackUpperFace {
   drawInfo(data) {
     if (!data.metonicCycle) return;
     
+    const metonic = data.metonicCycle;
+    
+    // Calculate months into current cycle (235 lunar months total)
+    const monthsInCycle = Math.round(metonic.progress * 235);
+    const monthsRemaining = 235 - monthsInCycle;
+    
+    // Calculate time remaining in cycle
+    const daysRemaining = monthsRemaining * 29.53059; // lunar month average
+    const yearsRemaining = Math.floor(daysRemaining / 365.25);
+    const daysInYearRemaining = Math.round(daysRemaining % 365.25);
+    
     // Info panel at bottom
     this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
     this.ctx.font = 'bold 16px Georgia';
     this.ctx.textAlign = 'center';
     this.ctx.fillText(
-      `Year ${data.metonicCycle.year} of 19`,
+      `Year ${metonic.year}/19 — Month ${monthsInCycle}/235`,
       this.centerX,
       this.canvas.height - 50
     );
@@ -202,9 +213,19 @@ class BackUpperFace {
     this.ctx.font = '12px Georgia';
     this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
     this.ctx.fillText(
-      '235 Lunar Months = 19 Solar Years',
+      `Cycle ends in ${yearsRemaining}y ${daysInYearRemaining}d (19.0 solar years)`,
       this.centerX,
       this.canvas.height - 30
+    );
+    
+    // Progress percentage
+    this.ctx.font = '11px Georgia';
+    this.ctx.fillStyle = 'rgba(212, 175, 55, 0.8)';
+    const progressPercent = (metonic.progress * 100).toFixed(1);
+    this.ctx.fillText(
+      `Progress: ${progressPercent}%`,
+      this.centerX,
+      this.canvas.height - 12
     );
   }
 }

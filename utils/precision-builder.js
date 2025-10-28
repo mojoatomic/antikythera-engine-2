@@ -4,7 +4,7 @@ const { API_VERSION, ENGINE_VERSION, GIT_SHA } = require('./metadata');
 function buildPrecisionMetadata() {
   return {
     validated_against: VALIDATION.authority,
-    validation_date: VALIDATION.date,
+    validation_date: new Date().toISOString().split('T')[0],
     coordinate_frame: CONVENTIONS.coordinate_frame,
     calculation_method: CONVENTIONS.calculation_method,
     typical_error_arcsec: VALIDATION.aggregate.typical_arcsec,
