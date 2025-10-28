@@ -319,6 +319,30 @@ test('plot moon.illumination 5d renders ASCII without crash', async () => {
     expect(clean).toMatch(/JUPITER/i);
   });
 
+  test('set location persists and shows in context', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('set location 40.0,-105.0\r');
+    await new Promise(res => setTimeout(res, 120));
+    term.write('context\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/location:\s+40(?:\.0)?,-105(?:\.0)?/);
+  });
+
   test('JSON purity: format=json for moon has no ANSI', async () => {
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
     const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
@@ -401,6 +425,33 @@ test('plot moon.illumination 5d renders ASCII without crash', async () => {
     expect(marsLine).toBeTruthy();
     expect(marsLine).toMatch(/Lon:/);
     expect(marsLine).toMatch(/Alt:/);
+  });
+
+  test('sample moon from now to +2h every 30m json outputs parsable JSON', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('set source local\r');
+    await new Promise(res => setTimeout(res, 120));
+    term.write('sample moon from now to +2h every 30m json\r');
+    await new Promise(res => setTimeout(res, 2500));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const matches = out.match(/{[\s\S]*}/g) || [];
+    const jsonStr = matches.length ? matches[matches.length - 1] : '';
+    const parsed = JSON.parse(jsonStr);
+    expect(code).toBe(0);
+    expect(Array.isArray(parsed.rows)).toBe(true);
+    expect(parsed.rows.length).toBeGreaterThan(1);
   });
 
   test('pipeline: all | where alt > 0 | fields name alt | limit 2 filters numerically', async () => {

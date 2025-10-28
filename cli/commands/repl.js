@@ -156,6 +156,7 @@ class AntikytheraREPL {
     if (cmd === 'compare') return this.handleCompare(tokens.slice(1));
     if (cmd === 'watch') return this.handleWatch(tokens.slice(1));
     if (cmd === 'plot') return this.handlePlot(tokens.slice(1));
+    if (cmd === 'sample') return this.handleSample(tokens.slice(1));
 
     // all / now short-hands
     if (cmd === 'all' || (cmd === 'now' && tokens.length === 1)) return this.showAllPositions(tokens[1]);
@@ -188,7 +189,7 @@ class AntikytheraREPL {
   }
 
   async dataFor(date) {
-    const opts = { local: this.context.source === 'local', remote: this.context.source === 'api' };
+    const opts = { local: this.context.source === 'local', remote: this.context.source === 'api', observer: this.context.location || null };
     // Timeout guard for API calls when source=auto
     return await getData(date, opts);
   }
@@ -494,8 +495,8 @@ class AntikytheraREPL {
         if (doCompare) {
           try {
             const [engData, apiData] = await Promise.all([
-              getFromEngine(now),
-              getFromAPI(now).catch(() => null)
+              getFromEngine(now, this.context.location || null),
+              getFromAPI(now, { observer: this.context.location || null }).catch(() => null)
             ]);
             if (!apiData) {
               if (!warnedApi) {
@@ -724,7 +725,7 @@ class AntikytheraREPL {
     const what = (args[0] || '').toLowerCase();
     const now = this._currentDate();
     try {
-      const data = await getDisplayFromAPI(now);
+      const data = await getDisplayFromAPI(now, this.context.location || null);
       if (what === 'opposition') {
         const body = (args[1] || this.context.lastBody || 'mars').toLowerCase();
         const opp = data.next_opposition;
@@ -877,6 +878,86 @@ class AntikytheraREPL {
     console.log(chalk.red('Usage: find next conjunction [A] [B] | find next equinox | find next solstice'));
   }
 
+  // Sample range: sample <body> from <date> to <date> every <step> [json|csv]
+  async handleSample(args) {
+    const body = (args[0] || this.context.lastBody || 'moon').toLowerCase();
+    if (!VALID_BODIES.includes(body)) {
+      console.log(chalk.red('Usage: sample <body> from <date> to <date> every <step> [json|csv]'));
+      return;
+    }
+    const tokens = args.slice(1);
+    const idxFrom = tokens.indexOf('from');
+    const idxTo = tokens.indexOf('to');
+    const idxEvery = tokens.indexOf('every');
+    if (idxFrom < 0 || idxTo < 0 || idxEvery < 0 || !(idxFrom < idxTo && idxTo < idxEvery)) {
+      console.log(chalk.red('Usage: sample <body> from <date> to <date> every <step> [json|csv]'));
+      return;
+    }
+    const fromStr = tokens.slice(idxFrom + 1, idxTo).join(' ');
+    const toStr = tokens.slice(idxTo + 1, idxEvery).join(' ');
+    const stepStr = tokens[idxEvery + 1] || '';
+    const fmtOverride = (tokens[idxEvery + 2] || '').toLowerCase();
+    const stepM = stepStr.match(/^(\d+)([smhdw])$/);
+    if (!stepM) {
+      console.log(chalk.red('every <step> must be like 15m, 2h, 1d, 1w'));
+      return;
+    }
+    const n = parseInt(stepM[1], 10);
+    const unit = stepM[2];
+    const msPer = { s: 1e3, m: 6e4, h: 3.6e6, d: 8.64e7, w: 6.048e8 };
+    const stepMs = (msPer[unit] || 0) * n;
+    if (!stepMs) return console.log(chalk.red('Invalid step'));
+
+    // Parse dates
+    let fromDate;
+    if (fromStr.toLowerCase() === 'now') fromDate = new Date();
+    else fromDate = parseDateInput(fromStr, this.context).date;
+    let toDate;
+    if (/^[+-]\d+[smhdwy]$/.test(toStr)) {
+      toDate = addRelativeToDate(toStr, fromDate);
+    } else if (toStr.toLowerCase() === 'now') {
+      toDate = new Date();
+    } else {
+      toDate = parseDateInput(toStr, this.context).date;
+    }
+    if (!(fromDate instanceof Date) || !(toDate instanceof Date) || isNaN(fromDate) || isNaN(toDate)) {
+      console.log(chalk.red('Invalid from/to dates'));
+      return;
+    }
+    if (toDate <= fromDate) {
+      console.log(chalk.red('to must be after from'));
+      return;
+    }
+    const estCount = Math.ceil((toDate - fromDate) / stepMs) + 1;
+    if (estCount > 2000) {
+      console.log(chalk.red('Too many samples; reduce range or increase step (max ~2000)'));
+      return;
+    }
+
+    const rows = [];
+    for (let t = fromDate.getTime(); t <= toDate.getTime(); t += stepMs) {
+      const d = await this.dataFor(new Date(t));
+      const sel = (body === 'sun' || body === 'moon') ? d[body] : d.planets[body];
+      rows.push({
+        time: new Date(t).toISOString(),
+        longitude: sel.longitude,
+        latitude: sel.latitude,
+        altitude: sel.altitude,
+        azimuth: sel.azimuth,
+        velocity: sel.velocity
+      });
+    }
+
+    const outFmt = ['json','csv'].includes(fmtOverride) ? fmtOverride : 'json';
+    if (outFmt === 'json') {
+      process.stdout.write(JSON.stringify({ body, from: fromDate.toISOString(), to: toDate.toISOString(), stepMs, rows }, null, 2) + os.EOL);
+    } else {
+      const header = 'time,longitude,latitude,altitude,azimuth,velocity';
+      const lines = rows.map(r => [r.time, r.longitude, r.latitude, r.altitude, r.azimuth, r.velocity].join(','));
+      console.log([header, ...lines].join(os.EOL));
+    }
+  }
+
   async handleSet(args) {
     const key = (args[0] || '').toLowerCase();
     const val = args.slice(1).join(' ');
@@ -893,6 +974,18 @@ class AntikytheraREPL {
         if (!ok) return console.log(chalk.red('Invalid source (auto|local|api)'));
         this.context.source = val;
         console.log(chalk.green(`source=${val}`));
+        break;
+      }
+      case 'location': {
+        // set location <lat,lon[,elev]>
+        const m = val.replace(/\s+/g,'').match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,(-?\d+(?:\.\d+)?))?$/);
+        if (!m) return console.log(chalk.red('Usage: set location <lat,lon[,elev]>'));
+        const lat = parseFloat(m[1]);
+        const lon = parseFloat(m[2]);
+        const elev = m[3] ? parseFloat(m[3]) : 0;
+        if (!isFinite(lat) || !isFinite(lon)) return console.log(chalk.red('Invalid lat/lon'));
+        this.context.location = { latitude: lat, longitude: lon, elevation: elev, source: 'manual' };
+        console.log(chalk.green(`location=${lat},${lon}${elev?','+elev:''}`));
         break;
       }
       case 'tz': {
@@ -928,6 +1021,7 @@ class AntikytheraREPL {
     console.log(`tz:     ${chalk.yellow(c.tz || 'auto')}`);
     console.log(`intent: ${chalk.yellow(c.showIntent ? 'on' : 'off')}`);
     console.log(`tolΔ:   ${chalk.yellow(c.compareToleranceDeg)}`);
+    if (c.location) console.log(`location: ${chalk.yellow(`${c.location.latitude},${c.location.longitude}${c.location.elevation?','+c.location.elevation:''}`)}`);
     if (c.lastBody) console.log(`lastBody: ${chalk.yellow(c.lastBody)}`);
     if (c.lastDate) console.log(`lastDate: ${chalk.gray(new Date(c.lastDate).toISOString())}`);
     console.log();
@@ -984,7 +1078,7 @@ class AntikytheraREPL {
       }
       // If typing second token and no trailing space, filter by current token
       if (parts.length === 2 && !raw.endsWith(' ')) {
-        return [startWith(['format','source','tz','intent','tolerance']), last];
+        return [startWith(['format','source','tz','intent','tolerance','location']), last];
       }
       if (parts.length >= 2) {
         const key = parts[1];
@@ -1007,6 +1101,10 @@ class AntikytheraREPL {
         if (key === 'intent') {
           const opts = ['on','off'];
           return [after ? opts : startWith(opts), last];
+        }
+        if (key === 'location') {
+          const hint = ['<lat,lon>', '<lat,lon,elev>'];
+          return [after ? hint : startWith(hint), last];
         }
         return [[''], last];
       }

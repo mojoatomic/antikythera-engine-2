@@ -30,8 +30,10 @@ Provide an interactive REPL for the Antikythera CLI that accelerates exploration
 - `plot <body> <Nd>` (e.g., `plot mars 90d`) – ecliptic longitude
 - `plot moon.illumination <Nd>` – lunar phase
 - `plot visibility sun 1d` – altitude timeline
+- `sample <body> from <date> to <date> every <step> [json|csv]` – export time series
 - `set source <auto|local|api>`
 - `set tz <auto|IANA>`
+- `set location <lat,lon[,elev]>`
 - `set intent <on|off>`
 - `set tolerance <degrees>`
 - `context`, `history`, `help`, `clear`, `exit|quit|.exit`
