@@ -45,31 +45,43 @@ describe('REPL e2e (persistence across restart)', () => {
     const tmpBase = fs.mkdtempSync(pathFs.join(os.tmpdir(), 'antikythera-repl-'));
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
 
-    // Session 1: set context values and exit
+    // Session 1: set context values and exit (PTY to record history)
     const env1 = { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1', XDG_CONFIG_HOME: tmpBase };
-    const child1 = spawn(process.execPath, [cliPath, 'repl'], { env: env1, stdio: 'pipe' });
+    const term1 = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: env1
+    });
     let out1 = '';
-    child1.stdout.on('data', c => { out1 += c.toString(); });
-    child1.stderr.on('data', c => { out1 += c.toString(); });
+    term1.onData(c => { out1 += c.toString(); });
+    await new Promise(res => setTimeout(res, 150));
+    term1.write('set format json\r');
     await new Promise(res => setTimeout(res, 120));
-    child1.stdin.write('set format json\n');
-    await new Promise(res => setTimeout(res, 80));
-    child1.stdin.write('set tolerance 0.002\n');
-    await new Promise(res => setTimeout(res, 80));
-    child1.stdin.write('exit\n');
-    const code1 = await new Promise(r => child1.on('close', r));
+    term1.write('set tolerance 0.002\r');
+    await new Promise(res => setTimeout(res, 120));
+    term1.write('exit\r');
+    const code1 = await new Promise(r => term1.onExit(({ exitCode }) => r(exitCode)));
     expect(code1).toBe(0);
 
+    // Verify history persisted
+    const histPath = pathFs.join(tmpBase, 'antikythera', 'history');
+    const hist = fs.readFileSync(histPath, 'utf8');
+    expect(hist).toMatch(/set format json/);
+    expect(hist).toMatch(/set tolerance 0\.002/);
+
     // Session 2: verify context persisted
-    const child2 = spawn(process.execPath, [cliPath, 'repl'], { env: env1, stdio: 'pipe' });
+    const term2 = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: env1
+    });
     let out2 = '';
-    child2.stdout.on('data', c => { out2 += c.toString(); });
-    child2.stderr.on('data', c => { out2 += c.toString(); });
-    await new Promise(res => setTimeout(res, 120));
-    child2.stdin.write('context\n');
-    await new Promise(res => setTimeout(res, 120));
-    child2.stdin.write('exit\n');
-    const code2 = await new Promise(r => child2.on('close', r));
+    term2.onData(c => { out2 += c.toString(); });
+    await new Promise(res => setTimeout(res, 150));
+    term2.write('context\r');
+    await new Promise(res => setTimeout(res, 150));
+    term2.write('exit\r');
+    const code2 = await new Promise(r => term2.onExit(({ exitCode }) => r(exitCode)));
     const clean = stripAnsi(out2);
     expect(code2).toBe(0);
     expect(clean).toMatch(/format:\s+json/i);
