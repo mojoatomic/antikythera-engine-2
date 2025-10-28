@@ -107,6 +107,62 @@ Examples:
 - Formats: table (default), json (pure, no ANSI), compact (single-line summary)
 - Keep within terminal width; truncate decimals in compact/table sensibly
 
+### Plot Examples
+
+#### Planetary Motion
+```text
+antikythera> plot mars 90d
+
+MARS Longitude over 90d
+
+ 237.3°┤      ╭─╮
+ 235.5°┤    ╭─╯ ╰─╮
+ 233.7°┤  ╭─╯     ╰─╮
+ 231.9°┤╭─╯         ╰─╮
+ 230.1°┼╯             ╰─╮
+```
+Shows retrograde motion loop (longitude reversal visible around stationary points).
+
+#### Moon Phase
+```text
+antikythera> plot moon.illumination 30d
+
+MOON Illumination over 30d
+
+ 100%┤ ●     ●     ●
+  75%┤╱ ╲   ╱ ╲   ╱
+  50%┤   ◐ ◑   ◐ ◑
+  25%┤    ╲ ╱    ╲ ╱
+   0%┤     ○     ○
+```
+Full moon cycle visualization (percent illumination).
+
+#### Visibility Timeline (Altitude)
+```text
+antikythera> plot visibility sun 1d
+
+ALT (°)
+ 90┤
+ 45┤        ╱‾‾‾╲        
+  0┼───────╯─────╰──────  ← Horizon
+-45┤   ╱           ╲
+-90┤                     
+   06:00  12:00  18:00
+```
+Altitude timeline over a day (horizon crossing shows sunrise/sunset).
+
+### Plot Implementation Notes
+- Library: `asciichart` (lightweight, no dependencies)
+- Width: responsive to terminal width via `process.stdout.columns`, with a conservative margin
+  - Example: `asciichart.plot(values, { height: 12, width: (process.stdout.columns || 80) - 10 })`
+- Height: default 12 rows; future work may auto-scale per series
+- Color: plots themselves are plain ASCII (no colors), headings may use minimal styling
+- JSON: when `format=json`, REPL returns pure JSON (no ANSI), plots are not rendered
+- Data source:
+  - `plot <body> <Nd>` → body ecliptic longitude samples across N days/weeks/hours
+  - `plot moon.illumination <Nd>` → percent illumination × 100
+  - `plot visibility sun 1d` → solar altitude (°) across a day
+
 ## Architecture
 - Shell: Node `readline` (completer, history)
 - Parser: token → intent dispatcher (no DSL)
