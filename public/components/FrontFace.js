@@ -803,11 +803,19 @@ class FrontFace {
     }
     
     if (data.egyptianCalendar) {
-      const monthName = languageManager.getMonthName(data.egyptianCalendar.month);
+      // Show full Gregorian date with year, using observer timezone when available
+      const tz = data?.observer?.timezone;
+      const dateObj = new Date(data.date);
+      const dateStr = dateObj.toLocaleDateString('en-US', {
+        timeZone: tz || undefined,
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
       this.ctx.font = '11px Georgia';
       this.ctx.fillStyle = 'rgba(240, 230, 210, 0.8)';
       this.ctx.fillText(
-        `${monthName} ${data.egyptianCalendar.day}`,
+        dateStr,
         padding,
         this.canvas.height - padding - lineHeight
       );
