@@ -4,6 +4,7 @@ const { VALIDATION, CONVENTIONS } = require('./constants/validation');
 const { API_VERSION, ENGINE_VERSION, GIT_SHA } = require('./utils/metadata');
 const { buildSystemMetadata } = require('./utils/precision-builder');
 const { getObserverFromRequest } = require('./lib/location-service');
+const { effectiveDate, status: controlStatus, setTime: controlSetTime, setAnimate: controlSetAnimate, setScene: controlSetScene, stop: controlStop } = require('./lib/control-state');
 const AntikytheraEngine = require('./engine');
 
 const app = express();
@@ -14,6 +15,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/config', express.static('config'));
+
+// Simple bearer token guard for control endpoints (MVP)
+function controlGuard(req, res, next) {
+  const token = process.env.CONTROL_TOKEN || process.env.ANTIKYTHERA_CONTROL_TOKEN || '';
+  const auth = req.headers['authorization'] || '';
+  if (token && typeof auth === 'string' && auth.startsWith('Bearer ') && auth.slice(7) === token) return next();
+  return res.status(401).json({ error: 'Control authentication failed', code: 'CONTROL_AUTH_FAILED' });
+}
 
 // Get language setting
 app.get('/api/language', (req, res) => {
@@ -30,7 +39,8 @@ app.get('/api/settings', (req, res) => {
 // Get current state
 app.get('/api/state', async (req, res) => {
   try {
-    const date = req.query.date ? new Date(req.query.date) : new Date();
+    const requested = req.query.date ? new Date(req.query.date) : new Date();
+    const date = effectiveDate(requested);
     const observer = await getObserverFromRequest(req);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state);
@@ -42,10 +52,11 @@ app.get('/api/state', async (req, res) => {
 // Get state for a specific date
 app.get('/api/state/:date', async (req, res) => {
   try {
-    const date = new Date(req.params.date);
-    if (isNaN(date.getTime())) {
+    const reqDate = new Date(req.params.date);
+    if (isNaN(reqDate.getTime())) {
       return res.status(400).json({ error: 'Invalid date format' });
     }
+    const date = effectiveDate(reqDate);
     const observer = await getObserverFromRequest(req);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state);
@@ -95,7 +106,8 @@ app.get('/api/planets', async (req, res) => {
 app.get('/api/display', async (req, res) => {
   try {
     const startTime = Date.now();
-    const date = req.query.date ? new Date(req.query.date) : new Date();
+    const requested = req.query.date ? new Date(req.query.date) : new Date();
+    const date = effectiveDate(requested);
     const observer = await getObserverFromRequest(req);
     const latitude = observer.latitude;
     const longitude = observer.longitude;
@@ -388,6 +400,62 @@ app.get('/api/display', async (req, res) => {
       }
     });
   }
+});
+
+// Control API (prefix)
+app.get('/api/control', (req, res) => {
+  res.json({
+    operations: [
+      { method: 'POST', path: '/api/control/time', body: { date: 'ISO 8601 (UTC)' } },
+      { method: 'POST', path: '/api/control/animate', body: { from: 'ISO', to: 'ISO', speed: 'number>0 (Nx)' } },
+      { method: 'POST', path: '/api/control/scene', body: { preset: 'string', bodies: 'string[]|csv' } },
+      { method: 'POST', path: '/api/control/stop' },
+      { method: 'GET', path: '/api/control/status' },
+    ],
+    auth: { type: 'bearer', env: 'CONTROL_TOKEN' },
+  });
+});
+
+app.get('/api/control/status', (req, res) => {
+  res.json(controlStatus());
+});
+
+app.post('/api/control/time', controlGuard, (req, res) => {
+  try {
+    const date = req.body && req.body.date;
+    if (!date) return res.status(400).json({ error: 'Missing body.date (ISO)' });
+    controlSetTime(date);
+    res.json({ ok: true, status: controlStatus() });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/control/animate', controlGuard, (req, res) => {
+  try {
+    const { from, to, speed } = req.body || {};
+    if (!from || !to) return res.status(400).json({ error: 'Missing body.from/body.to (ISO)' });
+    controlSetAnimate(from, to, speed);
+    res.json({ ok: true, status: controlStatus() });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/control/scene', controlGuard, (req, res) => {
+  try {
+    const { preset, bodies } = req.body || {};
+    if (!preset) return res.status(400).json({ error: 'Missing body.preset' });
+    controlSetScene(preset, bodies);
+    res.json({ ok: true, status: controlStatus() });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/control/stop', controlGuard, (req, res) => {
+  controlStop();
+  res.json({ ok: true, status: controlStatus() });
 });
 
 // System metadata endpoint only

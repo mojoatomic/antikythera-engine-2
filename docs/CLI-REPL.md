@@ -69,6 +69,15 @@ Notes
 - `set tolerance <degrees>`
 - `context`, `history`, `help`, `clear`, `exit|quit|.exit`
 
+### Control Commands (Classroom Control)
+Requires CONTROL_TOKEN in environment (Authorization: Bearer).
+
+- `control time <ISO>`
+- `control animate --from <ISO> --to <ISO> [--speed <Nx>]`
+- `control scene --preset <name> [--bodies a,b,c]`
+- `control stop`
+- `control status`
+
 Reserved for Phase 2: `next`, `find`, `goto`, `reset`, `+/-`, `where`.
 
 ### Pipes & Filters

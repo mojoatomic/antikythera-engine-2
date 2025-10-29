@@ -79,6 +79,28 @@ curl http://localhost:3000/api/system
 ## API Endpoints
 
 ### Physical Device Control
+### Classroom Control Mode
+
+Write operations are under `/api/control/*` (Bearer token via `CONTROL_TOKEN`).
+
+Examples:
+```bash
+# Set time (UTC)
+CONTROL_TOKEN=your-token antikythera control time 2025-10-29T12:00:00Z
+# Animate a range
+CONTROL_TOKEN=your-token antikythera control animate --from 2025-10-29T00:00:00Z --to 2025-10-30T00:00:00Z --speed 2
+# Scene preset
+CONTROL_TOKEN=your-token antikythera control scene --preset planets --bodies mercury,venus,mars
+# Status / Stop
+CONTROL_TOKEN=your-token antikythera control status
+CONTROL_TOKEN=your-token antikythera control stop
+```
+
+API endpoints:
+- `GET /api/control` (discovery)
+- `GET /api/control/status`
+- `POST /api/control/time|animate|scene|stop`
+
 **GET /api/display**
 
 Complete state for physical mechanism implementation, including stepper motor control, servo positions, display text, and LED indicators.
