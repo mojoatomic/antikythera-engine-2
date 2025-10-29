@@ -26,6 +26,9 @@ program
   .option('--debug', 'Show debug information')
   .option('--local', 'Use embedded engine')
   .option('--remote', 'Force API connection')
+  .option('--lat <num>', 'Observer latitude')
+  .option('--lon <num>', 'Observer longitude')
+  .option('--elev <num>', 'Observer elevation (meters)')
   .action(cmdNow);
 
 // Position command - specific body position
@@ -39,6 +42,9 @@ program
   .option('--profile', 'Show timing information')
   .option('--local', 'Use embedded engine')
   .option('--remote', 'Force API connection')
+  .option('--lat <num>', 'Observer latitude')
+  .option('--lon <num>', 'Observer longitude')
+  .option('--elev <num>', 'Observer elevation (meters)')
   .action(cmdPosition);
 
 // Watch command - live updates
@@ -48,6 +54,9 @@ program
   .option('--interval <ms>', 'Update interval in milliseconds', '1000')
   .option('--compare', 'Show comparison with API')
   .option('--format <type>', 'Output format (table, json)', 'table')
+  .option('--lat <num>', 'Observer latitude')
+  .option('--lon <num>', 'Observer longitude')
+  .option('--elev <num>', 'Observer elevation (meters)')
   .action(cmdWatch);
 
 // Compare command - compare sources
@@ -56,6 +65,9 @@ program
   .description('Compare calculations from different sources (cli, api, snapshot)')
   .option('--date <iso>', 'Date to compare', new Date().toISOString())
   .option('--format <type>', 'Output format (table, json)', 'table')
+  .option('--lat <num>', 'Observer latitude')
+  .option('--lon <num>', 'Observer longitude')
+  .option('--elev <num>', 'Observer elevation (meters)')
   .action(cmdCompare);
 
 // Validate command - check for discontinuities

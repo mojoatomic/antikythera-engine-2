@@ -5,7 +5,12 @@ const chalk = require('chalk');
 async function now(options) {
   try {
     const startTime = Date.now();
-    const data = await getData(new Date(), options);
+    const observer = (isFinite(options.lat) && isFinite(options.lon)) ? {
+      latitude: Number(options.lat),
+      longitude: Number(options.lon),
+      elevation: isFinite(options.elev) ? Number(options.elev) : undefined,
+    } : null;
+    const data = await getData(new Date(), { ...options, observer });
     const endTime = Date.now();
     
     if (options.debug) {
