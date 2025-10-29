@@ -101,6 +101,20 @@ antikythera control stop
 
 Shared classroom token (optional): set `ANTIKYTHERA_CONTROL_TOKEN` on server and clients.
 
+## Control Token Management
+
+The server generates a persistent control token on first startup and reuses it across restarts.
+
+- Location: `.antikythera/control-token` (gitignored)
+- Override with env: `export ANTIKYTHERA_CONTROL_TOKEN=custom-token`
+- Regenerate: delete the file and restart server
+
+Normal usage (no setup):
+```bash
+npm run dev              # Uses existing token or generates new one
+antikythera control ...  # CLI reads the same token automatically
+```
+
 API endpoints:
 - `GET /api/control` (discovery)
 - `GET /api/control/status`
