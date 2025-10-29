@@ -4,12 +4,12 @@ type: software
 title: "Antikythera Engine"
 abstract: "Astronomical ephemeris API providing NASA-validated celestial body positions for educational displays and physical mechanism control, inspired by the ancient Greek Antikythera mechanism."
 authors:
-  - family-names: "[YOUR_LAST_NAME]"
-    given-names: "[YOUR_FIRST_NAME]"
-    email: "[YOUR_EMAIL]"
-    orcid: "[YOUR_ORCID or remove this line if none]"
-repository-code: "https://github.com/[YOUR_USERNAME]/antikythera-engine-2"
-url: "https://github.com/[YOUR_USERNAME]/antikythera-engine-2"
+  - family-names: "Fennell"
+    given-names: "Doug"
+    email: "doug@c2cfirm.com"
+    orcid: "https://orcid.org/0009-0003-0995-4871"
+repository-code: "https://github.com/mojoatomic/antikythera-engine-2"
+url: "https://github.com/mojoatomic/antikythera-engine-2"
 keywords:
   - astronomical ephemeris
   - celestial mechanics
@@ -20,9 +20,9 @@ keywords:
   - NASA validation
   - VSOP87
   - ELP2000
-license: MIT
-version: "2.0.0"
-date-released: "2025-10-26"
+license: Apache-2.0
+version: "1.1.0"
+date-released: "2025-10-29"
 references:
   - type: software
     title: "astronomy-engine"
@@ -38,12 +38,13 @@ references:
     url: "https://ssd.jpl.nasa.gov/horizons/"
 preferred-citation:
   type: software
-  title: "Antikythera Engine: NASA-Validated Astronomical Ephemeris API"
+  title: "Antikythera Engine: Astronomical Ephemeris API"
   authors:
-    - family-names: "[YOUR_LAST_NAME]"
-      given-names: "[YOUR_FIRST_NAME]"
-      email: "[YOUR_EMAIL]"
+    - family-names: "Fennell"
+      given-names: "Doug"
+      email: "doug@c2cfirm.com"
+      orcid: "https://orcid.org/0009-0003-0995-4871"
   year: 2025
-  version: "2.0.0"
-  url: "https://github.com/[YOUR_USERNAME]/antikythera-engine-2"
-  notes: "Sub-10-arcsecond precision validated against NASA JPL HORIZONS"
+  version: "1.1.0"
+  url: "https://github.com/mojoatomic/antikythera-engine-2"
+  notes: "Validated against NASA JPL HORIZONS; median error 1.61 arcsec"
