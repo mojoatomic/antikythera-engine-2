@@ -1,4 +1,4 @@
-# CLI REPL User Guide (Educators and NASA)
+# CLI REPL User Guide
 
 This guide explains how to use the Antikythera CLI and interactive REPL without reading code. It includes step-by-step examples, ready-to-copy commands, and links to the Technical Operations Manual for deeper reference.
 
