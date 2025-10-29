@@ -859,18 +859,17 @@ class FrontFace {
     this.ctx.textAlign = 'right';
     let lowerRightY = this.canvas.height - padding;
     
-    // Real-time clock (format using observer timezone when available)
+    // Display time (controlled) using observer timezone when available
     {
       const tz = data && data.observer && data.observer.timezone ? data.observer.timezone : undefined;
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString('en-US', {
+      const t = new Date(data && data.date ? data.date : Date.now());
+      const timeStr = t.toLocaleTimeString('en-US', {
         timeZone: tz || undefined,
         hour: '2-digit', minute: '2-digit', second: '2-digit',
         hour12: false,
       });
       console.log('[Time Display - Lower Right]');
       console.log('  Using data.date:', data && data.date);
-      console.log('  Using wall clock:', now.toISOString());
       console.log('  TZ:', tz);
       console.log('  Formatted as:', timeStr);
       console.log('  Drawing at position:', this.canvas.width - padding, lowerRightY - lineHeight * 3);
