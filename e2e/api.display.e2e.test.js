@@ -127,3 +127,21 @@ test('GET /api/display includes stepper metadata and steps', async () => {
     },
   });
 });
+
+test('GET /api/display baseline omits stepsForInterval and intervalSec', async () => {
+  const url = 'http://localhost:3000/api/display';
+  const res = await fetch(url);
+  expect(res.ok).toBe(true);
+  const body = await res.json();
+
+  // intervalSec should not be present when dt/stepsPerDegree are not provided
+  expect(body.intervalSec).toBeUndefined();
+
+  const sun = body.mechanical.steppers.sun;
+  // stepsForInterval should be omitted
+  expect('stepsForInterval' in sun).toBe(false);
+
+  // velocityDegPerSec and direction are always present
+  expect(typeof sun.velocityDegPerSec).toBe('number');
+  expect(['CW', 'CCW']).toContain(sun.direction);
+});
