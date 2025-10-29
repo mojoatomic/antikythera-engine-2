@@ -4,7 +4,7 @@ const { VALIDATION, CONVENTIONS } = require('./constants/validation');
 const { API_VERSION, ENGINE_VERSION, GIT_SHA } = require('./utils/metadata');
 const { buildSystemMetadata } = require('./utils/precision-builder');
 const { getObserverFromRequest } = require('./lib/location-service');
-const { effectiveDate, status: controlStatus, setTime: controlSetTime, setAnimate: controlSetAnimate, setScene: controlSetScene, stop: controlStop } = require('./lib/control-state');
+const { effectiveDate, status: controlStatus, setTime: controlSetTime, setAnimate: controlSetAnimate, setScene: controlSetScene, run: controlRun, pause: controlPause, stop: controlStop } = require('./lib/control-state');
 const AntikytheraEngine = require('./engine');
 
 const app = express();
@@ -411,6 +411,8 @@ app.get('/api/control', (req, res) => {
   res.json({
     operations: [
       { method: 'POST', path: '/api/control/time', body: { date: 'ISO 8601 (UTC)' } },
+      { method: 'POST', path: '/api/control/run', body: { speed: 'number>0 (Nx, default 1)' } },
+      { method: 'POST', path: '/api/control/pause' },
       { method: 'POST', path: '/api/control/animate', body: { from: 'ISO', to: 'ISO', speed: 'number>0 (Nx)' } },
       { method: 'POST', path: '/api/control/scene', body: { preset: 'string', bodies: 'string[]|csv' } },
       { method: 'POST', path: '/api/control/stop' },
@@ -429,6 +431,25 @@ app.post('/api/control/time', controlGuard, (req, res) => {
     const date = req.body && req.body.date;
     if (!date) return res.status(400).json({ error: 'Missing body.date (ISO)' });
     controlSetTime(date);
+    res.json({ ok: true, status: controlStatus() });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/control/run', controlGuard, (req, res) => {
+  try {
+    const { speed } = req.body || {};
+    controlRun(speed);
+    res.json({ ok: true, status: controlStatus() });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/control/pause', controlGuard, (req, res) => {
+  try {
+    controlPause();
     res.json({ ok: true, status: controlStatus() });
   } catch (e) {
     res.status(400).json({ error: e.message });

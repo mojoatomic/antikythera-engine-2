@@ -37,6 +37,17 @@ module.exports = async function control(action, value, options) {
       console.log(JSON.stringify(out, null, 2));
       return;
     }
+    if (act === 'run') {
+      const speed = options.speed ? Number(options.speed) : undefined;
+      const out = await post('/api/control/run', { speed });
+      console.log(JSON.stringify(out, null, 2));
+      return;
+    }
+    if (act === 'pause') {
+      const out = await post('/api/control/pause', {});
+      console.log(JSON.stringify(out, null, 2));
+      return;
+    }
     if (act === 'animate') {
       const { from, to } = options;
       const speed = options.speed ? Number(options.speed) : undefined;

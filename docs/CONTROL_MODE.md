@@ -40,6 +40,8 @@ Endpoints:
 - `GET /api/control` → discovery
 - `GET /api/control/status` → `{ active, mode, displayTime?, animating?, animate?, preset?, bodies? }`
 - `POST /api/control/time` `{ date: ISO }`
+- `POST /api/control/run` `{ speed?: number>0 }` — start continuous forward animation
+- `POST /api/control/pause` `{}` — freeze at current effective time
 - `POST /api/control/animate` `{ from: ISO, to: ISO, speed?: number>0 }`
 - `POST /api/control/scene` `{ preset: string, bodies?: string[]|csv }`
 - `POST /api/control/stop` `{}`
@@ -50,6 +52,8 @@ State behavior:
 
 ## CLI Commands
 - `antikythera control time <ISO>`
+- `antikythera control run [--speed <N>]`
+- `antikythera control pause`
 - `antikythera control animate --from <ISO> --to <ISO> [--speed <N>]`
 - `antikythera control scene --preset <name> [--bodies a,b,c]`
 - `antikythera control stop`

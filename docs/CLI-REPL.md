@@ -73,7 +73,9 @@ Notes
 Authentication is automatic in local development: start the server first and a control token is generated at `.antikythera/control-token`. The CLI reads it automatically.
 
 - `control time <ISO>` — Set display to specific time (UTC ISO recommended)
-- `control animate --from <ISO> --to <ISO> [--speed <Nx>]` — Animate through a time range
+- `control run [--speed <Nx>]` — Start time flow from current controlled time (default 1x)
+- `control pause` — Freeze at current time
+- `control animate --from <ISO> --to <ISO> [--speed <Nx>]` — Animate through a time range (finite)
 - `control scene --preset <name> [--bodies a,b,c]` — Change scene preset
 - `control stop` — Return to real-time now
 - `control status` — Show current control state
@@ -110,6 +112,8 @@ antikythera control status
 | Command | Description |
 |---------|-------------|
 | `control time <ISO>` | Set display to specific time |
+| `control run [--speed <N>]` | Start time flow from current time |
+| `control pause` | Freeze at current time |
 | `control animate --from <ISO> --to <ISO> --speed <N>` | Animate through time range |
 | `control scene --preset <name>` | Change display scene |
 | `control stop` | Return to real-time |
