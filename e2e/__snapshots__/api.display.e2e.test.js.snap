@@ -1,0 +1,32 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`GET /api/display includes stepper metadata and steps 1`] = `
+{
+  "intervalSec": 5,
+  "mechanical": {
+    "steppers": {
+      "lunar_nodes_ascending": {
+        "direction": StringMatching /\\^\\(CW\\|CCW\\)\\$/,
+        "position": Any<Number>,
+        "stepsForInterval": Any<Number>,
+        "velocity": Any<Number>,
+        "velocityDegPerSec": Any<Number>,
+      },
+      "lunar_nodes_descending": {
+        "direction": StringMatching /\\^\\(CW\\|CCW\\)\\$/,
+        "position": Any<Number>,
+        "stepsForInterval": Any<Number>,
+        "velocity": Any<Number>,
+        "velocityDegPerSec": Any<Number>,
+      },
+      "sun": {
+        "direction": StringMatching /\\^\\(CW\\|CCW\\)\\$/,
+        "position": Any<Number>,
+        "stepsForInterval": Any<Number>,
+        "velocity": Any<Number>,
+        "velocityDegPerSec": Any<Number>,
+      },
+    },
+  },
+}
+`;

@@ -87,6 +87,19 @@ Complete state for physical mechanism implementation, including stepper motor co
 curl http://localhost:3000/api/display
 ```
 
+Query parameters (optional):
+- `date`: ISO 8601 timestamp
+- `lat`, `lon`, `elev`: Manual observer location override
+- `precision=full`: Include per-body validation errors
+- `include=astronomical`: Include raw astronomical data
+- `dt`: Interval in seconds to compute `stepsForInterval` for steppers
+- `stepsPerDegree`: Stepper resolution (steps/degree) used with `dt`
+
+Example:
+```bash
+curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
+```
+
 **Response structure:**
 ```json
 {
@@ -96,52 +109,70 @@ curl http://localhost:3000/api/display
       "sun": {
         "position": 215.781796586325,
         "velocity": 0.998847784120528,
+        "velocityDegPerSec": 0.00001156,
+        "direction": "CW",
         "altitude": 1.03761647984169,
         "azimuth": 253.005425613381
       },
       "moon": {
         "position": 297.396513944196,
         "velocity": 12.6810427226211,
+        "velocityDegPerSec": 0.00014688,
+        "direction": "CW",
         "altitude": 29.1465404202494,
         "azimuth": 172.636428072449
       },
       "mercury": {
         "position": 239.484014822145,
         "velocity": 1.01726211710803,
+        "velocityDegPerSec": 0.00001178,
+        "direction": "CW",
         "altitude": 11.1210731625624,
         "azimuth": 231.789630987122
       },
       "venus": {
         "position": 198.765298995648,
         "velocity": 1.24892443025954,
+        "velocityDegPerSec": 0.00001445,
+        "direction": "CW",
         "altitude": -7.17447701477178,
         "azimuth": 268.329661272134
       },
       "mars": {
         "position": 235.305780166959,
         "velocity": 0.710306073897129,
+        "velocityDegPerSec": 0.00000822,
+        "direction": "CW",
         "altitude": 11.0088598845841,
         "azimuth": 236.729874161838
       },
       "jupiter": {
         "position": 114.843230101557,
         "velocity": 0.0429114248708373,
+        "velocityDegPerSec": 0.00000050,
+        "direction": "CW",
         "altitude": -33.058690320916,
         "azimuth": 356.159190320464
       },
       "saturn": {
         "position": 355.938734706034,
         "velocity": -0.0490251765785956,
+        "velocityDegPerSec": -0.00000057,
+        "direction": "CCW",
         "altitude": 18.5780781054604,
         "azimuth": 109.053947533835
       },
       "lunar_nodes_ascending": {
         "position": 345.549624261153,
-        "velocity": -0.0529544147843943
+        "velocity": -0.0529544147843943,
+        "velocityDegPerSec": -0.00000061,
+        "direction": "CCW"
       },
       "lunar_nodes_descending": {
         "position": 165.549624261153,
-        "velocity": -0.0529544147843943
+        "velocity": -0.0529544147843943,
+        "velocityDegPerSec": -0.00000061,
+        "direction": "CCW"
       }
     },
     "servos": {
@@ -219,7 +250,7 @@ curl http://localhost:3000/api/display
       "error_quantiles_arcsec": { "p50": 1.61, "p95": 8.3, "max": 8.62 }
     },
     "reproducibility": {
-      "api_version": "1.0.0",
+      "api_version": "1.1.0",
       "engine_version": "astronomy-engine v2.1.19",
       "git_sha": "f35c46e",
       "validation_span": { "start": "2025-10-26", "end": "2025-11-25" },
@@ -266,6 +297,9 @@ curl http://localhost:3000/api/display
 **Units and conventions:**
 - **position:** Ecliptic longitude in degrees [0, 360)
 - **velocity:** Degrees per day (negative values indicate retrograde motion)
+- **velocityDegPerSec:** Degrees per second (derived from `velocity`)
+- **direction:** 'CW' when `velocityDegPerSec ≥ 0`, else 'CCW'
+- **stepsForInterval:** Integer motor steps for window `dt` using `stepsPerDegree` (present only when both query params provided)
 - **altitude:** Degrees above horizon [-90, 90] (negative = below horizon)
 - **azimuth:** Compass direction in degrees [0, 360) (0=North, 90=East, 180=South, 270=West)
 - **angle:** Servo position in degrees (0=prograde, 180=retrograde)
@@ -386,7 +420,7 @@ curl http://localhost:3000/api/system
       "validation_url": "https://github.com/mojoatomic/antikythera-engine-2/blob/main/docs/VALIDATION.md"
     },
     "reproducibility": {
-      "api_version": "1.0.0",
+      "api_version": "1.1.0",
       "engine_version": "astronomy-engine v2.1.19",
       "git_sha": "fb764bd",
       "sample_count": 7,
