@@ -79,6 +79,49 @@ curl http://localhost:3000/api/system
 ## API Endpoints
 
 ### Physical Device Control
+### Classroom Control Mode
+
+Write operations are under `/api/control/*`. For local development, the server auto-generates a token at `.antikythera/control-token` and the CLI reads it automatically.
+
+Examples:
+```bash
+# Start server (generates token on first run)
+npm start
+
+# Set time (UTC) — no env needed locally
+antikythera control time 2025-10-29T12:00:00Z
+# Animate a range
+antikythera control animate --from 2025-10-29T00:00:00Z --to 2025-10-30T00:00:00Z --speed 2
+# Scene preset
+antikythera control scene --preset planets --bodies mercury,venus,mars
+# Status / Stop
+antikythera control status
+antikythera control stop
+```
+
+Shared classroom token (optional): set `ANTIKYTHERA_CONTROL_TOKEN` on server and clients.
+
+## Control Token Management
+
+See also: docs/CONTROL_MODE.md
+
+The server generates a persistent control token on first startup and reuses it across restarts.
+
+- Location: `.antikythera/control-token` (gitignored)
+- Override with env: `export ANTIKYTHERA_CONTROL_TOKEN=custom-token`
+- Regenerate: delete the file and restart server
+
+Normal usage (no setup):
+```bash
+npm run dev              # Uses existing token or generates new one
+antikythera control ...  # CLI reads the same token automatically
+```
+
+API endpoints:
+- `GET /api/control` (discovery)
+- `GET /api/control/status`
+- `POST /api/control/time|animate|scene|stop`
+
 **GET /api/display**
 
 Complete state for physical mechanism implementation, including stepper motor control, servo positions, display text, and LED indicators.

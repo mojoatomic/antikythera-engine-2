@@ -198,6 +198,22 @@ Returns Moon position only (subset of `/api/state`).
 
 Returns planetary positions only (subset of `/api/state`).
 
+### Control-Prefixed Endpoints (Classroom Control)
+See also: `docs/CONTROL_MODE.md` for full operational guidance.
+
+Write operations are namespaced under `/api/control/*`. Reads remain under `/api/*`.
+
+Auth: Bearer token via `CONTROL_TOKEN` env var.
+
+- `GET /api/control` → discovery of available control operations and auth requirements
+- `GET /api/control/status` → `{ active, mode, displayTime?, animating?, animate?, preset?, bodies? }`
+- `POST /api/control/time` `{ date: ISO }` → set controlled time (UTC)
+- `POST /api/control/animate` `{ from: ISO, to: ISO, speed?: number>0 }` → animate between two times
+- `POST /api/control/scene` `{ preset: string, bodies?: string[]|csv }` → set scene preset
+- `POST /api/control/stop` `{}` → stop control and revert to real-time
+
+State behavior: when control is active, `/api/state` and `/api/display` honor controlled time; `stop` reverts.
+
 **GET /api/language**
 
 Returns the UI language configured on the server.
