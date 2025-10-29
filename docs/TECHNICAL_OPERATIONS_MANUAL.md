@@ -199,6 +199,7 @@ Returns Moon position only (subset of `/api/state`).
 Returns planetary positions only (subset of `/api/state`).
 
 ### Control-Prefixed Endpoints (Classroom Control)
+See also: `docs/CONTROL_MODE.md` for full operational guidance.
 
 Write operations are namespaced under `/api/control/*`. Reads remain under `/api/*`.
 

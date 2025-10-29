@@ -72,11 +72,48 @@ Notes
 ### Control Commands (Classroom Control)
 Authentication is automatic in local development: start the server first and a control token is generated at `.antikythera/control-token`. The CLI reads it automatically.
 
-- `control time <ISO>`
-- `control animate --from <ISO> --to <ISO> [--speed <Nx>]`
-- `control scene --preset <name> [--bodies a,b,c]`
-- `control stop`
-- `control status`
+- `control time <ISO>` — Set display to specific time (UTC ISO recommended)
+- `control animate --from <ISO> --to <ISO> [--speed <Nx>]` — Animate through a time range
+- `control scene --preset <name> [--bodies a,b,c]` — Change scene preset
+- `control stop` — Return to real-time now
+- `control status` — Show current control state
+
+#### Reset to Real-Time
+To stop control mode and return to live time:
+```bash
+antikythera control stop
+```
+This immediately reverts the display to real-time. All student displays will automatically follow.
+
+#### Example Session
+```bash
+# Set historical time
+antikythera control time 1969-07-20T20:17:00Z
+# Display shows: Apollo 11 moon landing
+
+# Check status
+antikythera control status
+# Control: active
+# Display time: 1969-07-20T20:17:00Z
+
+# Return to now
+antikythera control stop
+# ✓ Control stopped - display reverted to real-time
+
+# Verify
+antikythera control status
+# Control: inactive
+# Display: real-time
+```
+
+#### Control Commands Quick Reference
+| Command | Description |
+|---------|-------------|
+| `control time <ISO>` | Set display to specific time |
+| `control animate --from <ISO> --to <ISO> --speed <N>` | Animate through time range |
+| `control scene --preset <name>` | Change display scene |
+| `control stop` | Return to real-time |
+| `control status` | Show current control state |
 
 Reserved for Phase 2: `next`, `find`, `goto`, `reset`, `+/-`, `where`.
 

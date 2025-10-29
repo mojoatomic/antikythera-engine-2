@@ -103,6 +103,8 @@ Shared classroom token (optional): set `ANTIKYTHERA_CONTROL_TOKEN` on server and
 
 ## Control Token Management
 
+See also: docs/CONTROL_MODE.md
+
 The server generates a persistent control token on first startup and reuses it across restarts.
 
 - Location: `.antikythera/control-token` (gitignored)
