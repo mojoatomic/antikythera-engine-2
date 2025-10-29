@@ -45,6 +45,12 @@ app.get('/api/state', async (req, res) => {
   try {
     const requested = req.query.date ? new Date(req.query.date) : new Date();
     const date = effectiveDate(requested);
+    // Instrumentation: log effective date and control status
+    try {
+      console.log('[API /api/state] requested:', requested.toISOString());
+      console.log('[API /api/state] effective:', date.toISOString());
+      console.log('[API /api/state] control status:', controlStatus());
+    } catch (_e) {}
     const observer = await getObserverFromRequest(req);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state);
@@ -61,6 +67,12 @@ app.get('/api/state/:date', async (req, res) => {
       return res.status(400).json({ error: 'Invalid date format' });
     }
     const date = effectiveDate(reqDate);
+    // Instrumentation: log effective date and control status
+    try {
+      console.log('[API /api/state/:date] requested:', reqDate.toISOString());
+      console.log('[API /api/state/:date] effective:', date.toISOString());
+      console.log('[API /api/state/:date] control status:', controlStatus());
+    } catch (_e) {}
     const observer = await getObserverFromRequest(req);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state);
