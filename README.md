@@ -109,52 +109,70 @@ curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
       "sun": {
         "position": 215.781796586325,
         "velocity": 0.998847784120528,
+        "velocityDegPerSec": 0.00001156,
+        "direction": "CW",
         "altitude": 1.03761647984169,
         "azimuth": 253.005425613381
       },
       "moon": {
         "position": 297.396513944196,
         "velocity": 12.6810427226211,
+        "velocityDegPerSec": 0.00014688,
+        "direction": "CW",
         "altitude": 29.1465404202494,
         "azimuth": 172.636428072449
       },
       "mercury": {
         "position": 239.484014822145,
         "velocity": 1.01726211710803,
+        "velocityDegPerSec": 0.00001178,
+        "direction": "CW",
         "altitude": 11.1210731625624,
         "azimuth": 231.789630987122
       },
       "venus": {
         "position": 198.765298995648,
         "velocity": 1.24892443025954,
+        "velocityDegPerSec": 0.00001445,
+        "direction": "CW",
         "altitude": -7.17447701477178,
         "azimuth": 268.329661272134
       },
       "mars": {
         "position": 235.305780166959,
         "velocity": 0.710306073897129,
+        "velocityDegPerSec": 0.00000822,
+        "direction": "CW",
         "altitude": 11.0088598845841,
         "azimuth": 236.729874161838
       },
       "jupiter": {
         "position": 114.843230101557,
         "velocity": 0.0429114248708373,
+        "velocityDegPerSec": 0.00000050,
+        "direction": "CW",
         "altitude": -33.058690320916,
         "azimuth": 356.159190320464
       },
       "saturn": {
         "position": 355.938734706034,
         "velocity": -0.0490251765785956,
+        "velocityDegPerSec": -0.00000057,
+        "direction": "CCW",
         "altitude": 18.5780781054604,
         "azimuth": 109.053947533835
       },
       "lunar_nodes_ascending": {
         "position": 345.549624261153,
-        "velocity": -0.0529544147843943
+        "velocity": -0.0529544147843943,
+        "velocityDegPerSec": -0.00000061,
+        "direction": "CCW"
       },
       "lunar_nodes_descending": {
         "position": 165.549624261153,
-        "velocity": -0.0529544147843943
+        "velocity": -0.0529544147843943,
+        "velocityDegPerSec": -0.00000061,
+        "direction": "CCW"
       }
     },
     "servos": {
