@@ -15,7 +15,12 @@ async function position(body, options) {
     
     const date = new Date(options.date);
     const startTime = Date.now();
-    const data = await getData(date, options);
+    const observer = (isFinite(options.lat) && isFinite(options.lon)) ? {
+      latitude: Number(options.lat),
+      longitude: Number(options.lon),
+      elevation: isFinite(options.elev) ? Number(options.elev) : undefined,
+    } : null;
+    const data = await getData(date, { ...options, observer });
     const endTime = Date.now();
     
     // Extract body data

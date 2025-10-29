@@ -27,8 +27,14 @@ async function compare(body, source1, source2, options) {
     console.log(chalk.gray(`Date: ${date.toISOString()}\n`));
 
     // Get data from both sources
-    const data1 = await getDataFromSource(source1, date);
-    const data2 = await getDataFromSource(source2, date);
+    const observer = (isFinite(options.lat) && isFinite(options.lon)) ? {
+      latitude: Number(options.lat),
+      longitude: Number(options.lon),
+      elevation: isFinite(options.elev) ? Number(options.elev) : undefined,
+    } : null;
+
+    const data1 = await getDataFromSource(source1, date, observer);
+    const data2 = await getDataFromSource(source2, date, observer);
 
     // Extract body data
     const body1 = extractBodyData(data1, body);
@@ -52,11 +58,11 @@ async function compare(body, source1, source2, options) {
   }
 }
 
-async function getDataFromSource(source, date) {
+async function getDataFromSource(source, date, observer) {
   if (source === 'cli' || source === 'engine' || source === 'local') {
-    return await getFromEngine(date);
+    return await getFromEngine(date, observer);
   } else if (source === 'api') {
-    return await getFromAPI(date);
+    return await getFromAPI(date, { observer });
   }
   throw new Error(`Unknown source: ${source}`);
 }

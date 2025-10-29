@@ -36,7 +36,12 @@ async function watch(body, options) {
 
 async function displayUpdate(body, options) {
   try {
-    const data = await getData(new Date(), options);
+    const observer = (isFinite(options.lat) && isFinite(options.lon)) ? {
+      latitude: Number(options.lat),
+      longitude: Number(options.lon),
+      elevation: isFinite(options.elev) ? Number(options.elev) : undefined,
+    } : null;
+    const data = await getData(new Date(), { ...options, observer });
     
     if (body) {
       // Watch specific body
