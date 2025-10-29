@@ -70,7 +70,7 @@ Notes
 - `context`, `history`, `help`, `clear`, `exit|quit|.exit`
 
 ### Control Commands (Classroom Control)
-Requires CONTROL_TOKEN in environment (Authorization: Bearer).
+Authentication is automatic in local development: start the server first and a control token is generated at `.antikythera/control-token`. The CLI reads it automatically.
 
 - `control time <ISO>`
 - `control animate --from <ISO> --to <ISO> [--speed <Nx>]`

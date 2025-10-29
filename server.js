@@ -16,11 +16,15 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/config', express.static('config'));
 
+// Control token (auto for local dev)
+const { getOrCreateControlToken } = require('./lib/control-token');
+const LOCAL_CONTROL_TOKEN = getOrCreateControlToken();
+
 // Simple bearer token guard for control endpoints (MVP)
 function controlGuard(req, res, next) {
-  const token = process.env.CONTROL_TOKEN || process.env.ANTIKYTHERA_CONTROL_TOKEN || '';
+  const expected = (process.env.ANTIKYTHERA_CONTROL_TOKEN || process.env.CONTROL_TOKEN || LOCAL_CONTROL_TOKEN || '').trim();
   const auth = req.headers['authorization'] || '';
-  if (token && typeof auth === 'string' && auth.startsWith('Bearer ') && auth.slice(7) === token) return next();
+  if (expected && typeof auth === 'string' && auth.startsWith('Bearer ') && auth.slice(7) === expected) return next();
   return res.status(401).json({ error: 'Control authentication failed', code: 'CONTROL_AUTH_FAILED' });
 }
 

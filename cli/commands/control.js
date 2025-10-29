@@ -6,9 +6,10 @@ function baseURL() {
   return host.replace(/\/$/, '');
 }
 
+const { requireControlToken } = require('../lib/control-token');
 function authHeader() {
-  const token = process.env.CONTROL_TOKEN || process.env.ANTIKYTHERA_CONTROL_TOKEN;
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  const token = requireControlToken();
+  return { Authorization: `Bearer ${token}` };
 }
 
 async function post(path, body) {

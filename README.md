@@ -81,20 +81,25 @@ curl http://localhost:3000/api/system
 ### Physical Device Control
 ### Classroom Control Mode
 
-Write operations are under `/api/control/*` (Bearer token via `CONTROL_TOKEN`).
+Write operations are under `/api/control/*`. For local development, the server auto-generates a token at `.antikythera/control-token` and the CLI reads it automatically.
 
 Examples:
 ```bash
-# Set time (UTC)
-CONTROL_TOKEN=your-token antikythera control time 2025-10-29T12:00:00Z
+# Start server (generates token on first run)
+npm start
+
+# Set time (UTC) — no env needed locally
+antikythera control time 2025-10-29T12:00:00Z
 # Animate a range
-CONTROL_TOKEN=your-token antikythera control animate --from 2025-10-29T00:00:00Z --to 2025-10-30T00:00:00Z --speed 2
+antikythera control animate --from 2025-10-29T00:00:00Z --to 2025-10-30T00:00:00Z --speed 2
 # Scene preset
-CONTROL_TOKEN=your-token antikythera control scene --preset planets --bodies mercury,venus,mars
+antikythera control scene --preset planets --bodies mercury,venus,mars
 # Status / Stop
-CONTROL_TOKEN=your-token antikythera control status
-CONTROL_TOKEN=your-token antikythera control stop
+antikythera control status
+antikythera control stop
 ```
+
+Shared classroom token (optional): set `ANTIKYTHERA_CONTROL_TOKEN` on server and clients.
 
 API endpoints:
 - `GET /api/control` (discovery)
