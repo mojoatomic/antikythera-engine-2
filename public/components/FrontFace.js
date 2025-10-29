@@ -244,7 +244,12 @@ class FrontFace {
 
       // Sunrise label (local time) just outside the outer ring
       const showLabels = !!(window.appSettings && window.appSettings.showSunriseSunset);
-      if (showLabels && vis.sunrise && vis.sunrise.localTime) {
+      if (showLabels && vis.sunrise && vis.sunrise.time) {
+        const tz = data?.observer?.timezone;
+        const label = new Date(vis.sunrise.time).toLocaleTimeString('en-US', {
+          timeZone: tz || undefined,
+          hour: '2-digit', minute: '2-digit'
+        });
         this.ctx.font = '10px Georgia';
         this.ctx.fillStyle = 'rgba(255, 107, 53, 0.9)';
         this.ctx.textAlign = 'center';
@@ -252,7 +257,7 @@ class FrontFace {
         const srLabelR = outerRingRadius + 28;
         const srLabelX = this.centerX + Math.cos(sunriseAngle) * srLabelR;
         const srLabelY = this.centerY + Math.sin(sunriseAngle) * srLabelR;
-        this.ctx.fillText(vis.sunrise.localTime, srLabelX, srLabelY);
+        this.ctx.fillText(label, srLabelX, srLabelY);
       }
       
       // Sunrise line connecting rings
@@ -295,7 +300,12 @@ class FrontFace {
 
       // Sunset label (local time) just outside the outer ring, near moon marker
       const showLabels2 = !!(window.appSettings && window.appSettings.showSunriseSunset);
-      if (showLabels2 && vis.sunset && vis.sunset.localTime) {
+      if (showLabels2 && vis.sunset && vis.sunset.time) {
+        const tz = data?.observer?.timezone;
+        const label = new Date(vis.sunset.time).toLocaleTimeString('en-US', {
+          timeZone: tz || undefined,
+          hour: '2-digit', minute: '2-digit'
+        });
         this.ctx.font = '10px Georgia';
         this.ctx.fillStyle = 'rgba(240, 230, 210, 0.9)';
         this.ctx.textAlign = 'center';
@@ -303,7 +313,7 @@ class FrontFace {
         const ssLabelR = outerRingRadius + 36;
         const ssLabelX = this.centerX + Math.cos(sunsetAngle) * ssLabelR;
         const ssLabelY = this.centerY + Math.sin(sunsetAngle) * ssLabelR;
-        this.ctx.fillText(vis.sunset.localTime, ssLabelX, ssLabelY);
+        this.ctx.fillText(label, ssLabelX, ssLabelY);
       }
       
       // Daylight arc (between sunrise and sunset on outer ring)
