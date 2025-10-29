@@ -49,6 +49,10 @@ class FrontFace {
   }
   
   render(data) {
+    console.log('=== FrontFace.render() START ===');
+    console.log('  data.date:', data && data.date);
+    console.log('  data.control:', data && data.control);
+    console.log('  Wall clock:', new Date().toISOString());
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     
     // Draw from outside in - EoT rings are OUTERMOST
@@ -62,6 +66,7 @@ class FrontFace {
     this.drawPlanetPointers(data);
     this.drawCenterHub();
     this.drawLabels(data);
+    console.log('=== FrontFace.render() END ===');
   }
   
   drawEquationOfTimeRings(data) {
@@ -69,6 +74,9 @@ class FrontFace {
     
     const eot = data.equationOfTime;
     const date = new Date(data.date);
+    console.log('[EoT Rings]');
+    console.log('  data.date:', data && data.date);
+    console.log('  EOT minutes:', eot && eot.equationOfTime ? eot.equationOfTime.minutes : null);
     
     // Ring dimensions - OUTERMOST rings
     const outerRingRadius = this.maxRadius + 35;
@@ -77,6 +85,8 @@ class FrontFace {
     // Get sun's ecliptic longitude to rotate entire ring system
     const sunLongitude = data.sun.longitude;
     const eclipticRotation = (sunLongitude - 90) * Math.PI / 180;
+    console.log('  Sun ecliptic longitude:', sunLongitude);
+    console.log('  Ecliptic rotation (rad):', eclipticRotation);
     
     // === 1. OUTER RING - Mean Solar Time (Clock Time) ===
     this.ctx.strokeStyle = 'rgba(212, 175, 55, 0.8)';
@@ -179,6 +189,9 @@ class FrontFace {
     const eotMinutes = eot.equationOfTime.minutes;
     const apparentTimeHours = meanTimeHours + (eotMinutes / 60); // Add EoT correction
     const apparentAngle = (apparentTimeHours * 15 - 90) * Math.PI / 180 + eclipticRotation;
+    console.log('  [Time Markers]');
+    console.log('    meanTimeHours:', meanTimeHours, 'apparentTimeHours:', apparentTimeHours);
+    console.log('    meanAngle(rad):', meanAngle, 'apparentAngle(rad):', apparentAngle);
     
     // Mean Time marker (on outer ring) - BRONZE
     const meanMarkerX = this.centerX + Math.cos(meanAngle) * outerRingRadius;
@@ -221,11 +234,13 @@ class FrontFace {
       const sunriseTime = new Date(vis.sunrise.time);
       const sunriseHours = sunriseTime.getUTCHours() + sunriseTime.getUTCMinutes() / 60;
       const sunriseAngle = (sunriseHours * 15 - 90) * Math.PI / 180 + eclipticRotation;
+      console.log('  [Sunrise] time:', vis.sunrise.time, 'angle(rad):', sunriseAngle);
       
       // Calculate sunset time in hours using UTC to avoid DST jumps
       const sunsetTime = new Date(vis.sunset.time);
       const sunsetHours = sunsetTime.getUTCHours() + sunsetTime.getUTCMinutes() / 60;
       const sunsetAngle = (sunsetHours * 15 - 90) * Math.PI / 180 + eclipticRotation;
+      console.log('  [Sunset] time:', vis.sunset.time, 'angle(rad):', sunsetAngle);
       
       // Sunrise marker (on both rings) - ORANGE
       const sunriseOuterX = this.centerX + Math.cos(sunriseAngle) * outerRingRadius;
@@ -424,6 +439,9 @@ class FrontFace {
     // Egyptian calendar pointer
     if (data.egyptianCalendar) {
       const dayAngle = (data.egyptianCalendar.dayOfYear - 90) * Math.PI / 180;
+      console.log('[Egyptian Calendar]');
+      console.log('  dayOfYear(deg):', data.egyptianCalendar.dayOfYear);
+      console.log('  pointer angle(rad):', dayAngle);
       this.ctx.strokeStyle = 'rgba(255, 170, 0, 0.7)';
       this.ctx.lineWidth = 2;
       this.ctx.beginPath();
@@ -583,6 +601,8 @@ class FrontFace {
   drawPlanetPointers(data) {
     if (!data.planets) return;
     
+    console.log('[Planets]');
+    console.log('  data.planets:', data.planets);
     // Draw each planet pointer
     const bodies = ['saturn', 'jupiter', 'mars', 'venus', 'mercury'];
     
@@ -591,6 +611,7 @@ class FrontFace {
       
       const longitude = data.planets[planet].longitude;
       const angle = (longitude - 90) * Math.PI / 180;
+      console.log('  ' + planet + ' angle:', angle);
       const radius = (this.maxRadius - 70) * this.orbits[planet];
       
       // Pointer line
@@ -625,6 +646,9 @@ class FrontFace {
     // Moon pointer with phase
     if (data.moon) {
       const moonAngle = (data.moon.longitude - 90) * Math.PI / 180;
+      console.log('[Moon Position]');
+      console.log('  data.moon:', data.moon);
+      console.log('  Drawing at angle:', moonAngle);
       const moonRadius = (this.maxRadius - 70) * this.orbits.moon;
       
       this.ctx.strokeStyle = this.colors.moon;
@@ -650,6 +674,9 @@ class FrontFace {
     // Sun pointer (brightest, innermost)
     if (data.sun) {
       const sunAngle = (data.sun.longitude - 90) * Math.PI / 180;
+      console.log('[Sun Position]');
+      console.log('  data.sun:', data.sun);
+      console.log('  Drawing at angle:', sunAngle);
       const sunRadius = (this.maxRadius - 70) * this.orbits.sun;
       
       this.ctx.strokeStyle = this.colors.sun;
@@ -793,6 +820,9 @@ class FrontFace {
     
     if (data.zodiac) {
       const zodiacName = languageManager.getZodiacName(data.zodiac.signIndex);
+      console.log('[Zodiac Label]');
+      console.log('  data.zodiac:', data.zodiac);
+      console.log('  Label:', `${zodiacName} ${data.zodiac.degreeInSign.toFixed(1)}°`);
       this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
       this.ctx.font = 'bold 13px Georgia';
       this.ctx.fillText(
@@ -812,6 +842,10 @@ class FrontFace {
         day: 'numeric',
         year: 'numeric'
       });
+      console.log('[Date Display - Lower Left]');
+      console.log('  Using data.date:', data.date);
+      console.log('  Formatted as:', dateStr);
+      console.log('  Drawing at position:', padding, this.canvas.height - padding - lineHeight);
       this.ctx.font = '11px Georgia';
       this.ctx.fillStyle = 'rgba(240, 230, 210, 0.8)';
       this.ctx.fillText(
@@ -834,6 +868,12 @@ class FrontFace {
         hour: '2-digit', minute: '2-digit', second: '2-digit',
         hour12: false,
       });
+      console.log('[Time Display - Lower Right]');
+      console.log('  Using data.date:', data && data.date);
+      console.log('  Using wall clock:', now.toISOString());
+      console.log('  TZ:', tz);
+      console.log('  Formatted as:', timeStr);
+      console.log('  Drawing at position:', this.canvas.width - padding, lowerRightY - lineHeight * 3);
       this.ctx.fillStyle = 'var(--color-pointer, #ffaa00)';
       this.ctx.font = 'bold 16px "Courier New", monospace';
       this.ctx.fillText(
