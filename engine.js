@@ -177,7 +177,8 @@ class AntikytheraEngine {
    * Get the complete state of the Antikythera mechanism for a given date
    */
   getState(date = new Date(), latitude = 37.5, longitude = 23.0, observerInfo = null) {
-    const observer = new astronomy.Observer(latitude, longitude, 0);
+    const elevation = observerInfo && typeof observerInfo.elevation === 'number' ? observerInfo.elevation : 0;
+    const observer = new astronomy.Observer(latitude, longitude, elevation);
     
     return {
       date: date.toISOString(),

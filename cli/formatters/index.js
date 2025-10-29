@@ -7,26 +7,29 @@ const chalk = require('chalk');
 function formatTable(data) {
   const table = new Table({
     head: [chalk.cyan('Property'), chalk.cyan('Value')],
-    colWidths: [30, 50]
+    colWidths: [34, 60]
   });
-  
-  Object.entries(data).forEach(([key, value]) => {
-    if (typeof value === 'object' && value !== null) {
-      table.push([chalk.bold(key), chalk.gray('(see details)')]);
-      Object.entries(value).forEach(([subKey, subValue]) => {
-        table.push([
-          `  ${subKey}`,
-          typeof subValue === 'number' ? subValue.toFixed(3) : String(subValue)
-        ]);
-      });
-    } else {
-      table.push([
-        chalk.bold(key),
-        typeof value === 'number' ? value.toFixed(3) : String(value)
-      ]);
-    }
-  });
-  
+
+  // Recursively flatten object to key paths
+  function flatten(obj, prefix = '') {
+    const rows = [];
+    Object.entries(obj).forEach(([key, value]) => {
+      const fullKey = prefix ? `${prefix}.${key}` : key;
+      if (value instanceof Date) {
+        rows.push([fullKey, value.toISOString()]);
+      } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        rows.push([fullKey, chalk.gray('(see details)')]);
+        rows.push(...flatten(value, fullKey));
+      } else {
+        rows.push([fullKey, typeof value === 'number' ? value.toFixed(3) : String(value)]);
+      }
+    });
+    return rows;
+  }
+
+  const rows = flatten(data);
+  rows.forEach(([k, v]) => table.push([k, v]));
+
   return table.toString();
 }
 
