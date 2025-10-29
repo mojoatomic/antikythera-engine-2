@@ -825,12 +825,19 @@ class FrontFace {
     this.ctx.textAlign = 'right';
     let lowerRightY = this.canvas.height - padding;
     
-    // Real-time clock
-    if (data.currentTime) {
+    // Real-time clock (format using observer timezone when available)
+    {
+      const tz = data && data.observer && data.observer.timezone ? data.observer.timezone : undefined;
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', {
+        timeZone: tz || undefined,
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false,
+      });
       this.ctx.fillStyle = 'var(--color-pointer, #ffaa00)';
       this.ctx.font = 'bold 16px "Courier New", monospace';
       this.ctx.fillText(
-        data.currentTime,
+        timeStr,
         this.canvas.width - padding,
         lowerRightY - lineHeight * 3
       );
