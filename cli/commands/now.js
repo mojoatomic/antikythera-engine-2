@@ -19,6 +19,17 @@ async function now(options) {
       console.log();
     }
     
+    // Derive local times for sunrise/sunset if timezone provided
+    try {
+      const tz = data?.observer?.timezone;
+      const sv = data?.sunVisibility;
+      if (tz && sv) {
+        const fmt = (iso) => new Date(iso).toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+        if (sv.sunrise?.time) sv.sunrise.local = fmt(sv.sunrise.time);
+        if (sv.sunset?.time) sv.sunset.local = fmt(sv.sunset.time);
+      }
+    } catch (_) {}
+
     console.log(format(data, options.format));
     
   } catch (error) {

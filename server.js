@@ -267,6 +267,8 @@ app.get('/api/display', async (req, res) => {
         elevation: observer.elevation,
         city: observer.city || null,
         country: observer.country || null,
+        timezone: observer.timezone || null,
+        utcOffsetMinutes: (() => { try { const { getUtcOffsetMinutes } = require('./utils/tz'); return observer.timezone ? getUtcOffsetMinutes(date, observer.timezone) : null; } catch (_) { return null; } })(),
         source: observer.source,
         time_scale: 'UTC'
       }
