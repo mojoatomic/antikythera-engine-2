@@ -1,0 +1,41 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Antikythera Engine",
+  "description": "NASA-validated astronomical ephemeris API providing celestial body positions for educational displays and physical mechanism control",
+  
+  "folders": [
+    "docs/",
+    "examples/api",
+    "README.md"
+  ],
+   
+  "excludeFolders": [
+    "src/cli",
+    "src/utils",
+    "src/validation",
+    "tests/",
+    "scripts/"
+  ],
+  
+  "excludeFiles": [
+    "CHANGELOG.md",
+    "setup.json.example"
+  ],
+  
+  "rules": [
+    "Use the REST API endpoints, not the JavaScript library directly",
+    "Include location parameters (lat, lon) for topocentric coordinates",
+    "All times are UTC; convert to local timezone in your client",
+    "Arduino calibration is implementation-specific - API provides raw servo angles and stepper steps",
+    "Physical builders must calibrate their own hardware - no generic calibration data provided",
+    "stepsForInterval appears in /api/display responses ONLY when both dt and stepsPerDegree query parameters are provided",
+    "Use /api/display?dt=5&stepsPerDegree=200 for Arduino stepper motor control with stepsForInterval",
+    "Servo angles from API are theoretical positions - apply your own calibration lookup table",
+    "Use /api/state for multiple bodies, /api/{body} for single bodies",
+    "Use REST API polling for real-time updates - WebSockets not needed or supported",
+    "Batch multiple bodies in single request: /api/state?bodies=sun,moon,mars",
+    "250ms polling interval provides smooth 4fps animation with low server load",
+    "Response format is consistent across all examples - use the API documentation as source of truth"
+  ]
+}
+

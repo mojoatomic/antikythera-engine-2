@@ -279,7 +279,9 @@ Query parameters (optional):
 - `dt`: Interval in seconds to compute `stepsForInterval` for steppers
 - `stepsPerDegree`: Stepper resolution (steps/degree) used with `dt`
 
-Example:
+**Important:** The `stepsForInterval` field appears in stepper responses **only when both `dt` and `stepsPerDegree` query parameters are provided**. This field contains the exact number of motor steps to execute for the specified interval. Without these parameters, only position and velocity are returned.
+
+Example with hardware control parameters:
 ```bash
 curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
 ```
@@ -295,6 +297,7 @@ curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
         "velocity": 0.998847784120528,
         "velocityDegPerSec": 0.00001156,
         "direction": "CW",
+        "stepsForInterval": 12,
         "altitude": 1.03761647984169,
         "azimuth": 253.005425613381
       },
@@ -303,6 +306,7 @@ curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
         "velocity": 12.6810427226211,
         "velocityDegPerSec": 0.00014688,
         "direction": "CW",
+        "stepsForInterval": 147,
         "altitude": 29.1465404202494,
         "azimuth": 172.636428072449
       },
@@ -311,6 +315,7 @@ curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
         "velocity": 1.01726211710803,
         "velocityDegPerSec": 0.00001178,
         "direction": "CW",
+        "stepsForInterval": 12,
         "altitude": 11.1210731625624,
         "azimuth": 231.789630987122
       },
@@ -319,6 +324,7 @@ curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
         "velocity": 1.24892443025954,
         "velocityDegPerSec": 0.00001445,
         "direction": "CW",
+        "stepsForInterval": 14,
         "altitude": -7.17447701477178,
         "azimuth": 268.329661272134
       },
@@ -327,6 +333,7 @@ curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
         "velocity": 0.710306073897129,
         "velocityDegPerSec": 0.00000822,
         "direction": "CW",
+        "stepsForInterval": 8,
         "altitude": 11.0088598845841,
         "azimuth": 236.729874161838
       },
@@ -335,6 +342,7 @@ curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
         "velocity": 0.0429114248708373,
         "velocityDegPerSec": 0.00000050,
         "direction": "CW",
+        "stepsForInterval": 1,
         "altitude": -33.058690320916,
         "azimuth": 356.159190320464
       },
@@ -343,6 +351,7 @@ curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
         "velocity": -0.0490251765785956,
         "velocityDegPerSec": -0.00000057,
         "direction": "CCW",
+        "stepsForInterval": -1,
         "altitude": 18.5780781054604,
         "azimuth": 109.053947533835
       },
@@ -350,13 +359,15 @@ curl "http://localhost:3000/api/display?dt=5&stepsPerDegree=200"
         "position": 345.549624261153,
         "velocity": -0.0529544147843943,
         "velocityDegPerSec": -0.00000061,
-        "direction": "CCW"
+        "direction": "CCW",
+        "stepsForInterval": -1
       },
       "lunar_nodes_descending": {
         "position": 165.549624261153,
         "velocity": -0.0529544147843943,
         "velocityDegPerSec": -0.00000061,
-        "direction": "CCW"
+        "direction": "CCW",
+        "stepsForInterval": -1
       }
     },
     "servos": {
