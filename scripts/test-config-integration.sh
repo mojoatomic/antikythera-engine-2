@@ -56,16 +56,22 @@ cleanup() {
         wait $SERVER_PID 2>/dev/null || true
     fi
     
-    # Restore backup config if exists
-    if [ -f "$BACKUP_CONFIG" ]; then
-        print_info "Restoring original config..."
-        mv "$BACKUP_CONFIG" "$TEST_CONFIG"
+    # Restore original state
+    if [ "$CONFIG_EXISTED_BEFORE" = true ]; then
+        if [ -f "$BACKUP_CONFIG" ]; then
+            print_info "Restoring original config..."
+            mv "$BACKUP_CONFIG" "$TEST_CONFIG"
+        else
+            print_info "Warning: Backup was expected but not found"
+        fi
     else
-        # Remove test config
+        # Config didn't exist before - remove any test config
         if [ -f "$TEST_CONFIG" ]; then
-            print_info "Removing test config..."
+            print_info "Removing test config (none existed before tests)..."
             rm "$TEST_CONFIG"
         fi
+        # Also remove backup if it somehow exists
+        rm -f "$BACKUP_CONFIG" 2>/dev/null || true
     fi
     
     # Remove any test artifacts
@@ -143,8 +149,10 @@ print_info "Config dir: $CONFIG_DIR"
 
 cd "$PROJECT_ROOT"
 
-# Backup existing config if present
+# Remember if config existed before tests
+CONFIG_EXISTED_BEFORE=false
 if [ -f "$TEST_CONFIG" ]; then
+    CONFIG_EXISTED_BEFORE=true
     print_info "Backing up existing config..."
     cp "$TEST_CONFIG" "$BACKUP_CONFIG"
 fi
