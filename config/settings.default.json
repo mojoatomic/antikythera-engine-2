@@ -1,0 +1,32 @@
+{
+  "configVersion": 1,
+  "server": {
+    "port": 3000,
+    "host": "localhost"
+  },
+  "observer": {
+    "mode": "auto",
+    "location": {
+      "latitude": null,
+      "longitude": null,
+      "timezone": null,
+      "elevation": 0,
+      "name": null
+    }
+  },
+  "api": {
+    "rateLimit": {
+      "enabled": true,
+      "maxRequests": 100,
+      "windowMs": 60000
+    },
+    "cache": {
+      "enabled": true,
+      "ttlSeconds": 300
+    }
+  },
+  "display": {
+    "language": "english",
+    "showSunriseSunset": true
+  }
+}
