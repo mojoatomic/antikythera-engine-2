@@ -281,22 +281,38 @@ When determining observer location, the system uses this priority order:
 
 **Never put secrets in JSON config files!**
 
-Secrets belong in environment variables:
+Secrets belong in environment variables or secure token files.
+
+### Control Token
+
+The server automatically generates a persistent control token on first startup:
+
+- **Location:** `.antikythera/control-token` (gitignored, 0600 permissions)
+- **Behavior:** Token persists across restarts
+- **Override:** Set `ANTIKYTHERA_CONTROL_TOKEN` environment variable
+- **Regenerate:** Delete `.antikythera/control-token` and restart server
+
+For normal local development, no configuration is needed - the CLI automatically reads the token file.
+
+For classroom/shared deployments, set `ANTIKYTHERA_CONTROL_TOKEN` on the server and distribute to clients:
 
 ```bash
 # .env.local (gitignored)
-ANTIKYTHERA_CONTROL_TOKEN=your-secret-token
-# Future: API keys, database credentials, etc.
+ANTIKYTHERA_CONTROL_TOKEN=your-shared-token-here
 ```
 
-Config files are for:
+### Other Secrets
+
+Future secrets (API keys, database credentials, TLS certificates) will also use environment variables, never config files.
+
+**Config files are for:**
 - Application settings
-- Feature flags
+- Feature flags  
 - Display preferences
 - Observer location
 
-Config files are **not** for:
-- ❌ Control tokens
+**Config files are NOT for:**
+- ❌ Control tokens (use `.antikythera/control-token` or env var)
 - ❌ API keys
 - ❌ Database passwords
 - ❌ TLS certificates
