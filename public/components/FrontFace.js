@@ -751,12 +751,12 @@ class FrontFace {
     this.ctx.textAlign = 'left';
     
     // Get timezone for conversion
-    const tz = data?.observer?.timezone;
-    const date = new Date(data.date);
+    const upperLeftTz = data?.observer?.timezone;
+    const upperLeftDate = new Date(data.date);
     
     // Calculate Mean Time (clock time) - convert UTC to local
-    const meanTimeStr = date.toLocaleTimeString('en-US', {
-      timeZone: tz || undefined,
+    const meanTimeStr = upperLeftDate.toLocaleTimeString('en-US', {
+      timeZone: upperLeftTz || undefined,
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
@@ -766,9 +766,9 @@ class FrontFace {
     let sundialTimeStr = meanTimeStr; // Fallback
     if (data.equationOfTime) {
       const eotMinutes = data.equationOfTime.equationOfTime.minutes;
-      const sundialDate = new Date(date.getTime() + eotMinutes * 60 * 1000);
+      const sundialDate = new Date(upperLeftDate.getTime() + eotMinutes * 60 * 1000);
       sundialTimeStr = sundialDate.toLocaleTimeString('en-US', {
-        timeZone: tz || undefined,
+        timeZone: upperLeftTz || undefined,
         hour: '2-digit',
         minute: '2-digit',
         hour12: true
@@ -902,7 +902,9 @@ class FrontFace {
       if (data.observer.city) {
         locationText = data.observer.state ? `${data.observer.city}, ${data.observer.state}` : data.observer.city;
       } else if (data.observer.name) {
-        locationText = data.observer.name;
+        // Skip displaying name if it's just coordinates (fallback format from server)
+        const isCoordinatesFallback = /^-?\d+\.?\d*,\s*-?\d+\.?\d*$/.test(data.observer.name);
+        locationText = isCoordinatesFallback ? '' : data.observer.name;
       } else {
         locationText = '';
       }
