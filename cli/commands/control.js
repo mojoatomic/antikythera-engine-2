@@ -27,7 +27,7 @@ module.exports = async function control(action, value, options) {
   try {
     const act = String(action || '').toLowerCase();
     if (!act) {
-      console.log(chalk.cyan('Usage: control time <ISO> | control animate --from <ISO> --to <ISO> [--speed <Nx>] | control scene --preset <name> [--bodies a,b,c] | control stop | control status'));
+      console.log(chalk.cyan('Usage: control time <ISO> | control run [--speed N] | control pause | control animate --from <ISO> --to <ISO> [--speed <N>] | control scene --preset <name> [--bodies a,b,c] | control location <lat,lon> --timezone <tz> [--name <str>] [--elevation <m>] | control stop | control status'));
       return;
     }
     if (act === 'time') {
@@ -64,6 +64,21 @@ module.exports = async function control(action, value, options) {
       console.log(JSON.stringify(out, null, 2));
       return;
     }
+    if (act === 'location') {
+      const coords = value || options.coords;
+      if (!coords || !coords.includes(',')) return console.log(chalk.red('Usage: control location <lat,lon> --timezone <tz> [--name <str>] [--elevation <m>]'));
+      const [latStr, lonStr] = coords.split(',');
+      const lat = parseFloat(String(latStr).trim());
+      const lon = parseFloat(String(lonStr).trim());
+      const tz = options.timezone || options.tz;
+      const name = options.name || undefined;
+      const elevation = options.elevation !== undefined ? Number(options.elevation) : undefined;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return console.log(chalk.red('Invalid coordinates. Example: 37.98,23.73'));
+      if (!tz) return console.log(chalk.red('Timezone required. Example: --timezone "Europe/Athens"'));
+      const out = await post('/api/control/location', { latitude: lat, longitude: lon, elevation, timezone: tz, name });
+      console.log(JSON.stringify(out, null, 2));
+      return;
+    }
     if (act === 'stop') {
       const out = await post('/api/control/stop', {});
       console.log(JSON.stringify(out, null, 2));
@@ -74,7 +89,7 @@ module.exports = async function control(action, value, options) {
       console.log(JSON.stringify(out, null, 2));
       return;
     }
-    console.log(chalk.red('Unknown control action. Use: time | animate | scene | stop | status'));
+    console.log(chalk.red('Unknown control action. Use: time | run | pause | animate | scene | location | stop | status'));
   } catch (err) {
     const msg = err?.response?.data?.error || err.message;
     console.error(chalk.red('Error:'), msg);

@@ -4,7 +4,7 @@ const { VALIDATION, CONVENTIONS } = require('./constants/validation');
 const { API_VERSION, ENGINE_VERSION, GIT_SHA } = require('./utils/metadata');
 const { buildSystemMetadata } = require('./utils/precision-builder');
 const { getObserverFromRequest } = require('./lib/location-service');
-const { effectiveDate, status: controlStatus, setTime: controlSetTime, setAnimate: controlSetAnimate, setScene: controlSetScene, run: controlRun, pause: controlPause, stop: controlStop } = require('./lib/control-state');
+const { effectiveDate, status: controlStatus, setTime: controlSetTime, setAnimate: controlSetAnimate, setScene: controlSetScene, run: controlRun, pause: controlPause, stop: controlStop, setLocation: controlSetLocation } = require('./lib/control-state');
 const AntikytheraEngine = require('./engine');
 
 const app = express();
@@ -45,7 +45,13 @@ app.get('/api/state', async (req, res) => {
   try {
     const requested = req.query.date ? new Date(req.query.date) : new Date();
     const date = effectiveDate(requested);
-    const observer = await getObserverFromRequest(req);
+    const cs = controlStatus();
+    let observer;
+    if (cs && cs.location && Number.isFinite(cs.location.latitude) && Number.isFinite(cs.location.longitude)) {
+      observer = { ...cs.location, source: 'control' };
+    } else {
+      observer = await getObserverFromRequest(req);
+    }
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state);
   } catch (err) {
@@ -61,7 +67,13 @@ app.get('/api/state/:date', async (req, res) => {
       return res.status(400).json({ error: 'Invalid date format' });
     }
     const date = effectiveDate(reqDate);
-    const observer = await getObserverFromRequest(req);
+    const cs = controlStatus();
+    let observer;
+    if (cs && cs.location && Number.isFinite(cs.location.latitude) && Number.isFinite(cs.location.longitude)) {
+      observer = { ...cs.location, source: 'control' };
+    } else {
+      observer = await getObserverFromRequest(req);
+    }
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state);
   } catch (err) {
@@ -112,7 +124,13 @@ app.get('/api/display', async (req, res) => {
     const startTime = Date.now();
     const requested = req.query.date ? new Date(req.query.date) : new Date();
     const date = effectiveDate(requested);
-    const observer = await getObserverFromRequest(req);
+    const cs = controlStatus();
+    let observer;
+    if (cs && cs.location && Number.isFinite(cs.location.latitude) && Number.isFinite(cs.location.longitude)) {
+      observer = { ...cs.location, source: 'control' };
+    } else {
+      observer = await getObserverFromRequest(req);
+    }
     const latitude = observer.latitude;
     const longitude = observer.longitude;
     const fullPrecision = req.query.precision === 'full';
@@ -415,6 +433,7 @@ app.get('/api/control', (req, res) => {
       { method: 'POST', path: '/api/control/pause' },
       { method: 'POST', path: '/api/control/animate', body: { from: 'ISO', to: 'ISO', speed: 'number>0 (Nx)' } },
       { method: 'POST', path: '/api/control/scene', body: { preset: 'string', bodies: 'string[]|csv' } },
+      { method: 'POST', path: '/api/control/location', body: { latitude: 'number', longitude: 'number', elevation: 'number?', timezone: 'IANA', name: 'string?' } },
       { method: 'POST', path: '/api/control/stop' },
       { method: 'GET', path: '/api/control/status' },
     ],
@@ -424,6 +443,40 @@ app.get('/api/control', (req, res) => {
 
 app.get('/api/control/status', (req, res) => {
   res.json(controlStatus());
+});
+
+// Set control location (tz required, optional elevation)
+app.post('/api/control/location', controlGuard, (req, res) => {
+  try {
+    const { latitude, longitude, elevation, timezone, name } = req.body || {};
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return res.status(400).json({ error: 'latitude and longitude required' });
+    }
+    if (latitude < -90 || latitude > 90) {
+      return res.status(400).json({ error: 'latitude must be between -90 and 90' });
+    }
+    if (longitude < -180 || longitude > 180) {
+      return res.status(400).json({ error: 'longitude must be between -180 and 180' });
+    }
+    if (!timezone || typeof timezone !== 'string') {
+      return res.status(400).json({ error: 'timezone required (IANA, e.g., Europe/Athens)' });
+    }
+    // Validate IANA tz identifier
+    try { new Intl.DateTimeFormat('en-US', { timeZone: timezone }); } catch (_e) {
+      return res.status(400).json({ error: 'invalid timezone identifier' });
+    }
+    const loc = {
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      timezone: String(timezone),
+      name: name ? String(name) : `${latitude}, ${longitude}`,
+    };
+    if (Number.isFinite(elevation)) loc.elevation = Number(elevation);
+    controlSetLocation(loc);
+    res.json({ ok: true, status: controlStatus() });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 app.post('/api/control/time', controlGuard, (req, res) => {

@@ -90,14 +90,17 @@ program
 const cmdControl = require('./commands/control');
 program
   .command('control')
-  .description('Classroom control: time | animate | scene | stop | status')
-  .argument('<action>', 'time|animate|scene|stop|status')
-  .argument('[value]', 'ISO date for time action')
+  .description('Classroom control: time | run | pause | animate | scene | location | stop | status')
+  .argument('<action>', 'time|run|pause|animate|scene|location|stop|status')
+  .argument('[value]', 'ISO for time OR "lat,lon" for location')
   .option('--from <iso>', 'Animation start ISO')
   .option('--to <iso>', 'Animation end ISO')
   .option('--speed <Nx>', 'Animation speed multiplier (default 1)')
   .option('--preset <name>', 'Scene preset name')
   .option('--bodies <list>', 'Comma-separated bodies list for scene')
+  .option('--timezone <tz>', 'IANA timezone for control location (e.g., Europe/Athens)')
+  .option('--elevation <m>', 'Elevation (meters) for control location')
+  .option('--name <str>', 'Friendly location name')
   .action(cmdControl);
 
 program.parse(process.argv);
