@@ -574,5 +574,77 @@
       "andromeda": "アンドロメダ座",
       "pegasus": "ペガスス座"
     }
+  },
+  "klingon": {
+    "front_face": {
+      "title": "QUN BEJ",
+      "mean_time": "POH NUGH",
+      "mean_time_subtitle": "(mIv poH)",
+      "apparent_time": "POH'E' LEG",
+      "apparent_time_subtitle": "(pemjep poH)",
+      "sundial_ahead": "pemjep RUSTO'",
+      "sundial_behind": "pemjep TAI'",
+      "local_time": "NUGH poH"
+    },
+    "back_upper_face": {
+      "title": "METON MACH",
+      "year_month": "DIS {year}/19 — jar {month}/235",
+      "cycle_ends": "MACH mach {years}y {days}d (19.0 pemjep DIS)",
+      "progress": "TAGH: {percent}%",
+      "callippic": "KALLIPIK",
+      "years_76": "76 DIS"
+    },
+    "back_lower_face": {
+      "title": "SAROS MACH",
+      "saros_month": "SAROS MACH {cycle} — jar {month}/223",
+      "cycle_ends": "MACH mach {years}y {days}d (≈ 6586.3 jaj)",
+      "next_eclipse_solar": "VITH: pemjep ☉ {days} jaj",
+      "next_eclipse_lunar": "VITH: maS ☽ {days} jaj",
+      "progress": "TAGH: {percent}%",
+      "exeligmos": "EKSELIGMOS",
+      "years_54": "54 DIS"
+    },
+    "zodiac": {
+      "aries": "QI'",
+      "taurus": "TARGH",
+      "gemini": "CHA' LOM",
+      "cancer": "GHEW",
+      "leo": "QI'EMPEQ",
+      "virgo": "BE' QUVHAH",
+      "libra": "NAGH",
+      "scorpio": "GHEW NAGH",
+      "sagittarius": "BEQ",
+      "capricorn": "RA'GHOM",
+      "aquarius": "BIQ",
+      "pisces": "GHOTHMEY"
+    },
+    "months": {
+      "1": "wa'DIch jar",
+      "2": "cha'DIch jar",
+      "3": "wejDIch jar",
+      "4": "loSDIch jar",
+      "5": "vaghDIch jar",
+      "6": "jAvDIch jar",
+      "7": "SochDIch jar",
+      "8": "chorghDIch jar",
+      "9": "HutDIch jar",
+      "10": "wa'maH jar",
+      "11": "wa'maHwa' jar",
+      "12": "wa'maHcha' jar"
+    },
+    "parapegma": {
+      "pleiades": "HOVMEY MACH",
+      "arcturus": "HOV TIQH",
+      "sirius": "HOV WOVQU'",
+      "hyades": "HOVMEY V",
+      "orion": "SUQQA'",
+      "lyra": "CHORD",
+      "aquila": "TOQDUQ",
+      "canis": "TARGH QI'",
+      "cassiopeia": "QASIOPEIA",
+      "perseus": "PER'SU'",
+      "andromeda": "'ANDROMEDA",
+      "pegasus": "SARGH YUVTLHE'"
+    }
   }
 }
