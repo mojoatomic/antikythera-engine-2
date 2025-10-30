@@ -651,6 +651,24 @@ node scripts/validate-all-bodies.js
 
 Expected output: All bodies pass with errors under 10 arcseconds.
 
+### Configuration System Integration Tests
+End-to-end testing of the JSON configuration system:
+```bash
+./scripts/test-config-integration.sh
+```
+
+Tests 10 scenarios including:
+- Default configuration and auto mode
+- Manual observer location from config
+- Config layering and hot reload
+- Query parameter overrides
+- Validation modes (strict and loose)
+- Control mode interaction
+- Unknown key handling
+- Custom config paths
+
+Expected output: 40/40 tests passing. Runtime approximately 2-3 minutes.
+
 ### Validation Results Summary
 
 Comparison against NASA JPL HORIZONS System performed on 2025-10-26:
@@ -750,9 +768,10 @@ antikythera-engine-2/
 │   └── utils/
 │       └── metadata.js     # Version and git SHA extraction
 ├── scripts/
-│   ├── validate-simple.js      # Quick validation (Moon only)
-│   ├── validate-all-bodies.js  # Comprehensive HORIZONS comparison
-│   └── dump-horizons.js        # HORIZONS API diagnostic tool
+│   ├── validate-simple.js           # Quick validation (Moon only)
+│   ├── validate-all-bodies.js       # Comprehensive HORIZONS comparison
+│   ├── test-config-integration.sh   # End-to-end config system tests (40 scenarios)
+│   └── dump-horizons.js             # HORIZONS API diagnostic tool
 ├── docs/
 │   └── VALIDATION.md      # Complete validation methodology
 └── public/
@@ -764,7 +783,7 @@ antikythera-engine-2/
 - **Language:** JavaScript (Node.js)
 - **Framework:** Express
 - **Astronomy:** astronomy-engine v2.1.19
-- **Testing:** Custom validation suite against NASA JPL HORIZONS data
+- **Testing:** Jest unit tests (78 tests), HORIZONS validation scripts, configuration integration tests (40 scenarios)
 - **Documentation:** Markdown with validation reports
 
 ## Limitations and Known Issues
