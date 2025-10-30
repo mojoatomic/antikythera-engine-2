@@ -34,12 +34,12 @@ print_test() {
 
 print_success() {
     echo -e "${GREEN}✓${NC} $1"
-    ((TESTS_PASSED++))
+    TESTS_PASSED=$((TESTS_PASSED + 1))
 }
 
 print_failure() {
     echo -e "${RED}✗${NC} $1"
-    ((TESTS_FAILED++))
+    TESTS_FAILED=$((TESTS_FAILED + 1))
 }
 
 print_info() {
@@ -82,6 +82,36 @@ cleanup() {
 
 # Trap to ensure cleanup runs
 trap cleanup EXIT INT TERM
+
+kill_existing_servers() {
+    # Check for any processes on port 3000
+    local existing_pids=$(lsof -ti:3000 2>/dev/null || true)
+    
+    if [ ! -z "$existing_pids" ]; then
+        print_info "Found existing server(s) on port 3000 (PIDs: $existing_pids)"
+        print_info "Killing existing servers to avoid test conflicts..."
+        
+        # Kill each PID
+        for pid in $existing_pids; do
+            kill $pid 2>/dev/null || true
+        done
+        
+        # Wait for processes to die
+        sleep 2
+        
+        # Force kill if still running
+        existing_pids=$(lsof -ti:3000 2>/dev/null || true)
+        if [ ! -z "$existing_pids" ]; then
+            print_info "Force killing stubborn processes..."
+            for pid in $existing_pids; do
+                kill -9 $pid 2>/dev/null || true
+            done
+            sleep 1
+        fi
+        
+        print_success "Cleared port 3000"
+    fi
+}
 
 wait_for_server() {
     print_info "Waiting for server to start..."
@@ -146,6 +176,9 @@ test_api_endpoint() {
 print_header "Configuration System Integration Tests"
 print_info "Project: $PROJECT_ROOT"
 print_info "Config dir: $CONFIG_DIR"
+
+# Kill any existing servers on port 3000 to avoid conflicts
+kill_existing_servers
 
 cd "$PROJECT_ROOT"
 
