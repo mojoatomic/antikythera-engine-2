@@ -109,6 +109,23 @@ antikythera control status
 antikythera control stop
 ```
 
+### Display Visualization
+
+The project includes a web-based sundial display at `http://localhost:3000/` that visualizes:
+- Mean Solar Time (clock time)
+- Apparent Solar Time (sundial time)
+- Celestial body positions (Sun, Moon, planets)
+- Observer location, timezone, and sunrise/sunset
+
+How updates work:
+- The display polls `/api/state` approximately once per second and re-renders.
+- Control commands (`time`, `run`, `pause`, `animate`, `location`) change the server’s effective state.
+- High-speed demo (e.g., `run --speed 600`) is computed server-side; the display simply renders the advancing state returned by the API.
+- No client-side interpolation — all positions are consistent per timestamp (UTC-safe).
+
+Use case:
+- Classroom control: the teacher controls time/location via CLI or API, and all student displays stay synchronized.
+
 Shared classroom token (optional): set `ANTIKYTHERA_CONTROL_TOKEN` on server and clients.
 
 ### Control Location (explicit)
