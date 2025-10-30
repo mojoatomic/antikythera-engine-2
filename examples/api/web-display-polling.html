@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Antikythera Live Display</title>
+</head>
+<body>
+  <div id="display"></div>
+
+  <script>
+    async function updateDisplay() {
+      try {
+        const response = await fetch('http://localhost:3000/api/display');
+        const data = await response.json();
+        
+        // Update the HTML element with the formatted display text
+        document.getElementById('display').textContent = data.display.formatted;
+      } catch (error) {
+        console.error('Failed to fetch display:', error);
+      }
+    }
+
+    // Poll every 5 seconds
+    setInterval(updateDisplay, 5000);
+    
+    // Initial update
+    updateDisplay();
+  </script>
+</body>
+</html>
