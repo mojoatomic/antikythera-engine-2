@@ -11,10 +11,22 @@
       "local_time": "Local Time"
     },
     "back_upper_face": {
-      "title": "Metonic Cycle"
+      "title": "Metonic Cycle",
+      "year_month": "Year {year}/19 — Month {month}/235",
+      "cycle_ends": "Cycle ends in {years}y {days}d (19.0 solar years)",
+      "progress": "Progress: {percent}%",
+      "callippic": "Callippic",
+      "years_76": "76 years"
     },
     "back_lower_face": {
-      "title": "Saros Cycle"
+      "title": "Saros Cycle",
+      "saros_month": "Saros Cycle {cycle} — Month {month}/223",
+      "cycle_ends": "Cycle ends in {years}y {days}d (≈ 6586.3 days total)",
+      "next_eclipse_solar": "Next Eclipse: Solar ☉ in {days} days",
+      "next_eclipse_lunar": "Next Eclipse: Lunar ☽ in {days} days",
+      "progress": "Progress: {percent}%",
+      "exeligmos": "Exeligmos",
+      "years_54": "54 years"
     },
     "zodiac": {
       "aries": "ARIES",
@@ -71,10 +83,22 @@
       "local_time": "ΤΟΠΙΚΗ ΩΡΑ"
     },
     "back_upper_face": {
-      "title": "ΚΥΚΛΟΣ ΤΟΥ ΜΕΤΩΝΟΣ"
+      "title": "ΚΥΚΛΟΣ ΤΟΥ ΜΕΤΩΝΟΣ",
+      "year_month": "Έτος {year}/19 — Μήνας {month}/235",
+      "cycle_ends": "Ο κύκλος τελειώνει σε {years}έ {days}η (19.0 ηλιακά έτη)",
+      "progress": "Πρόοδος: {percent}%",
+      "callippic": "Καλλιππικός",
+      "years_76": "76 έτη"
     },
     "back_lower_face": {
-      "title": "ΚΥΚΛΟΣ ΣΑΡΟΣ"
+      "title": "ΚΥΚΛΟΣ ΣΑΡΟΣ",
+      "saros_month": "Κύκλος Σάρος {cycle} — Μήνας {month}/223",
+      "cycle_ends": "Ο κύκλος τελειώνει σε {years}έ {days}η (≈ 6586.3 ημέρες σύνολο)",
+      "next_eclipse_solar": "Επόμενη Έκλειψη: Ηλιακή ☉ σε {days} ημέρες",
+      "next_eclipse_lunar": "Επόμενη Έκλειψη: Σεληνιακή ☽ σε {days} ημέρες",
+      "progress": "Πρόοδος: {percent}%",
+      "exeligmos": "Εξελιγμός",
+      "years_54": "54 έτη"
     },
     "zodiac": {
       "aries": "ΚΡΙΟΣ",
@@ -131,10 +155,22 @@
       "local_time": "Hora Local"
     },
     "back_upper_face": {
-      "title": "Ciclo Metónico"
+      "title": "Ciclo Metónico",
+      "year_month": "Año {year}/19 — Mes {month}/235",
+      "cycle_ends": "El ciclo termina en {years}a {days}d (19.0 años solares)",
+      "progress": "Progreso: {percent}%",
+      "callippic": "Calípico",
+      "years_76": "76 años"
     },
     "back_lower_face": {
-      "title": "Ciclo de Saros"
+      "title": "Ciclo de Saros",
+      "saros_month": "Ciclo de Saros {cycle} — Mes {month}/223",
+      "cycle_ends": "El ciclo termina en {years}a {days}d (≈ 6586.3 días en total)",
+      "next_eclipse_solar": "Próximo Eclipse: Solar ☉ en {days} días",
+      "next_eclipse_lunar": "Próximo Eclipse: Lunar ☽ en {days} días",
+      "progress": "Progreso: {percent}%",
+      "exeligmos": "Exeligmos",
+      "years_54": "54 años"
     },
     "zodiac": {
       "aries": "ARIES",
@@ -191,10 +227,22 @@
       "local_time": "Heure Locale"
     },
     "back_upper_face": {
-      "title": "Cycle de Méton"
+      "title": "Cycle de Méton",
+      "year_month": "Année {year}/19 — Mois {month}/235",
+      "cycle_ends": "Le cycle se termine dans {years}a {days}j (19.0 années solaires)",
+      "progress": "Progrès: {percent}%",
+      "callippic": "Callippique",
+      "years_76": "76 ans"
     },
     "back_lower_face": {
-      "title": "Cycle de Saros"
+      "title": "Cycle de Saros",
+      "saros_month": "Cycle de Saros {cycle} — Mois {month}/223",
+      "cycle_ends": "Le cycle se termine dans {years}a {days}j (≈ 6586.3 jours au total)",
+      "next_eclipse_solar": "Prochaine Éclipse: Solaire ☉ dans {days} jours",
+      "next_eclipse_lunar": "Prochaine Éclipse: Lunaire ☽ dans {days} jours",
+      "progress": "Progrès: {percent}%",
+      "exeligmos": "Exeligmos",
+      "years_54": "54 ans"
     },
     "zodiac": {
       "aries": "BÉLIER",
@@ -251,10 +299,22 @@
       "local_time": "Местное Время"
     },
     "back_upper_face": {
-      "title": "Метонов Цикл"
+      "title": "Метонов Цикл",
+      "year_month": "Год {year}/19 — Месяц {month}/235",
+      "cycle_ends": "Цикл заканчивается через {years}л {days}д (19.0 солнечных лет)",
+      "progress": "Прогресс: {percent}%",
+      "callippic": "Каллиппов",
+      "years_76": "76 лет"
     },
     "back_lower_face": {
-      "title": "Цикл Сароса"
+      "title": "Цикл Сароса",
+      "saros_month": "Цикл Сароса {cycle} — Месяц {month}/223",
+      "cycle_ends": "Цикл заканчивается через {years}л {days}д (≈ 6586.3 дней всего)",
+      "next_eclipse_solar": "Следующее Затмение: Солнечное ☉ через {days} дней",
+      "next_eclipse_lunar": "Следующее Затмение: Лунное ☽ через {days} дней",
+      "progress": "Прогресс: {percent}%",
+      "exeligmos": "Эксэлигмос",
+      "years_54": "54 года"
     },
     "zodiac": {
       "aries": "ОВЕН",
@@ -311,10 +371,22 @@
       "local_time": "الوقت المحلي"
     },
     "back_upper_face": {
-      "title": "دورة ميتون"
+      "title": "دورة ميتون",
+      "year_month": "السنة {year}/19 — الشهر {month}/235",
+      "cycle_ends": "تنتهي الدورة في {years}س {days}ي (19.0 سنة شمسية)",
+      "progress": "التقدم: {percent}%",
+      "callippic": "كاليبيك",
+      "years_76": "76 سنة"
     },
     "back_lower_face": {
-      "title": "دورة ساروس"
+      "title": "دورة ساروس",
+      "saros_month": "دورة ساروس {cycle} — الشهر {month}/223",
+      "cycle_ends": "تنتهي الدورة في {years}س {days}ي (≈ 6586.3 يوم إجمالي)",
+      "next_eclipse_solar": "الكسوف التالي: شمسي ☉ في {days} يوم",
+      "next_eclipse_lunar": "الكسوف التالي: قمري ☽ في {days} يوم",
+      "progress": "التقدم: {percent}%",
+      "exeligmos": "إكسيليغموس",
+      "years_54": "54 سنة"
     },
     "zodiac": {
       "aries": "الحمل",
@@ -371,10 +443,22 @@
       "local_time": "当地时间"
     },
     "back_upper_face": {
-      "title": "默冬章"
+      "title": "默冬章",
+      "year_month": "第{year}/19年 — 第{month}/235月",
+      "cycle_ends": "周期在{years}年{days}天后结束 (19.0太阳年)",
+      "progress": "进度: {percent}%",
+      "callippic": "卡利波斯",
+      "years_76": "76年"
     },
     "back_lower_face": {
-      "title": "沙罗周期"
+      "title": "沙罗周期",
+      "saros_month": "沙罗周期{cycle} — 第{month}/223月",
+      "cycle_ends": "周期在{years}年{days}天后结束 (≈ 6586.3天总计)",
+      "next_eclipse_solar": "下次日食: ☉ {days}天后",
+      "next_eclipse_lunar": "下次月食: ☽ {days}天后",
+      "progress": "进度: {percent}%",
+      "exeligmos": "三沙罗周期",
+      "years_54": "54年"
     },
     "zodiac": {
       "aries": "白羊座",
@@ -431,10 +515,22 @@
       "local_time": "現地時刻"
     },
     "back_upper_face": {
-      "title": "メトン周期"
+      "title": "メトン周期",
+      "year_month": "第{year}/19年 — 第{month}/235月",
+      "cycle_ends": "周期は{years}年{days}日後に終了 (19.0太陽年)",
+      "progress": "進捗: {percent}%",
+      "callippic": "カリポス",
+      "years_76": "76年"
     },
     "back_lower_face": {
-      "title": "サロス周期"
+      "title": "サロス周期",
+      "saros_month": "サロス周期{cycle} — 第{month}/223月",
+      "cycle_ends": "周期は{years}年{days}日後に終了 (≈ 6586.3日合計)",
+      "next_eclipse_solar": "次の日食: ☉ {days}日後",
+      "next_eclipse_lunar": "次の月食: ☽ {days}日後",
+      "progress": "進捗: {percent}%",
+      "exeligmos": "エクセリグモス",
+      "years_54": "54年"
     },
     "zodiac": {
       "aries": "牡羊座",

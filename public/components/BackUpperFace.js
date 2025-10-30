@@ -8,6 +8,13 @@ class BackUpperFace {
     this.spiralTurns = 4.75; // 19 years in ~5 turns looks good
   }
   
+  // Helper to replace placeholders in translated strings
+  format(template, values) {
+    return template.replace(/{(\w+)}/g, (match, key) => {
+      return values[key] !== undefined ? values[key] : match;
+    });
+  }
+  
   render(data) {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     
@@ -182,8 +189,8 @@ class BackUpperFace {
     this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
     this.ctx.font = '11px Georgia';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('Callippic', subDialX, subDialY + subDialRadius + 15);
-    this.ctx.fillText('76 years', subDialX, subDialY + subDialRadius + 28);
+    this.ctx.fillText(languageManager.t('back_upper_face.callippic'), subDialX, subDialY + subDialRadius + 15);
+    this.ctx.fillText(languageManager.t('back_upper_face.years_76'), subDialX, subDialY + subDialRadius + 28);
   }
   
   drawInfo(data) {
@@ -205,7 +212,10 @@ class BackUpperFace {
     this.ctx.font = 'bold 16px Georgia';
     this.ctx.textAlign = 'center';
     this.ctx.fillText(
-      `Year ${metonic.year}/19 — Month ${monthsInCycle}/235`,
+      this.format(languageManager.t('back_upper_face.year_month'), {
+        year: metonic.year,
+        month: monthsInCycle
+      }),
       this.centerX,
       this.canvas.height - 50
     );
@@ -213,7 +223,10 @@ class BackUpperFace {
     this.ctx.font = '12px Georgia';
     this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
     this.ctx.fillText(
-      `Cycle ends in ${yearsRemaining}y ${daysInYearRemaining}d (19.0 solar years)`,
+      this.format(languageManager.t('back_upper_face.cycle_ends'), {
+        years: yearsRemaining,
+        days: daysInYearRemaining
+      }),
       this.centerX,
       this.canvas.height - 30
     );
@@ -223,7 +236,9 @@ class BackUpperFace {
     this.ctx.fillStyle = 'rgba(212, 175, 55, 0.8)';
     const progressPercent = (metonic.progress * 100).toFixed(1);
     this.ctx.fillText(
-      `Progress: ${progressPercent}%`,
+      this.format(languageManager.t('back_upper_face.progress'), {
+        percent: progressPercent
+      }),
       this.centerX,
       this.canvas.height - 12
     );

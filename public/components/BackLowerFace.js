@@ -8,6 +8,13 @@ class BackLowerFace {
     this.spiralTurns = 4.5; // 223 months in ~4.5 turns
   }
   
+  // Helper to replace placeholders in translated strings
+  format(template, values) {
+    return template.replace(/{(\w+)}/g, (match, key) => {
+      return values[key] !== undefined ? values[key] : match;
+    });
+  }
+  
   render(data) {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     
@@ -208,8 +215,8 @@ class BackLowerFace {
     this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
     this.ctx.font = '11px Georgia';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('Exeligmos', subDialX, subDialY + subDialRadius + 15);
-    this.ctx.fillText('54 years', subDialX, subDialY + subDialRadius + 28);
+    this.ctx.fillText(languageManager.t('back_lower_face.exeligmos'), subDialX, subDialY + subDialRadius + 15);
+    this.ctx.fillText(languageManager.t('back_lower_face.years_54'), subDialX, subDialY + subDialRadius + 28);
   }
   
   drawInfo(data) {
@@ -233,7 +240,10 @@ class BackLowerFace {
     this.ctx.font = 'bold 16px Georgia';
     this.ctx.textAlign = 'center';
     this.ctx.fillText(
-      `Saros Cycle ${saros.cycle} — Month ${monthsInCycle}/223`,
+      this.format(languageManager.t('back_lower_face.saros_month'), {
+        cycle: saros.cycle,
+        month: monthsInCycle
+      }),
       this.centerX,
       this.canvas.height - 65
     );
@@ -241,7 +251,10 @@ class BackLowerFace {
     this.ctx.font = '12px Georgia';
     this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
     this.ctx.fillText(
-      `Cycle ends in ${yearsRemaining}y ${daysInYearRemaining}d (≈ 6586.3 days total)`,
+      this.format(languageManager.t('back_lower_face.cycle_ends'), {
+        years: yearsRemaining,
+        days: daysInYearRemaining
+      }),
       this.centerX,
       this.canvas.height - 45
     );
@@ -250,11 +263,13 @@ class BackLowerFace {
     this.ctx.font = 'bold 14px Georgia';
     this.ctx.fillStyle = 'var(--color-pointer, #ffaa00)';
     
-    const eclipseType = nextEclipse.type === 'lunar' ? 'Lunar ☽' : 'Solar ☉';
     const daysUntil = Math.floor(nextEclipse.daysUntil || 0);
+    const eclipseKey = nextEclipse.type === 'lunar' ? 'next_eclipse_lunar' : 'next_eclipse_solar';
     
     this.ctx.fillText(
-      `Next Eclipse: ${eclipseType} in ${daysUntil} days`,
+      this.format(languageManager.t(`back_lower_face.${eclipseKey}`), {
+        days: daysUntil
+      }),
       this.centerX,
       this.canvas.height - 25
     );
@@ -264,7 +279,9 @@ class BackLowerFace {
     this.ctx.fillStyle = 'rgba(212, 175, 55, 0.8)';
     const progressPercent = (saros.progress * 100).toFixed(1);
     this.ctx.fillText(
-      `Progress: ${progressPercent}%`,
+      this.format(languageManager.t('back_lower_face.progress'), {
+        percent: progressPercent
+      }),
       this.centerX,
       this.canvas.height - 8
     );
