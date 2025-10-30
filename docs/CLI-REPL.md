@@ -77,8 +77,9 @@ Authentication is automatic in local development: start the server first and a c
 - `control pause` — Freeze at current time
 - `control animate --from <ISO> --to <ISO> [--speed <Nx>]` — Animate through a time range (finite)
 - `control scene --preset <name> [--bodies a,b,c]` — Change scene preset
-- `control stop` — Return to real-time now
-- `control status` — Show current control state
+- `control location <lat,lon> --timezone <IANA> [--name <str>] [--elevation <m>]` — Set observer location (explicit)
+- `control stop` — Return to real-time now (also clears control location)
+- `control status` — Show current control state (includes location)
 
 #### Reset to Real-Time
 To stop control mode and return to live time:
@@ -86,6 +87,22 @@ To stop control mode and return to live time:
 antikythera control stop
 ```
 This immediately reverts the display to real-time. All student displays will automatically follow.
+
+#### Example Session (Time + Location)
+```bash
+# Set historical time (UTC)
+antikythera control time 1969-07-20T20:17:00Z
+
+# Set location (Athens — timezone required, elevation optional)
+antikythera control location 37.9838,23.7275 --timezone "Europe/Athens" --name "Athens, Greece"
+
+# Inspect
+antikythera control status
+# → shows { mode: 'time', displayTime: ..., location: { latitude, longitude, timezone, name } }
+
+# Return to live time & auto-detected location
+antikythera control stop
+```
 
 #### Example Session
 ```bash
@@ -116,8 +133,9 @@ antikythera control status
 | `control pause` | Freeze at current time |
 | `control animate --from <ISO> --to <ISO> --speed <N>` | Animate through time range |
 | `control scene --preset <name>` | Change display scene |
-| `control stop` | Return to real-time |
-| `control status` | Show current control state |
+| `control location <lat,lon> --timezone <IANA> [--name] [--elevation]` | Set observer location (explicit) |
+| `control stop` | Return to real-time (clears control location) |
+| `control status` | Show current control state (includes location) |
 
 Reserved for Phase 2: `next`, `find`, `goto`, `reset`, `+/-`, `where`.
 
