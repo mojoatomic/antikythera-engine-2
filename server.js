@@ -5,11 +5,23 @@ const { API_VERSION, ENGINE_VERSION, GIT_SHA } = require('./utils/metadata');
 const { buildSystemMetadata } = require('./utils/precision-builder');
 const { getObserverFromRequest } = require('./lib/location-service');
 const { effectiveDate, status: controlStatus, setTime: controlSetTime, setAnimate: controlSetAnimate, setScene: controlSetScene, run: controlRun, pause: controlPause, stop: controlStop, setLocation: controlSetLocation } = require('./lib/control-state');
+const { getConfigLoader } = require('./lib/config-loader');
 const AntikytheraEngine = require('./engine');
 
 const app = express();
 const engine = new AntikytheraEngine();
-const PORT = 3000;
+
+// Initialize configuration system
+const configLoader = getConfigLoader();
+const config = configLoader.getConfig();
+const PORT = config.server.port || 3000;
+
+// Listen for config reload events
+configLoader.on('reload', (newConfig) => {
+  console.log('Configuration reloaded');
+  // Note: Server port cannot change without restart
+  // Config changes apply immediately to location service and display settings
+});
 
 app.use(cors());
 app.use(express.json());
@@ -28,16 +40,19 @@ function controlGuard(req, res, next) {
   return res.status(401).json({ error: 'Control authentication failed', code: 'CONTROL_AUTH_FAILED' });
 }
 
-// Get language setting
+// Get language setting (deprecated - use /api/settings instead)
 app.get('/api/language', (req, res) => {
-  const language = process.env.LANGUAGE || 'english';
-  res.json({ language: language });
+  const currentConfig = configLoader.getConfig();
+  res.json({ language: currentConfig.display.language });
 });
 
-// UI settings
+// UI settings - returns display-safe configuration fields only
 app.get('/api/settings', (req, res) => {
-  const showSunriseSunset = String(process.env.SHOW_SUNRISE_SUNSET || 'no').toLowerCase() === 'yes';
-  res.json({ showSunriseSunset });
+  const currentConfig = configLoader.getConfig();
+  res.json({
+    language: currentConfig.display.language,
+    showSunriseSunset: currentConfig.display.showSunriseSunset
+  });
 });
 
 // Get current state
@@ -46,11 +61,12 @@ app.get('/api/state', async (req, res) => {
     const requested = req.query.date ? new Date(req.query.date) : new Date();
     const date = effectiveDate(requested);
     const cs = controlStatus();
+    const currentConfig = configLoader.getConfig();
     let observer;
     if (cs && cs.location && Number.isFinite(cs.location.latitude) && Number.isFinite(cs.location.longitude)) {
       observer = { ...cs.location, source: 'control' };
     } else {
-      observer = await getObserverFromRequest(req);
+      observer = await getObserverFromRequest(req, currentConfig);
     }
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state);
@@ -68,11 +84,12 @@ app.get('/api/state/:date', async (req, res) => {
     }
     const date = effectiveDate(reqDate);
     const cs = controlStatus();
+    const currentConfig = configLoader.getConfig();
     let observer;
     if (cs && cs.location && Number.isFinite(cs.location.latitude) && Number.isFinite(cs.location.longitude)) {
       observer = { ...cs.location, source: 'control' };
     } else {
-      observer = await getObserverFromRequest(req);
+      observer = await getObserverFromRequest(req, currentConfig);
     }
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state);
@@ -85,7 +102,8 @@ app.get('/api/state/:date', async (req, res) => {
 app.get('/api/sun', async (req, res) => {
   try {
     const date = req.query.date ? new Date(req.query.date) : new Date();
-    const observer = await getObserverFromRequest(req);
+    const currentConfig = configLoader.getConfig();
+    const observer = await getObserverFromRequest(req, currentConfig);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state.sun);
   } catch (err) {
@@ -97,7 +115,8 @@ app.get('/api/sun', async (req, res) => {
 app.get('/api/moon', async (req, res) => {
   try {
     const date = req.query.date ? new Date(req.query.date) : new Date();
-    const observer = await getObserverFromRequest(req);
+    const currentConfig = configLoader.getConfig();
+    const observer = await getObserverFromRequest(req, currentConfig);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state.moon);
   } catch (err) {
@@ -109,7 +128,8 @@ app.get('/api/moon', async (req, res) => {
 app.get('/api/planets', async (req, res) => {
   try {
     const date = req.query.date ? new Date(req.query.date) : new Date();
-    const observer = await getObserverFromRequest(req);
+    const currentConfig = configLoader.getConfig();
+    const observer = await getObserverFromRequest(req, currentConfig);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
     res.json(state.planets);
   } catch (err) {
@@ -125,11 +145,12 @@ app.get('/api/display', async (req, res) => {
     const requested = req.query.date ? new Date(req.query.date) : new Date();
     const date = effectiveDate(requested);
     const cs = controlStatus();
+    const currentConfig = configLoader.getConfig();
     let observer;
     if (cs && cs.location && Number.isFinite(cs.location.latitude) && Number.isFinite(cs.location.longitude)) {
       observer = { ...cs.location, source: 'control' };
     } else {
-      observer = await getObserverFromRequest(req);
+      observer = await getObserverFromRequest(req, currentConfig);
     }
     const latitude = observer.latitude;
     const longitude = observer.longitude;
