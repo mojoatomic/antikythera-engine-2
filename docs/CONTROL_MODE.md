@@ -51,6 +51,39 @@ State behavior:
 - When control is active, `/api/state` and `/api/display` honor the effective (controlled) time
 - `stop` reverts to real-time now
 
+## Configuration Integration
+
+Control mode operates independently of the configuration system but interacts with it:
+
+**Priority:**
+- Control mode location takes precedence over all config settings
+- While control location is active, config observer settings are ignored
+- `control stop` immediately resumes config-based location resolution
+
+**Hot Reload:**
+- Configuration changes (via `config/settings.local.json`) apply when control is inactive
+- Configuration changes do not affect active control sessions
+- Control mode state persists across config reloads
+
+**Example:**
+```bash
+# Config has manual observer mode set to Athens
+# API uses Athens location
+curl http://localhost:3000/api/state
+
+# Teacher sets control location to New York
+antikythera control location 40.7128,-74.0060 --timezone "America/New_York"
+
+# API now uses New York (config ignored)
+curl http://localhost:3000/api/state
+
+# Teacher stops control
+antikythera control stop
+
+# API resumes Athens location from config
+curl http://localhost:3000/api/state
+```
+
 ## CLI Commands
 - `antikythera control time <ISO>`
 - `antikythera control run [--speed <N>]`
@@ -84,12 +117,19 @@ CLI example:
 antikythera control location 37.9838,23.7275 --timezone "Europe/Athens" --name "Athens, Greece"
 antikythera control time 1969-07-20T20:17:00Z
 # ... explore ...
-antikythera control stop   # clears time and location → auto-detect resumes
+antikythera control stop   # clears control overrides → resumes config policy
 ```
 
-Notes
-- While control location is active, `?lat/lon` query overrides are ignored.
-- FrontFace shows the control location (name and coordinates) in the lower-right; sunrise/sunset/time use the provided timezone.
+Notes:
+- While control location is active, `?lat/lon` query overrides are ignored
+- FrontFace shows the control location (name and coordinates) in the lower-right; sunrise/sunset/time use the provided timezone
+- `control stop` clears both time and location overrides
+- After `control stop`, location resolution follows normal priority:
+  1. Config file (if `observer.mode === 'manual'`)
+  2. Query parameters (`?lat=X&lon=Y`)
+  3. IP geolocation (if `observer.mode === 'auto'` or no config)
+  4. Fallback (Memphis, TN)
+- See `docs/TECHNICAL_OPERATIONS_MANUAL.md` for complete location resolution priority
 
 ### Example Session
 ```bash
