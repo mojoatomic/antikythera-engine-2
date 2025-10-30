@@ -689,10 +689,16 @@ Complete validation methodology, coordinate frame specifications, and reproducib
 - **Coordinate Systems:** Ecliptic (J2000), Equatorial (J2000), Horizontal (topocentric)
 
 ### Observer Location
-- **Primary:** Automatic IP geolocation
-- **Explicit control:** `POST /api/control/location` (latitude, longitude, timezone required; elevation/name optional). While active, this takes precedence over query overrides.
-- **Override:** Query parameters (`?lon=X&lat=Y&elev=Z`) when no control location is active
-- **Fallback:** Default coordinates (Kansas, United States) if detection fails
+
+Observer location is resolved using the following priority order:
+
+1. **Control location** (highest) - Set via `POST /api/control/location` or control CLI commands
+2. **Config manual mode** - Fixed location from `config/settings.local.json` when `observer.mode: "manual"`
+3. **Query parameters** - Temporary override via `?lat=X&lon=Y&elev=Z`
+4. **IP geolocation** - Automatic detection when `observer.mode: "auto"` (default)
+5. **Fallback** (lowest) - Memphis, Tennessee (35.1184°N, 90.0489°W) if all else fails
+
+See `config/README.md` for complete configuration documentation.
 
 ### Performance Characteristics
 - **Computation time:** 25-75ms typical per request

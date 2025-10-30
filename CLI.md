@@ -663,7 +663,9 @@ npm run lint:fix
 
 ## License
 
-ISC
+Apache License 2.0
+
+See LICENSE file in repository root for full license text.
 
 ---
 

@@ -24,9 +24,11 @@ The Antikythera Engine consists of three primary components:
 - Astronomical phenomena calculations (eclipses, oppositions, cycles)
 
 **Location Service (`lib/location-service.js`)**
-- IP-based geolocation via ipapi.co
+- Observer location resolution with priority chain
+- Configuration-based manual mode (JSON config)
+- IP-based geolocation for auto mode (ipapi.co)
 - 24-hour result caching
-- Manual coordinate override via query parameters
+- Query parameter and control mode overrides
 
 ### 1.2 Data Flow
 
@@ -35,7 +37,7 @@ Client Request
     ↓
 Express Router
     ↓
-Location Service (async) → IP Geolocation API
+Location Service (async) → Config/Control/IP Geolocation
     ↓
 AntikytheraEngine.getState()
     ↓
@@ -223,10 +225,18 @@ Response:
 
 **GET /api/settings**
 
-Returns UI feature toggles derived from `.env.local`.
+Returns display-safe configuration settings.
 
 Response:
-- `{ "showSunriseSunset": true|false }`  // Controlled by `SHOW_SUNRISE_SUNSET=yes|no`
+```json
+{
+  "language": "english",
+  "showSunriseSunset": true
+}
+```
+
+Derived from `config/settings.local.json` or `config/settings.default.json`.
+See `config/README.md` for configuration documentation.
 
 ### 4.2 Request/Response Formats
 
@@ -685,7 +695,9 @@ node scripts/validate-all-bodies.js
 
 **Default Port:** 3000
 
-**Default Observer:** Athens, Greece (37.5°N, 23.0°E)
+**Default Observer (Fallback):** Memphis, Tennessee (35.1184°N, 90.0489°W)
+
+**Note:** Observer location is typically resolved via IP geolocation or manual config. The fallback is only used when all other methods fail. See Section 7.1 Configuration Management for complete location resolution priority.
 
 ---
 
