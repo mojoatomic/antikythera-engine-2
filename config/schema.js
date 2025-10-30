@@ -109,7 +109,7 @@ function validateConfig(data, filePath = 'config', looseMode = false) {
     if (missing.length > 0) {
       const errorMsg = [
         `Configuration Error in ${filePath}:`,
-        `  observer.mode is "manual" but required fields are missing or null:`,
+        '  observer.mode is "manual" but required fields are missing or null:',
         ...missing.map(field => `    - ${field}`)
       ].join('\n');
       

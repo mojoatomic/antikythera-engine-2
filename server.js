@@ -17,7 +17,7 @@ const config = configLoader.getConfig();
 const PORT = config.server.port || 3000;
 
 // Listen for config reload events
-configLoader.on('reload', (newConfig) => {
+configLoader.on('reload', () => {
   console.log('Configuration reloaded');
   // Note: Server port cannot change without restart
   // Config changes apply immediately to location service and display settings
