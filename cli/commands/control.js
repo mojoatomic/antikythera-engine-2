@@ -38,7 +38,15 @@ module.exports = async function control(action, value, options) {
       return;
     }
     if (act === 'run') {
-      const speed = options.speed ? Number(options.speed) : undefined;
+      // Accept speed from --speed or bare numeric value; coerce negatives to positive per docs (speed > 0)
+      let speed;
+      if (options.speed !== undefined) {
+        const n = Number(options.speed);
+        speed = Number.isFinite(n) ? Math.abs(n) : undefined;
+      } else if (value && /^-?\d+(\.\d+)?$/.test(String(value))) {
+        const n = Number(value);
+        speed = Number.isFinite(n) ? Math.abs(n) : undefined;
+      }
       const out = await post('/api/control/run', { speed });
       console.log(JSON.stringify(out, null, 2));
       return;
@@ -50,7 +58,11 @@ module.exports = async function control(action, value, options) {
     }
     if (act === 'animate') {
       const { from, to } = options;
-      const speed = options.speed ? Number(options.speed) : undefined;
+      let speed;
+      if (options.speed !== undefined) {
+        const n = Number(options.speed);
+        speed = Number.isFinite(n) ? Math.abs(n) : undefined;
+      }
       if (!from || !to) return console.log(chalk.red('Usage: control animate --from <ISO> --to <ISO> [--speed <Nx>]'));
       const out = await post('/api/control/animate', { from, to, speed });
       console.log(JSON.stringify(out, null, 2));
