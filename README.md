@@ -59,6 +59,97 @@ curl http://localhost:3000/api/display
 curl http://localhost:3000/api/system
 ```
 
+## Configuration
+
+The system uses a validated JSON configuration architecture for application settings. Configuration is optional - the system works out of the box with sensible defaults.
+
+### Configuration Files
+
+```
+config/
+├── settings.default.json    # Committed defaults
+├── settings.local.json       # Local overrides (gitignored)
+└── schema.js                 # Zod validation
+```
+
+### Observer Location
+
+The system determines observer location using this priority order:
+
+1. **Control mode location** (highest priority)
+   - Set via `antikythera control location` CLI command
+   - Active until `control stop` is called
+   - See Control Mode section below
+
+2. **Configuration file** (when `observer.mode === 'manual'`)
+   - Specified in `config/settings.local.json`
+   - Requires latitude, longitude, and timezone (IANA format)
+
+3. **Query parameters** (per-request override)
+   - `?lat=X&lon=Y&elev=Z` in API requests
+
+4. **IP geolocation** (when `observer.mode === 'auto'` or no config)
+   - Automatic detection via ipapi.co
+   - City-level accuracy
+   - 24-hour cache
+
+5. **Fallback** (lowest priority)
+   - Memphis, Tennessee (35.1184°N, 90.0489°W)
+
+### Example: Manual Observer Configuration
+
+For fixed observatory locations, create `config/settings.local.json`:
+
+```json
+{
+  "observer": {
+    "mode": "manual",
+    "location": {
+      "latitude": 37.9838,
+      "longitude": 23.7275,
+      "timezone": "Europe/Athens",
+      "elevation": 0,
+      "name": "Athens, Greece"
+    }
+  }
+}
+```
+
+### Display Settings
+
+Configure language and UI elements:
+
+```json
+{
+  "display": {
+    "language": "english",
+    "showSunriseSunset": true
+  }
+}
+```
+
+### Configuration Layering
+
+Settings merge with priority: custom > local > default
+
+```bash
+# Use custom config path
+export ANTIKYTHERA_CONFIG=/path/to/custom.json
+npm start
+
+# Use loose validation for development
+export ANTIKYTHERA_CONFIG_LOOSE=1
+npm start
+```
+
+### Hot Reload
+
+- `settings.local.json` changes reload automatically
+- Custom config path changes reload automatically  
+- `settings.default.json` requires server restart
+
+Complete configuration documentation: `config/README.md`
+
 ## Features
 
 ### Astronomical Calculations
@@ -560,6 +651,24 @@ node scripts/validate-all-bodies.js
 
 Expected output: All bodies pass with errors under 10 arcseconds.
 
+### Configuration System Integration Tests
+End-to-end testing of the JSON configuration system:
+```bash
+./scripts/test-config-integration.sh
+```
+
+Tests 10 scenarios including:
+- Default configuration and auto mode
+- Manual observer location from config
+- Config layering and hot reload
+- Query parameter overrides
+- Validation modes (strict and loose)
+- Control mode interaction
+- Unknown key handling
+- Custom config paths
+
+Expected output: 40/40 tests passing. Runtime approximately 2-3 minutes.
+
 ### Validation Results Summary
 
 Comparison against NASA JPL HORIZONS System performed on 2025-10-26:
@@ -598,10 +707,16 @@ Complete validation methodology, coordinate frame specifications, and reproducib
 - **Coordinate Systems:** Ecliptic (J2000), Equatorial (J2000), Horizontal (topocentric)
 
 ### Observer Location
-- **Primary:** Automatic IP geolocation
-- **Explicit control:** `POST /api/control/location` (latitude, longitude, timezone required; elevation/name optional). While active, this takes precedence over query overrides.
-- **Override:** Query parameters (`?lon=X&lat=Y&elev=Z`) when no control location is active
-- **Fallback:** Default coordinates (Kansas, United States) if detection fails
+
+Observer location is resolved using the following priority order:
+
+1. **Control location** (highest) - Set via `POST /api/control/location` or control CLI commands
+2. **Config manual mode** - Fixed location from `config/settings.local.json` when `observer.mode: "manual"`
+3. **Query parameters** - Temporary override via `?lat=X&lon=Y&elev=Z`
+4. **IP geolocation** - Automatic detection when `observer.mode: "auto"` (default)
+5. **Fallback** (lowest) - Memphis, Tennessee (35.1184°N, 90.0489°W) if all else fails
+
+See `config/README.md` for complete configuration documentation.
 
 ### Performance Characteristics
 - **Computation time:** 25-75ms typical per request
@@ -653,9 +768,10 @@ antikythera-engine-2/
 │   └── utils/
 │       └── metadata.js     # Version and git SHA extraction
 ├── scripts/
-│   ├── validate-simple.js      # Quick validation (Moon only)
-│   ├── validate-all-bodies.js  # Comprehensive HORIZONS comparison
-│   └── dump-horizons.js        # HORIZONS API diagnostic tool
+│   ├── validate-simple.js           # Quick validation (Moon only)
+│   ├── validate-all-bodies.js       # Comprehensive HORIZONS comparison
+│   ├── test-config-integration.sh   # End-to-end config system tests (40 scenarios)
+│   └── dump-horizons.js             # HORIZONS API diagnostic tool
 ├── docs/
 │   └── VALIDATION.md      # Complete validation methodology
 └── public/
@@ -667,7 +783,7 @@ antikythera-engine-2/
 - **Language:** JavaScript (Node.js)
 - **Framework:** Express
 - **Astronomy:** astronomy-engine v2.1.19
-- **Testing:** Custom validation suite against NASA JPL HORIZONS data
+- **Testing:** Jest unit tests (78 tests), HORIZONS validation scripts, configuration integration tests (40 scenarios)
 - **Documentation:** Markdown with validation reports
 
 ## Limitations and Known Issues
@@ -684,9 +800,10 @@ antikythera-engine-2/
 - No proper motion corrections (suitable for solar system bodies only)
 
 ### Observer Location
-- IP geolocation may be inaccurate by several degrees
-- Manual override recommended for precision applications
-- No automated time zone handling (all times in UTC)
+- IP geolocation provides city-level accuracy (may vary by several degrees)
+- Manual configuration via `config/settings.local.json` recommended for fixed installations
+- Query parameter override available for per-request location specification
+- All internal calculations use UTC; timezone handling for display purposes only
 
 ### Computational Limitations
 - No caching (every request performs full calculation)
@@ -723,7 +840,11 @@ Contributions are welcome in the following areas:
 ## Documentation
 
 - **API Documentation:** Complete endpoint descriptions in this README
+- **Configuration:** `config/README.md` (settings, validation, hot reload)
+- **Control Mode:** `docs/CONTROL_MODE.md` (classroom control, authentication)
+- **CLI/REPL:** `docs/CLI-REPL.md` (interactive commands, data export)
 - **Validation Results:** `docs/VALIDATION.md` (methodology, coordinate frames, error analysis)
+- **Technical Operations:** `docs/TECHNICAL_OPERATIONS_MANUAL.md` (architecture, performance)
 - **Precision Metadata:** Included in all `/api/system` responses
 - **Coordinate Systems:** Documented in validation file
 

@@ -24,9 +24,11 @@ The Antikythera Engine consists of three primary components:
 - Astronomical phenomena calculations (eclipses, oppositions, cycles)
 
 **Location Service (`lib/location-service.js`)**
-- IP-based geolocation via ipapi.co
+- Observer location resolution with priority chain
+- Configuration-based manual mode (JSON config)
+- IP-based geolocation for auto mode (ipapi.co)
 - 24-hour result caching
-- Manual coordinate override via query parameters
+- Query parameter and control mode overrides
 
 ### 1.2 Data Flow
 
@@ -35,7 +37,7 @@ Client Request
     ↓
 Express Router
     ↓
-Location Service (async) → IP Geolocation API
+Location Service (async) → Config/Control/IP Geolocation
     ↓
 AntikytheraEngine.getState()
     ↓
@@ -223,10 +225,18 @@ Response:
 
 **GET /api/settings**
 
-Returns UI feature toggles derived from `.env.local`.
+Returns display-safe configuration settings.
 
 Response:
-- `{ "showSunriseSunset": true|false }`  // Controlled by `SHOW_SUNRISE_SUNSET=yes|no`
+```json
+{
+  "language": "english",
+  "showSunriseSunset": true
+}
+```
+
+Derived from `config/settings.local.json` or `config/settings.default.json`.
+See `config/README.md` for configuration documentation.
 
 ### 4.2 Request/Response Formats
 
@@ -500,26 +510,61 @@ Variables affecting computation time:
 
 ## 7. Operational Guidelines
 
-### 7.1 Location Handling
+### 7.1 Configuration Management
 
-**Priority Order (current):**
-1. `.env.local` configuration (OBSERVER_LATITUDE, OBSERVER_LONGITUDE, etc.)
-2. Query parameters (`?lat=X&lon=Y&elev=Z`)
-3. IP geolocation (ipapi.co) with a 24h TTL cache (`IP_GEO_TTL_MS`), log noise suppressed on cache hits
-4. Fallback: Memphis, Tennessee (35.1184°N, −90.0489°)
+The system uses a validated JSON configuration architecture with layered settings and hot reload support.
 
-Both `/api/state` and `/api/state/:date` now use the same observer-resolution path, ensuring consistent sunrise/sunset and horizontal coordinates across endpoints.
+**Configuration Files:**
+- `config/settings.default.json` - Committed defaults (requires restart to reload)
+- `config/settings.local.json` - Local overrides (gitignored, hot reload enabled)
+- Custom path via `ANTIKYTHERA_CONFIG` environment variable (hot reload enabled)
 
-**IP Geolocation:**
-- Service: ipapi.co free tier
-- Cache duration: 24 hours
-- Rate limit: 1,000 requests/day (free tier)
-- Timeout: 2 seconds
+**Validation:**
+- Schema validation via Zod on load and reload
+- Strict mode (default): fails fast on validation errors
+- Loose mode (`ANTIKYTHERA_CONFIG_LOOSE=1`): logs warnings, continues with defaults
+- Conditional validation: manual observer mode requires latitude, longitude, timezone
 
-**Accuracy:**
-- City-level typically
-- Can be inaccurate by several degrees
-- Use manual override for precision applications
+**Observer Location Resolution Priority:**
+
+1. **Control mode location** (highest)
+   - Set via `POST /api/control/location` or `antikythera control location` CLI
+   - Active until `POST /api/control/stop`
+   - Overrides all other sources
+   - See `docs/CONTROL_MODE.md` for details
+
+2. **Configuration file** (when `observer.mode === 'manual'`)
+   - Specified in `config/settings.local.json` or custom config
+   - Requires `latitude`, `longitude`, `timezone` (IANA format)
+   - Optional: `elevation` (meters), `name` (string)
+   - Validation enforced at config load time
+
+3. **Query parameters** (per-request override)
+   - `?lat=X&lon=Y&elev=Z` in API requests
+   - Temporary override for single request
+   - Not persisted
+
+4. **IP geolocation** (when `observer.mode === 'auto'` or no config)
+   - Service: ipapi.co free tier
+   - Automatic detection from request IP
+   - Cache duration: 24 hours (configurable via `IP_GEO_TTL_MS` env var)
+   - Rate limit: 1,000 requests/day (free tier)
+   - Timeout: 2 seconds
+   - Accuracy: city-level (may vary by several degrees)
+
+5. **Fallback** (lowest)
+   - Memphis, Tennessee (35.1184°N, 90.0489°W)
+   - Used when all other sources fail or unavailable
+
+**Configuration Hot Reload:**
+- `settings.local.json` changes trigger automatic reload
+- Custom config path changes trigger automatic reload
+- `settings.default.json` changes require server restart (committed file)
+- Reload validation applies same strict/loose mode rules
+- Control mode state persists across config reloads
+
+**Endpoint Consistency:**
+Both `/api/state` and `/api/state/:date` use identical observer-resolution logic, ensuring consistent sunrise/sunset times and horizontal coordinates.
 
 ### 7.2 Error States
 
@@ -650,7 +695,9 @@ node scripts/validate-all-bodies.js
 
 **Default Port:** 3000
 
-**Default Observer:** Athens, Greece (37.5°N, 23.0°E)
+**Default Observer (Fallback):** Memphis, Tennessee (35.1184°N, 90.0489°W)
+
+**Note:** Observer location is typically resolved via IP geolocation or manual config. The fallback is only used when all other methods fail. See Section 7.1 Configuration Management for complete location resolution priority.
 
 ---
 

@@ -595,7 +595,6 @@ API response validation warnings are informational. The CLI will still display r
 - [ ] `watch --compare` mode
 - [ ] Snapshot comparison
 - [ ] Range queries (batch export)
-- [ ] Custom location support
 
 ### Interactive REPL
 See `docs/CLI-REPL.md` for REPL usage, grammar, and tests.
@@ -664,7 +663,9 @@ npm run lint:fix
 
 ## License
 
-ISC
+Apache License 2.0
+
+See LICENSE file in repository root for full license text.
 
 ---
 

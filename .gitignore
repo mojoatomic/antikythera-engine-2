@@ -11,6 +11,12 @@ yarn-error.log*
 # Control tokens (local development)
 .antikythera/
 
+# Local config overrides
+config/settings.local.json
+
+# Warp AI documentation (local only)
+warp-professional-docs.md
+
 # Dependencies
 node_modules/
 package-lock.json
