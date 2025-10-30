@@ -59,6 +59,97 @@ curl http://localhost:3000/api/display
 curl http://localhost:3000/api/system
 ```
 
+## Configuration
+
+The system uses a validated JSON configuration architecture for application settings. Configuration is optional - the system works out of the box with sensible defaults.
+
+### Configuration Files
+
+```
+config/
+├── settings.default.json    # Committed defaults
+├── settings.local.json       # Local overrides (gitignored)
+└── schema.js                 # Zod validation
+```
+
+### Observer Location
+
+The system determines observer location using this priority order:
+
+1. **Control mode location** (highest priority)
+   - Set via `antikythera control location` CLI command
+   - Active until `control stop` is called
+   - See Control Mode section below
+
+2. **Configuration file** (when `observer.mode === 'manual'`)
+   - Specified in `config/settings.local.json`
+   - Requires latitude, longitude, and timezone (IANA format)
+
+3. **Query parameters** (per-request override)
+   - `?lat=X&lon=Y&elev=Z` in API requests
+
+4. **IP geolocation** (when `observer.mode === 'auto'` or no config)
+   - Automatic detection via ipapi.co
+   - City-level accuracy
+   - 24-hour cache
+
+5. **Fallback** (lowest priority)
+   - Memphis, Tennessee (35.1184°N, 90.0489°W)
+
+### Example: Manual Observer Configuration
+
+For fixed observatory locations, create `config/settings.local.json`:
+
+```json
+{
+  "observer": {
+    "mode": "manual",
+    "location": {
+      "latitude": 37.9838,
+      "longitude": 23.7275,
+      "timezone": "Europe/Athens",
+      "elevation": 0,
+      "name": "Athens, Greece"
+    }
+  }
+}
+```
+
+### Display Settings
+
+Configure language and UI elements:
+
+```json
+{
+  "display": {
+    "language": "english",
+    "showSunriseSunset": true
+  }
+}
+```
+
+### Configuration Layering
+
+Settings merge with priority: custom > local > default
+
+```bash
+# Use custom config path
+export ANTIKYTHERA_CONFIG=/path/to/custom.json
+npm start
+
+# Use loose validation for development
+export ANTIKYTHERA_CONFIG_LOOSE=1
+npm start
+```
+
+### Hot Reload
+
+- `settings.local.json` changes reload automatically
+- Custom config path changes reload automatically  
+- `settings.default.json` requires server restart
+
+Complete configuration documentation: `config/README.md`
+
 ## Features
 
 ### Astronomical Calculations
@@ -684,9 +775,10 @@ antikythera-engine-2/
 - No proper motion corrections (suitable for solar system bodies only)
 
 ### Observer Location
-- IP geolocation may be inaccurate by several degrees
-- Manual override recommended for precision applications
-- No automated time zone handling (all times in UTC)
+- IP geolocation provides city-level accuracy (may vary by several degrees)
+- Manual configuration via `config/settings.local.json` recommended for fixed installations
+- Query parameter override available for per-request location specification
+- All internal calculations use UTC; timezone handling for display purposes only
 
 ### Computational Limitations
 - No caching (every request performs full calculation)
@@ -723,7 +815,11 @@ Contributions are welcome in the following areas:
 ## Documentation
 
 - **API Documentation:** Complete endpoint descriptions in this README
+- **Configuration:** `config/README.md` (settings, validation, hot reload)
+- **Control Mode:** `docs/CONTROL_MODE.md` (classroom control, authentication)
+- **CLI/REPL:** `docs/CLI-REPL.md` (interactive commands, data export)
 - **Validation Results:** `docs/VALIDATION.md` (methodology, coordinate frames, error analysis)
+- **Technical Operations:** `docs/TECHNICAL_OPERATIONS_MANUAL.md` (architecture, performance)
 - **Precision Metadata:** Included in all `/api/system` responses
 - **Coordinate Systems:** Documented in validation file
 
