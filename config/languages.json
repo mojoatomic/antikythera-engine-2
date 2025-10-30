@@ -10,6 +10,12 @@
       "sundial_behind": "Sundial BEHIND",
       "local_time": "Local Time"
     },
+    "back_upper_face": {
+      "title": "Metonic Cycle"
+    },
+    "back_lower_face": {
+      "title": "Saros Cycle"
+    },
     "zodiac": {
       "aries": "ARIES",
       "taurus": "TAURUS",
@@ -63,6 +69,12 @@
       "sundial_ahead": "ΗΛΙΑΚΟ ΡΟΛΟΙ ΜΠΡΟΣΤΑ",
       "sundial_behind": "ΗΛΙΑΚΟ ΡΟΛΟΙ ΠΙΣΩ",
       "local_time": "ΤΟΠΙΚΗ ΩΡΑ"
+    },
+    "back_upper_face": {
+      "title": "ΚΥΚΛΟΣ ΤΟΥ ΜΕΤΩΝΟΣ"
+    },
+    "back_lower_face": {
+      "title": "ΚΥΚΛΟΣ ΣΑΡΟΣ"
     },
     "zodiac": {
       "aries": "ΚΡΙΟΣ",
@@ -118,6 +130,12 @@
       "sundial_behind": "Reloj de Sol ATRASADO",
       "local_time": "Hora Local"
     },
+    "back_upper_face": {
+      "title": "Ciclo Metónico"
+    },
+    "back_lower_face": {
+      "title": "Ciclo de Saros"
+    },
     "zodiac": {
       "aries": "ARIES",
       "taurus": "TAURO",
@@ -171,6 +189,12 @@
       "sundial_ahead": "Cadran Solaire EN AVANCE",
       "sundial_behind": "Cadran Solaire EN RETARD",
       "local_time": "Heure Locale"
+    },
+    "back_upper_face": {
+      "title": "Cycle de Méton"
+    },
+    "back_lower_face": {
+      "title": "Cycle de Saros"
     },
     "zodiac": {
       "aries": "BÉLIER",
@@ -226,6 +250,12 @@
       "sundial_behind": "Солнечные Часы ОТСТАЮТ",
       "local_time": "Местное Время"
     },
+    "back_upper_face": {
+      "title": "Метонов Цикл"
+    },
+    "back_lower_face": {
+      "title": "Цикл Сароса"
+    },
     "zodiac": {
       "aries": "ОВЕН",
       "taurus": "ТЕЛЕЦ",
@@ -279,6 +309,12 @@
       "sundial_ahead": "المزولة متقدمة",
       "sundial_behind": "المزولة متأخرة",
       "local_time": "الوقت المحلي"
+    },
+    "back_upper_face": {
+      "title": "دورة ميتون"
+    },
+    "back_lower_face": {
+      "title": "دورة ساروس"
     },
     "zodiac": {
       "aries": "الحمل",
@@ -334,6 +370,12 @@
       "sundial_behind": "日晷慢",
       "local_time": "当地时间"
     },
+    "back_upper_face": {
+      "title": "默冬章"
+    },
+    "back_lower_face": {
+      "title": "沙罗周期"
+    },
     "zodiac": {
       "aries": "白羊座",
       "taurus": "金牛座",
@@ -387,6 +429,12 @@
       "sundial_ahead": "日時計が進んでいます",
       "sundial_behind": "日時計が遅れています",
       "local_time": "現地時刻"
+    },
+    "back_upper_face": {
+      "title": "メトン周期"
+    },
+    "back_lower_face": {
+      "title": "サロス周期"
     },
     "zodiac": {
       "aries": "牡羊座",

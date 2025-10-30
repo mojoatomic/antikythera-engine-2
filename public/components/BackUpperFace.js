@@ -23,9 +23,9 @@ class BackUpperFace {
     this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
     this.ctx.font = 'bold 18px Georgia';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('Metonic Cycle', this.centerX, 30);
+    this.ctx.fillText(languageManager.t('back_upper_face.title'), this.centerX, 30);
     //this.ctx.font = '14px Georgia';
-    //this.ctx.fillText('Metonic Cycle', this.centerX, 50);
+    //this.ctx.fillText(languageManager.t('back_upper_face.title'), this.centerX, 50);
   }
   
   drawSpiral() {
