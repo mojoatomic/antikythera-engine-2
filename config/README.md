@@ -260,13 +260,15 @@ When determining observer location, the system uses this priority order:
    - Overrides all other sources while active
    - Cleared by `control stop`
 
-2. **Config observer** (when `mode === 'manual'`)
+2. **Query parameters**
+   - `?lat=X&lon=Y&elev=Z` in API requests
+   - Temporary per-request override
+   - Takes precedence over config
+
+3. **Config observer** (when `mode === 'manual'`)
    - From `settings.local.json` or custom config
    - Requires `latitude`, `longitude`, `timezone`
-
-3. **Query parameters**
-   - `?lat=X&lon=Y&elev=Z` in API requests
-   - Temporary override for single request
+   - Persistent configuration for fixed installations
 
 4. **IP geolocation** (when `mode === 'auto'`)
    - Automatic detection via ipapi.co
