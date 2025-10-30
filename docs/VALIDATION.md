@@ -78,8 +78,14 @@ node scripts/validate-horizons.js
 
 ### Changing Observer Location
 
+Observer location can be configured using the validated JSON configuration system or query parameters:
+
 ```bash
+# Via query parameters (temporary override)
 curl "http://localhost:3000/api/display?lat=40.7&lon=-74.0"
+
+# Via configuration file (persistent)
+# See config/README.md for complete configuration documentation
 ```
 
 ## Precision Standards

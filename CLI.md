@@ -595,7 +595,6 @@ API response validation warnings are informational. The CLI will still display r
 - [ ] `watch --compare` mode
 - [ ] Snapshot comparison
 - [ ] Range queries (batch export)
-- [ ] Custom location support
 
 ### Interactive REPL
 See `docs/CLI-REPL.md` for REPL usage, grammar, and tests.
