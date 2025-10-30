@@ -38,12 +38,13 @@ Auth: Bearer token required. In local dev, CLI loads token automatically.
 
 Endpoints:
 - `GET /api/control` → discovery
-- `GET /api/control/status` → `{ active, mode, displayTime?, animating?, animate?, preset?, bodies? }`
+- `GET /api/control/status` → `{ active, mode, displayTime?, animating?, animate?, location?, preset?, bodies? }`
 - `POST /api/control/time` `{ date: ISO }`
 - `POST /api/control/run` `{ speed?: number>0 }` — start continuous forward animation
 - `POST /api/control/pause` `{}` — freeze at current effective time
 - `POST /api/control/animate` `{ from: ISO, to: ISO, speed?: number>0 }`
 - `POST /api/control/scene` `{ preset: string, bodies?: string[]|csv }`
+- `POST /api/control/location` `{ latitude: number, longitude: number, timezone: IANA, name?: string, elevation?: number }`
 - `POST /api/control/stop` `{}`
 
 State behavior:
@@ -56,8 +57,39 @@ State behavior:
 - `antikythera control pause`
 - `antikythera control animate --from <ISO> --to <ISO> [--speed <N>]`
 - `antikythera control scene --preset <name> [--bodies a,b,c]`
+- `antikythera control location <lat,lon> --timezone <IANA> [--name <str>] [--elevation <m>]`
 - `antikythera control stop`
 - `antikythera control status`
+
+### Control Location
+
+Set observer location explicitly for classroom scenarios. Timezone is required; elevation optional (meters). When set, reads use this location until `stop`.
+
+API example:
+```bash
+curl -X POST http://localhost:3000/api/control/location \
+  -H "Authorization: Bearer {{CONTROL_TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "latitude": 37.9838,
+    "longitude": 23.7275,
+    "timezone": "Europe/Athens",
+    "name": "Athens, Greece",
+    "elevation": 0
+  }'
+```
+
+CLI example:
+```bash
+antikythera control location 37.9838,23.7275 --timezone "Europe/Athens" --name "Athens, Greece"
+antikythera control time 1969-07-20T20:17:00Z
+# ... explore ...
+antikythera control stop   # clears time and location → auto-detect resumes
+```
+
+Notes
+- While control location is active, `?lat/lon` query overrides are ignored.
+- FrontFace shows the control location (name and coordinates) in the lower-right; sunrise/sunset/time use the provided timezone.
 
 ### Example Session
 ```bash
