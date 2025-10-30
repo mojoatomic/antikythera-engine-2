@@ -137,19 +137,21 @@ function parseLocalDateTime(value) {
 }
 
 async function updateDisplay() {
-    const dateInput = document.getElementById('dateInput').value;
-    // Parse local datetime as local without manual timezone adjustment
-    const date = dateInput 
-        ? parseLocalDateTime(dateInput).toISOString()
-        : new Date().toISOString();
-    
-    
+    // Choose date source:
+    // - Real-time mode: always use current time with seconds
+    // - Otherwise: use user-selected datetime input (parsed as local)
+    const inputEl = document.getElementById('dateInput');
+    const inputVal = inputEl ? inputEl.value : '';
+    const date = isRealTimeMode
+        ? new Date().toISOString()
+        : (inputVal ? parseLocalDateTime(inputVal).toISOString() : new Date().toISOString());
+
     try {
         const response = await fetch(`http://localhost:3000/api/state/${date}`);
         const data = await response.json();
         currentData = data;
-        
-        // Add current time for clock display
+
+        // Also include wall clock for ancillary uses (FrontFace uses data.date now)
         const now = new Date();
         data.currentTime = now.toLocaleTimeString('en-US', {
             hour: '2-digit',
@@ -157,12 +159,12 @@ async function updateDisplay() {
             second: '2-digit',
             hour12: false
         });
-        
+
         // Render all three faces
         frontFace.render(data);
         backUpperFace.render(data);
         backLowerFace.render(data);
-        
+
     } catch (err) {
         console.error('Error fetching data:', err);
         // Show error message or use demo data
