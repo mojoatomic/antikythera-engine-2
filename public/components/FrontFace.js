@@ -844,7 +844,7 @@ class FrontFace {
     }
     
     // Location information
-    if (data.observer && data.observer.city) {
+    if (data.observer && (data.observer.city || data.observer.name || (typeof data.observer.latitude === 'number' && typeof data.observer.longitude === 'number'))) {
       const source = data.observer.source || 'unknown';
       
       // Source icon based on source type
@@ -853,34 +853,45 @@ class FrontFace {
         sourceIcon = '⚙️';
       } else if (source === 'ip_geolocation') {
         sourceIcon = '🌐';
+      } else if (source === 'control') {
+        sourceIcon = '🎛️';
       } else if (source === 'fallback') {
         sourceIcon = '📍';
       }
       
-      // City, State/Country
+      // Primary location label: city/state, else provided name, else blank
       this.ctx.font = 'bold 11px Georgia';
       this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
-      const locationText = data.observer.state 
-        ? `${data.observer.city}, ${data.observer.state}` 
-        : data.observer.city;
-      this.ctx.fillText(
-        `${sourceIcon} ${locationText}`,
-        this.canvas.width - padding,
-        lowerRightY - lineHeight * 2
-      );
+      let locationText;
+      if (data.observer.city) {
+        locationText = data.observer.state ? `${data.observer.city}, ${data.observer.state}` : data.observer.city;
+      } else if (data.observer.name) {
+        locationText = data.observer.name;
+      } else {
+        locationText = '';
+      }
+      if (locationText) {
+        this.ctx.fillText(
+          `${sourceIcon} ${locationText}`,
+          this.canvas.width - padding,
+          lowerRightY - lineHeight * 2
+        );
+      }
       
-      // Coordinates
-      this.ctx.font = '9px Georgia';
-      this.ctx.fillStyle = 'rgba(240, 230, 210, 0.6)';
-      const lat = Math.abs(data.observer.latitude).toFixed(2);
-      const latDir = data.observer.latitude >= 0 ? 'N' : 'S';
-      const lon = Math.abs(data.observer.longitude).toFixed(2);
-      const lonDir = data.observer.longitude >= 0 ? 'E' : 'W';
-      this.ctx.fillText(
-        `${lat}°${latDir} ${lon}°${lonDir}`,
-        this.canvas.width - padding,
-        lowerRightY - lineHeight
-      );
+      // Coordinates (when available)
+      if (typeof data.observer.latitude === 'number' && typeof data.observer.longitude === 'number') {
+        this.ctx.font = '9px Georgia';
+        this.ctx.fillStyle = 'rgba(240, 230, 210, 0.6)';
+        const lat = Math.abs(data.observer.latitude).toFixed(2);
+        const latDir = data.observer.latitude >= 0 ? 'N' : 'S';
+        const lon = Math.abs(data.observer.longitude).toFixed(2);
+        const lonDir = data.observer.longitude >= 0 ? 'E' : 'W';
+        this.ctx.fillText(
+          `${lat}°${latDir} ${lon}°${lonDir}`,
+          this.canvas.width - padding,
+          lowerRightY - lineHeight
+        );
+      }
     }
   }
 }
