@@ -98,7 +98,7 @@ The system determines observer location using this priority order:
 
 ### Example: Manual Observer Configuration
 
-For fixed observatory locations, create `config/settings.local.json`:
+The system works automatically using IP geolocation by default. For fixed observatory locations or when you need precise coordinates, edit `config/settings.local.json`:
 
 ```json
 {
@@ -127,6 +127,10 @@ Configure language and UI elements:
   }
 }
 ```
+
+**Supported languages:** English, Greek, Spanish, French, Russian, Arabic, Chinese, Japanese
+
+All display text in the visualization (front face, back faces, zodiac signs, months) is fully internationalized.
 
 ### Configuration Layering
 

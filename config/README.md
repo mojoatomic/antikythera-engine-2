@@ -197,6 +197,10 @@ Display and UI settings:
 }
 ```
 
+**Supported Languages:** English, Greek, Spanish, French, Russian, Arabic, Chinese, Japanese
+
+All UI text is fully internationalized. The selected language affects all display components including the mechanism faces, zodiac signs, month names, and parapegma star information.
+
 ## Validation
 
 Configuration is validated using [Zod](https://github.com/colinhacks/zod) on every load/reload.
