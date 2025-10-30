@@ -589,9 +589,9 @@ cat > "$CUSTOM_CONFIG" << 'EOF'
 EOF
 print_success "Created custom config: settings.custom.json"
 
-print_info "Starting server with ANTIKYTHERA_CONFIG=custom..."
+print_info "Starting server with ANTIKYTHERA_CONFIG=$CUSTOM_CONFIG..."
 cd "$PROJECT_ROOT"
-ANTIKYTHERA_CONFIG=custom npm start > /tmp/antikythera-test-custom.log 2>&1 &
+ANTIKYTHERA_CONFIG="$CUSTOM_CONFIG" npm start > /tmp/antikythera-test-custom.log 2>&1 &
 CUSTOM_PID=$!
 SERVER_PID=$CUSTOM_PID
 
