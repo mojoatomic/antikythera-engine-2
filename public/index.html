@@ -179,6 +179,24 @@
             aspect-ratio: 1;
         }
         
+        /* Orientation: Horizontal (default) - for wide displays */
+        .layout-gallery.orientation-horizontal .faces-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: 1fr;
+            gap: 30px;
+            max-width: 100%;
+        }
+        
+        /* Orientation: Vertical - for portrait/tall displays */
+        .layout-gallery.orientation-vertical .faces-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: repeat(3, 1fr);
+            gap: 30px;
+            max-height: 100vh;
+        }
+        
         /* Layout: Focus (one at a time with navigation) */
         .layout-focus .faces-container {
             display: flex;
