@@ -16,8 +16,8 @@ class BackLowerFace {
   }
   
   render(data) {
-    const mount = (data && data.settings && data.settings.mount) || (window.appSettings && window.appSettings.mount) || 'landscape';
-    const angle = mount === 'portrait-right' ? -Math.PI / 2 : (mount === 'portrait-left' ? Math.PI / 2 : 0);
+    const rotate = (data && data.settings && data.settings.rotate) || (window.appSettings && window.appSettings.rotate) || 'none';
+    const angle = rotate === 'ccw90' ? -Math.PI / 2 : (rotate === 'cw90' ? Math.PI / 2 : 0);
 
     this.ctx.save();
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);

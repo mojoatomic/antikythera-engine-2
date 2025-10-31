@@ -55,7 +55,8 @@ app.get('/api/settings', (req, res) => {
     theme: currentConfig.display.theme || 'ancient-bronze',
     layout: currentConfig.display.layout || 'gallery',
     orientation: currentConfig.display.orientation || 'horizontal', // legacy field
-    mount: currentConfig.display.mount || 'landscape'
+    mount: currentConfig.display.mount || 'landscape',
+    rotate: currentConfig.display.rotate || 'none'
   });
 });
 

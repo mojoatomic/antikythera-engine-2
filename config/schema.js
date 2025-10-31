@@ -43,14 +43,17 @@ const configSchema = z.object({
     theme: z.string().default('ancient-bronze'),
     layout: z.enum(['hero', 'gallery', 'focus']).default('gallery'),
     orientation: z.enum(['horizontal', 'vertical']).default('horizontal'), // legacy support
-    mount: z.enum(['landscape', 'portrait-right', 'portrait-left']).default('landscape')
+    mount: z.enum(['landscape', 'portrait-right', 'portrait-left']).default('landscape'),
+    rotate: z.enum(['none', 'cw90', 'ccw90']).default('none') // advanced override for canvas rotation
+  }).default({
   }).default({
     language: 'english',
     showSunriseSunset: true,
     theme: 'ancient-bronze',
     layout: 'gallery',
     orientation: 'horizontal',
-    mount: 'landscape'
+    mount: 'landscape',
+    rotate: 'none'
   })
 }).passthrough(); // Allow unknown keys for forward compatibility
 

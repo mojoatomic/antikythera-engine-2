@@ -30,6 +30,7 @@
     "showSunriseSunset": true,
     "theme": "ancient-bronze",
     "layout": "gallery",
-    "mount": "landscape"
+    "mount": "landscape",
+    "rotate": "none"
   }
 }
