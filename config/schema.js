@@ -39,8 +39,17 @@ const configSchema = z.object({
   
   display: z.object({
     language: z.string().default('english'),
-    showSunriseSunset: z.boolean().default(true)
-  }).default({ language: 'english', showSunriseSunset: true })
+    showSunriseSunset: z.boolean().default(true),
+    theme: z.string().default('ancient-bronze'),
+    layout: z.enum(['hero', 'gallery', 'focus']).default('gallery'),
+    orientation: z.enum(['horizontal', 'vertical']).default('horizontal')
+  }).default({
+    language: 'english',
+    showSunriseSunset: true,
+    theme: 'ancient-bronze',
+    layout: 'gallery',
+    orientation: 'horizontal'
+  })
 }).passthrough(); // Allow unknown keys for forward compatibility
 
 // Conditional validation: manual mode requires location fields
