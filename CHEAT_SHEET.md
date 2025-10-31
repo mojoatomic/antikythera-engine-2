@@ -31,13 +31,40 @@ http://localhost:3000
 | Minimal | Modern offices |
 | Dark Mode | Home theaters, OLED |
 
-## 📐 Layouts
+## 📐 Layouts & Mount
 
-| Layout | Description |
-|--------|-------------|
-| Gallery | All three faces side-by-side |
-| Hero | Single large front face only |
-| Focus | One at a time, arrow navigation |
+| Setting | Values | Effect |
+|---------|--------|--------|
+| layout  | hero | Single large front face |
+|         | gallery | Three faces visible |
+|         | focus | One face at a time |
+| mount   | landscape | 3×1 grid |
+|         | portrait-right | 1×3 grid |
+|         | portrait-left | 1×3 grid |
+
+Advanced (optional): `rotate: none | cw90 | ccw90` (rotates canvas drawing only when OS does not).
+
+## ⚙️ Settings Quick Reference
+
+Edit `config/settings.local.json` (hot‑reloaded):
+
+```json
+{
+  "display": {
+    "theme": "ancient-bronze",
+    "layout": "gallery",
+    "mount": "landscape",
+    "rotate": "none",
+    "language": "english",
+    "showSunriseSunset": true
+  }
+}
+```
+
+Verify applied settings:
+```bash
+curl http://localhost:3000/api/settings
+```
 
 ## 🎯 API Quick Reference
 

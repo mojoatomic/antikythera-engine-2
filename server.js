@@ -51,7 +51,12 @@ app.get('/api/settings', (req, res) => {
   const currentConfig = configLoader.getConfig();
   res.json({
     language: currentConfig.display.language,
-    showSunriseSunset: currentConfig.display.showSunriseSunset
+    showSunriseSunset: currentConfig.display.showSunriseSunset,
+    theme: currentConfig.display.theme || 'ancient-bronze',
+    layout: currentConfig.display.layout || 'gallery',
+    orientation: currentConfig.display.orientation || 'horizontal', // legacy field
+    mount: currentConfig.display.mount || 'landscape',
+    rotate: currentConfig.display.rotate || 'none'
   });
 });
 

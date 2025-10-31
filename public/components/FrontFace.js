@@ -49,8 +49,20 @@ class FrontFace {
   }
   
   render(data) {
+    // Determine mount and rotation angle
+    const rotate = (data && data.settings && data.settings.rotate) || (window.appSettings && window.appSettings.rotate) || 'none';
+    const angle = rotate === 'ccw90' ? -Math.PI / 2 : (rotate === 'cw90' ? Math.PI / 2 : 0);
+
+    // Reset transform, clear, then apply rotation around canvas center
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    
+    if (angle !== 0) {
+      this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+      this.ctx.rotate(angle);
+      this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+    }
+
     // Draw from outside in - EoT rings are OUTERMOST
     this.drawEquationOfTimeRings(data);
     this.drawEgyptianCalendar(data);
@@ -62,6 +74,8 @@ class FrontFace {
     this.drawPlanetPointers(data);
     this.drawCenterHub();
     this.drawLabels(data);
+
+    this.ctx.restore();
   }
   
   drawEquationOfTimeRings(data) {
@@ -243,7 +257,7 @@ class FrontFace {
       this.ctx.stroke();
 
       // Sunrise label (local time) just outside the outer ring
-      const showLabels = !!(window.appSettings && window.appSettings.showSunriseSunset);
+      const showLabels = !!((data && data.settings && data.settings.showSunriseSunset) || (window.appSettings && window.appSettings.showSunriseSunset));
       if (showLabels && vis.sunrise && vis.sunrise.time) {
         const tz = data?.observer?.timezone;
         const label = new Date(vis.sunrise.time).toLocaleTimeString('en-US', {
@@ -299,7 +313,7 @@ class FrontFace {
       this.ctx.stroke();
 
       // Sunset label (local time) just outside the outer ring, near moon marker
-      const showLabels2 = !!(window.appSettings && window.appSettings.showSunriseSunset);
+      const showLabels2 = !!((data && data.settings && data.settings.showSunriseSunset) || (window.appSettings && window.appSettings.showSunriseSunset));
       if (showLabels2 && vis.sunset && vis.sunset.time) {
         const tz = data?.observer?.timezone;
         const label = new Date(vis.sunset.time).toLocaleTimeString('en-US', {

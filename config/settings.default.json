@@ -27,6 +27,10 @@
   },
   "display": {
     "language": "english",
-    "showSunriseSunset": true
+    "showSunriseSunset": true,
+    "theme": "ancient-bronze",
+    "layout": "gallery",
+    "mount": "landscape",
+    "rotate": "none"
   }
 }
