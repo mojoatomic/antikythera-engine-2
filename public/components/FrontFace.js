@@ -49,8 +49,20 @@ class FrontFace {
   }
   
   render(data) {
+    // Determine mount and rotation angle
+    const mount = (data && data.settings && data.settings.mount) || (window.appSettings && window.appSettings.mount) || 'landscape';
+    const angle = mount === 'portrait-right' ? -Math.PI / 2 : (mount === 'portrait-left' ? Math.PI / 2 : 0);
+
+    // Reset transform, clear, then apply rotation around canvas center
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    
+    if (angle !== 0) {
+      this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+      this.ctx.rotate(angle);
+      this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+    }
+
     // Draw from outside in - EoT rings are OUTERMOST
     this.drawEquationOfTimeRings(data);
     this.drawEgyptianCalendar(data);
@@ -62,6 +74,8 @@ class FrontFace {
     this.drawPlanetPointers(data);
     this.drawCenterHub();
     this.drawLabels(data);
+
+    this.ctx.restore();
   }
   
   drawEquationOfTimeRings(data) {

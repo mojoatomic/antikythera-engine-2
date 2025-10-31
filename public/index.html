@@ -125,10 +125,10 @@
             gap: 30px;
         }
         
-        /* Canvas rotation for portrait mounts */
-        body[data-mount="landscape"] canvas { transform: rotate(0deg); transform-origin: 50% 50%; }
-        body[data-mount="portrait-right"] canvas { transform: rotate(-90deg); transform-origin: 50% 50%; }
-        body[data-mount="portrait-left"] canvas { transform: rotate(90deg); transform-origin: 50% 50%; }
+        /* Canvas rotation now handled in component render via context; keep no transforms here */
+        body[data-mount="landscape"] canvas,
+        body[data-mount="portrait-right"] canvas,
+        body[data-mount="portrait-left"] canvas { transform: none; } 
         
         /* Layout: Focus (one at a time with navigation) */
         .layout-focus .faces-container {

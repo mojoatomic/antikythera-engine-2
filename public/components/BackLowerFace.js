@@ -16,8 +16,18 @@ class BackLowerFace {
   }
   
   render(data) {
+    const mount = (data && data.settings && data.settings.mount) || (window.appSettings && window.appSettings.mount) || 'landscape';
+    const angle = mount === 'portrait-right' ? -Math.PI / 2 : (mount === 'portrait-left' ? Math.PI / 2 : 0);
+
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    
+    if (angle !== 0) {
+      this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+      this.ctx.rotate(angle);
+      this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+    }
+
     this.drawTitle();
     this.drawSpiral();
     this.drawMonthMarkers();
@@ -25,6 +35,8 @@ class BackLowerFace {
     this.drawCurrentPosition(data);
     this.drawSubDials(data);
     this.drawInfo(data);
+
+    this.ctx.restore();
   }
   
   drawTitle() {
