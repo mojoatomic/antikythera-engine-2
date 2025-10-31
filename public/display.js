@@ -27,12 +27,10 @@ async function loadSettings() {
         // Apply theme and layout from server settings
         if (data.theme) changeTheme(data.theme);
         if (data.layout) changeLayout(data.layout);
-        
-        // Apply orientation
-        if (data.orientation) {
-            document.querySelector('.app-container')
-                .classList.add(`orientation-${data.orientation}`);
-        }
+
+        // Apply mount (single source of truth)
+        const mount = data.mount || 'landscape';
+        document.body.setAttribute('data-mount', mount);
     } catch (_e) {
         console.warn('loadSettings: failed to fetch /api/settings, using defaults (showSunriseSunset=false)');
         window.appSettings = { 

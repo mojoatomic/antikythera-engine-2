@@ -42,13 +42,15 @@ const configSchema = z.object({
     showSunriseSunset: z.boolean().default(true),
     theme: z.string().default('ancient-bronze'),
     layout: z.enum(['hero', 'gallery', 'focus']).default('gallery'),
-    orientation: z.enum(['horizontal', 'vertical']).default('horizontal')
+    orientation: z.enum(['horizontal', 'vertical']).default('horizontal'), // legacy support
+    mount: z.enum(['landscape', 'portrait-right', 'portrait-left']).default('landscape')
   }).default({
     language: 'english',
     showSunriseSunset: true,
     theme: 'ancient-bronze',
     layout: 'gallery',
-    orientation: 'horizontal'
+    orientation: 'horizontal',
+    mount: 'landscape'
   })
 }).passthrough(); // Allow unknown keys for forward compatibility
 
@@ -70,6 +72,29 @@ function validateConfig(data, filePath = 'config', looseMode = false) {
     console.warn('These keys will be ignored. This may indicate a version mismatch or typo.');
   }
   
+  // Map legacy orientation/rotation to mount if mount missing (pre-parse)
+  try {
+    if (data && typeof data === 'object') {
+      const d = data.display || {};
+      if (!d.mount) {
+        const orientation = d.orientation;
+        const rotation = d.rotation || d.canvasRotation; // accept legacy key names just in case
+        let inferred;
+        if (orientation === 'horizontal') inferred = 'landscape';
+        else if (orientation === 'vertical') {
+          if (rotation === 'ccw90') inferred = 'portrait-right';
+          else if (rotation === 'cw90') inferred = 'portrait-left';
+          else inferred = 'portrait-right';
+        }
+        if (inferred) {
+          data.display = { ...d, mount: inferred };
+        }
+      }
+    }
+  } catch (_) {
+    // ignore mapping errors; fall through to schema parse
+  }
+
   // Schema validation
   let result;
   try {
