@@ -117,20 +117,29 @@ The system works automatically using IP geolocation by default. For fixed observ
 
 ### Display Settings
 
-Configure language and UI elements:
+Configure display language and layout behavior. Defaults are suitable for most setups; per-device overrides go in `config/settings.local.json` (hot‑reloaded).
 
 ```json
 {
   "display": {
     "language": "english",
+    "theme": "ancient-bronze",
+    "layout": "gallery",                    // "hero" | "gallery" | "focus"
+    "mount": "landscape",                   // "landscape" | "portrait-right" | "portrait-left"
+    "rotate": "none",                       // advanced: "none" | "cw90" | "ccw90"
     "showSunriseSunset": true
   }
 }
 ```
 
+- `mount` controls the page grid: landscape = 3×1, portrait = 1×3.
+- `rotate` is an advanced override that rotates the canvas drawing in software. Most users do not need it. If a monitor is physically rotated and the OS does not rotate the output, set:
+  - `portrait-right` hardware → `rotate: "ccw90"`
+  - `portrait-left` hardware → `rotate: "cw90"`
+
 **Supported languages:** English, Greek, Spanish, French, Russian, Arabic, Chinese, Japanese
 
-All display text in the visualization (front face, back faces, zodiac signs, months) is fully internationalized.
+All display text in the visualization (front face, back faces, zodiac signs, months) is internationalized.
 
 ### Configuration Layering
 
@@ -204,22 +213,22 @@ antikythera control status
 antikythera control stop
 ```
 
-### Display Visualization
+### Display Visualization (dumb client)
 
-The project includes a web-based sundial display at `http://localhost:3000/` that visualizes:
-- Mean Solar Time (clock time)
-- Apparent Solar Time (sundial time)
-- Celestial body positions (Sun, Moon, planets)
-- Observer location, timezone, and sunrise/sunset
+The example display at `http://localhost:3000/` renders three canvases (front, back‑upper, back‑lower):
+- Mean/Apprent solar time indicators
+- Planetary positions and zodiac
+- Metonic and Saros cycles
+- Observer location and sunrise/sunset (when enabled)
 
-How updates work:
-- The display polls `/api/state` approximately once per second and re-renders.
-- Control commands (`time`, `run`, `pause`, `animate`, `location`) change the server’s effective state.
-- High-speed demo (e.g., `run --speed 600`) is computed server-side; the display simply renders the advancing state returned by the API.
-- No client-side interpolation — all positions are consistent per timestamp (UTC-safe).
+Update model:
+- The browser polls `/api/state` roughly once per second and re‑renders.
+- All control logic is server‑side (CLI → `/api/control/*`). The browser never manipulates time or state locally.
+- High‑speed animations (`control run --speed …`) are computed on the server; the display just renders the returned state.
+- No client‑side interpolation — positions are consistent per timestamp (UTC‑safe).
 
 Use case:
-- Classroom control: the teacher controls time/location via CLI or API, and all student displays stay synchronized.
+- Synchronized classroom or exhibit: operators change time/location via CLI/API; all displays follow.
 
 Shared classroom token (optional): set `ANTIKYTHERA_CONTROL_TOKEN` on server and clients.
 

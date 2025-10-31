@@ -563,6 +563,26 @@ $ antikythera position mars --remote
 
 ---
 
+## Display Mount (configuration)
+
+Configure display layout/rotation via JSON config (not CLI). Place per-device overrides in `config/settings.local.json` (hot‑reloaded):
+
+```json
+{
+  "display": {
+    "layout": "gallery",             
+    "mount": "landscape",            
+    "rotate": "none"                 
+  }
+}
+```
+
+- `mount` values: `landscape`, `portrait-right`, `portrait-left` (controls grid stacking).
+- `rotate` values: `none`, `cw90`, `ccw90` (advanced; rotates canvas drawing when OS does not rotate output).
+- Verify: `curl http://localhost:3000/api/settings`.
+
+---
+
 ## Troubleshooting
 
 ### CLI Not Found
