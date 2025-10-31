@@ -20,9 +20,7 @@ async function loadSettings() {
     try {
         const res = await fetch('http://localhost:3000/api/settings');
         const data = await res.json();
-        console.log('loadSettings: received data =', data);
         window.appSettings = data;
-        console.log('loadSettings: window.appSettings =', window.appSettings);
         
         // Apply theme and layout from server settings
         if (data.theme) changeTheme(data.theme);
@@ -39,7 +37,6 @@ async function loadSettings() {
             layout: 'gallery',
             orientation: 'horizontal'
         };
-        console.log('loadSettings: window.appSettings (fallback) =', window.appSettings);
     }
 }
 
@@ -110,7 +107,6 @@ async function updateDisplay() {
         currentData = data;
         
         // Render all three faces
-        console.log('updateDisplay: window.appSettings =', window.appSettings);
         const renderData = { ...data, settings: window.appSettings };
         frontFace.render(renderData);
         backUpperFace.render(renderData);

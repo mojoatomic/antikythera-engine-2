@@ -258,7 +258,6 @@ class FrontFace {
 
       // Sunrise label (local time) just outside the outer ring
       const showLabels = !!((data && data.settings && data.settings.showSunriseSunset) || (window.appSettings && window.appSettings.showSunriseSunset));
-      console.log('FrontFace: (data.settings) showSunriseSunset =', data?.settings?.showSunriseSunset, 'window.appSettings =', window.appSettings?.showSunriseSunset, 'showLabels =', showLabels);
       if (showLabels && vis.sunrise && vis.sunrise.time) {
         const tz = data?.observer?.timezone;
         const label = new Date(vis.sunrise.time).toLocaleTimeString('en-US', {
