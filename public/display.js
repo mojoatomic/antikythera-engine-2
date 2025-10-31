@@ -18,7 +18,7 @@ window.addEventListener('load', async () => {
 
 async function loadSettings() {
     try {
-        const res = await fetch('/api/settings');
+        const res = await fetch('http://localhost:3000/api/settings');
         const data = await res.json();
         console.log('loadSettings: received data =', data);
         window.appSettings = data;
@@ -70,12 +70,12 @@ function changeLayout(layout) {
     
     // Show/hide navigation for focus layout
     if (layout === 'focus') {
-        faceNav.classList.remove('hidden');
+        if (faceNav) faceNav.classList.remove('hidden');
         faces.forEach((face, idx) => {
             face.classList.toggle('active', idx === currentFaceIndex);
         });
     } else {
-        faceNav.classList.add('hidden');
+        if (faceNav) faceNav.classList.add('hidden');
         faces.forEach(face => {
             face.classList.remove('active');
         });
