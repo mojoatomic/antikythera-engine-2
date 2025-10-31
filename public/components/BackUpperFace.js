@@ -39,7 +39,7 @@ class BackUpperFace {
   }
   
   drawTitle() {
-    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
+    this.ctx.fillStyle = '#d4af37';
     this.ctx.font = 'bold 18px Georgia';
     this.ctx.textAlign = 'center';
     this.ctx.fillText(languageManager.t('back_upper_face.title'), this.centerX, 30);
@@ -49,7 +49,7 @@ class BackUpperFace {
   
   drawSpiral() {
     // Main Archimedean spiral
-    this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
+    this.ctx.strokeStyle = '#d4af37';
     this.ctx.lineWidth = 10;
     this.ctx.beginPath();
     
@@ -90,7 +90,7 @@ class BackUpperFace {
   }
   
   drawYearMarkers() {
-    this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
+    this.ctx.fillStyle = '#f0e6d2';
     this.ctx.font = '12px Georgia';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
@@ -111,7 +111,7 @@ class BackUpperFace {
       
       // Label every year
       if (year % 2 === 1 || year === 19) {
-        this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
+      this.ctx.fillStyle = '#f0e6d2';
         const labelAngle = angle + Math.PI / 2; // Perpendicular to spiral
         const labelOffset = 20;
         const labelX = x + Math.cos(labelAngle) * labelOffset;
@@ -131,7 +131,7 @@ class BackUpperFace {
     const y = this.centerY + Math.sin(angle) * r;
     
     // Pointer from center
-    this.ctx.strokeStyle = 'var(--color-pointer, #ffaa00)';
+    this.ctx.strokeStyle = '#ffaa00';
     this.ctx.lineWidth = 3;
     this.ctx.beginPath();
     this.ctx.moveTo(this.centerX, this.centerY);
@@ -163,7 +163,7 @@ class BackUpperFace {
     const subDialY = 100;
     const subDialRadius = 50;
     
-    this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
+    this.ctx.strokeStyle = '#d4af37';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     this.ctx.arc(subDialX, subDialY, subDialRadius, 0, Math.PI * 2);
@@ -174,7 +174,7 @@ class BackUpperFace {
       const callippicProgress = (data.metonicCycle.year % 76) / 76;
       const angle = callippicProgress * Math.PI * 2 - Math.PI / 2;
       
-      this.ctx.strokeStyle = 'var(--color-pointer, #ffaa00)';
+      this.ctx.strokeStyle = '#ffaa00';
       this.ctx.lineWidth = 2;
       this.ctx.beginPath();
       this.ctx.moveTo(subDialX, subDialY);

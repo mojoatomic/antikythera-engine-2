@@ -40,7 +40,7 @@ class BackLowerFace {
   }
   
   drawTitle() {
-    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
+    this.ctx.fillStyle = '#d4af37';
     this.ctx.font = 'bold 18px Georgia';
     this.ctx.textAlign = 'center';
     this.ctx.fillText(languageManager.t('back_lower_face.title'), this.centerX, 30);
@@ -50,7 +50,7 @@ class BackLowerFace {
   
   drawSpiral() {
     // Main Archimedean spiral (223 synodic months)
-    this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
+    this.ctx.strokeStyle = '#d4af37';
     this.ctx.lineWidth = 10;
     this.ctx.beginPath();
     
@@ -92,7 +92,7 @@ class BackLowerFace {
   
   drawMonthMarkers() {
     // Mark every 10 months along the spiral
-    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
+    this.ctx.fillStyle = '#d4af37';
     
     for (let month = 0; month <= 223; month += 10) {
       const t = month / 223;
@@ -110,7 +110,7 @@ class BackLowerFace {
   drawEclipseGlyphs() {
     // Draw eclipse symbols at key positions
     // Solar eclipses = ☉, Lunar eclipses = ☽
-    this.ctx.fillStyle = 'var(--color-text, #f0e6d2)';
+    this.ctx.fillStyle = '#f0e6d2';
     this.ctx.font = '16px Arial';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
@@ -144,7 +144,7 @@ class BackLowerFace {
     const y = this.centerY + Math.sin(angle) * r;
     
     // Pointer from center
-    this.ctx.strokeStyle = 'var(--color-pointer, #ffaa00)';
+    this.ctx.strokeStyle = '#ffaa00';
     this.ctx.lineWidth = 3;
     this.ctx.beginPath();
     this.ctx.moveTo(this.centerX, this.centerY);
@@ -175,7 +175,7 @@ class BackLowerFace {
     const subDialY = 100;
     const subDialRadius = 50;
     
-    this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
+    this.ctx.strokeStyle = '#d4af37';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     this.ctx.arc(subDialX, subDialY, subDialRadius, 0, Math.PI * 2);
