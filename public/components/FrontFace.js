@@ -747,31 +747,67 @@ class FrontFace {
     const padding = 15;
     const lineHeight = 18;
     
-    // ========== UPPER LEFT: Title and Time Labels ==========
+    // ========== UPPER LEFT: Dual Time Display ==========
     this.ctx.textAlign = 'left';
-    this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
-    this.ctx.font = 'bold 14px Georgia';
-    //this.ctx.fillText(
-    //  languageManager.t('front_face.title'),
-    //  padding,
-    //  padding + lineHeight
-    //);
     
-    // Apparent Time label
-    this.ctx.font = 'bold 12px Georgia';
-    this.ctx.fillStyle = '#FFD700';
+    // Get timezone for conversion
+    const upperLeftTz = data?.observer?.timezone;
+    const upperLeftDate = new Date(data.date);
+    
+    // Calculate Mean Time (clock time) - convert UTC to local
+    const meanTimeStr = upperLeftDate.toLocaleTimeString('en-US', {
+      timeZone: upperLeftTz || undefined,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    // Calculate Sundial Time (apparent solar time) using EoT
+    let sundialTimeStr = meanTimeStr; // Fallback
+    if (data.equationOfTime) {
+      const eotMinutes = data.equationOfTime.equationOfTime.minutes;
+      const sundialDate = new Date(upperLeftDate.getTime() + eotMinutes * 60 * 1000);
+      sundialTimeStr = sundialDate.toLocaleTimeString('en-US', {
+        timeZone: upperLeftTz || undefined,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+    
+    // Mean Time label and value
+    this.ctx.font = 'bold 11px Georgia';
+    this.ctx.fillStyle = '#d4af37'; // Bronze for mean time
     this.ctx.fillText(
-      languageManager.t('front_face.apparent_time'),
+      languageManager.t('front_face.mean_time'),
       padding,
       padding + lineHeight
     );
     
-    const apparentSubtitle = languageManager.t('front_face.apparent_time_subtitle');
-    if (apparentSubtitle) {
-      this.ctx.font = '10px Georgia';
-      this.ctx.fillStyle = 'rgba(255, 215, 0, 0.7)';
-      this.ctx.fillText(apparentSubtitle, padding, padding + lineHeight * 2);
-    }
+    this.ctx.font = 'bold 14px "Courier New", monospace';
+    this.ctx.fillStyle = '#d4af37';
+    this.ctx.fillText(
+      meanTimeStr,
+      padding,
+      padding + lineHeight * 2
+    );
+    
+    // Sundial Time label and value
+    this.ctx.font = 'bold 11px Georgia';
+    this.ctx.fillStyle = '#FFD700'; // Gold for sundial time
+    this.ctx.fillText(
+      languageManager.t('front_face.sundial_time'),
+      padding,
+      padding + lineHeight * 3.5
+    );
+    
+    this.ctx.font = 'bold 14px "Courier New", monospace';
+    this.ctx.fillStyle = '#FFD700';
+    this.ctx.fillText(
+      sundialTimeStr,
+      padding,
+      padding + lineHeight * 4.5
+    );
     
     // ========== UPPER RIGHT: Equation of Time ==========
     if (data.equationOfTime) {
@@ -866,7 +902,9 @@ class FrontFace {
       if (data.observer.city) {
         locationText = data.observer.state ? `${data.observer.city}, ${data.observer.state}` : data.observer.city;
       } else if (data.observer.name) {
-        locationText = data.observer.name;
+        // Skip displaying name if it's just coordinates (fallback format from server)
+        const isCoordinatesFallback = /^-?\d+\.?\d*,\s*-?\d+\.?\d*$/.test(data.observer.name);
+        locationText = isCoordinatesFallback ? '' : data.observer.name;
       } else {
         locationText = '';
       }
