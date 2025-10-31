@@ -20,7 +20,9 @@ async function loadSettings() {
     try {
         const res = await fetch('/api/settings');
         const data = await res.json();
+        console.log('loadSettings: received data =', data);
         window.appSettings = data;
+        console.log('loadSettings: window.appSettings =', window.appSettings);
         
         // Apply theme and layout from server settings
         if (data.theme) changeTheme(data.theme);
@@ -32,12 +34,14 @@ async function loadSettings() {
                 .classList.add(`orientation-${data.orientation}`);
         }
     } catch (_e) {
+        console.warn('loadSettings: failed to fetch /api/settings, using defaults (showSunriseSunset=false)');
         window.appSettings = { 
             showSunriseSunset: false,
             theme: 'ancient-bronze',
             layout: 'gallery',
             orientation: 'horizontal'
         };
+        console.log('loadSettings: window.appSettings (fallback) =', window.appSettings);
     }
 }
 
@@ -108,9 +112,11 @@ async function updateDisplay() {
         currentData = data;
         
         // Render all three faces
-        frontFace.render(data);
-        backUpperFace.render(data);
-        backLowerFace.render(data);
+        console.log('updateDisplay: window.appSettings =', window.appSettings);
+        const renderData = { ...data, settings: window.appSettings };
+        frontFace.render(renderData);
+        backUpperFace.render(renderData);
+        backLowerFace.render(renderData);
     } catch (err) {
         console.error('Error fetching data:', err);
         showError('Unable to connect to server.');

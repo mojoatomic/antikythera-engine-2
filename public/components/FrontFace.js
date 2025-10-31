@@ -243,7 +243,8 @@ class FrontFace {
       this.ctx.stroke();
 
       // Sunrise label (local time) just outside the outer ring
-      const showLabels = !!(window.appSettings && window.appSettings.showSunriseSunset);
+      const showLabels = !!((data && data.settings && data.settings.showSunriseSunset) || (window.appSettings && window.appSettings.showSunriseSunset));
+      console.log('FrontFace: (data.settings) showSunriseSunset =', data?.settings?.showSunriseSunset, 'window.appSettings =', window.appSettings?.showSunriseSunset, 'showLabels =', showLabels);
       if (showLabels && vis.sunrise && vis.sunrise.time) {
         const tz = data?.observer?.timezone;
         const label = new Date(vis.sunrise.time).toLocaleTimeString('en-US', {
@@ -299,7 +300,7 @@ class FrontFace {
       this.ctx.stroke();
 
       // Sunset label (local time) just outside the outer ring, near moon marker
-      const showLabels2 = !!(window.appSettings && window.appSettings.showSunriseSunset);
+      const showLabels2 = !!((data && data.settings && data.settings.showSunriseSunset) || (window.appSettings && window.appSettings.showSunriseSunset));
       if (showLabels2 && vis.sunset && vis.sunset.time) {
         const tz = data?.observer?.timezone;
         const label = new Date(vis.sunset.time).toLocaleTimeString('en-US', {
