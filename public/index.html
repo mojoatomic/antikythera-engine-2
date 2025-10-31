@@ -265,44 +265,6 @@
             <div class="subtitle">The Three Faces of the Ancient Greek Astronomical Calculator</div>
         </header>
         
-        <div class="controls">
-            <div class="control-group">
-                <label for="layoutSelect">Layout:</label>
-                <select id="layoutSelect">
-                    <option value="gallery">Gallery (All Three)</option>
-                    <option value="hero">Hero (Front Only)</option>
-                    <option value="focus">Focus (One at a Time)</option>
-                </select>
-            </div>
-            
-            <div class="control-group">
-                <label for="themeSelect">Theme:</label>
-                <select id="themeSelect">
-                    <option value="ancient-bronze">Ancient Bronze</option>
-                    <option value="restored-bronze">Restored Bronze</option>
-                    <option value="steampunk">Steampunk</option>
-                    <option value="minimal">Minimal</option>
-                    <option value="dark-mode">Dark Mode</option>
-                </select>
-            </div>
-            
-            <div class="control-group">
-                <div id="clockDisplay" style="font-size: 1.2em; font-weight: bold; color: var(--color-accent); min-width: 100px; text-align: center;"></div>
-            </div>
-            
-            <div class="control-group">
-                <input type="datetime-local" id="dateInput" />
-                <button onclick="setCurrentDate()">Now</button>
-                <button onclick="updateDisplay()">Update</button>
-            </div>
-            
-            <div class="control-group">
-                <button onclick="toggleRealTime()" id="realTimeBtn">Real-Time ⏰</button>
-                <button onclick="animateForward()">Fast-Forward ▶▶</button>
-                <button onclick="stopAnimation()">Stop ⏸</button>
-            </div>
-        </div>
-        
         <div class="faces-container">
             <div class="face-card face" id="frontFace">
                 <canvas id="frontCanvas" width="600" height="600"></canvas>
@@ -314,12 +276,6 @@
             
             <div class="face-card face" id="backLowerFace">
                 <canvas id="backLowerCanvas" width="600" height="600"></canvas>
-            </div>
-            
-            <!-- Navigation for Focus layout -->
-            <div class="face-nav hidden" id="faceNav">
-                <button onclick="previousFace()">←</button>
-                <button onclick="nextFace()">→</button>
             </div>
         </div>
         
