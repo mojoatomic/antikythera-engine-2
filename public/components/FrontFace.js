@@ -362,9 +362,9 @@ class FrontFace {
     const innerRadius = this.maxRadius - 35;
     
     // Determine ring color based on sun visibility
-    // White when sun is above horizon (daytime), gold when below (nighttime)
+    // Gold (sundial color) when sun is above horizon, bronze when below
     const isSunVisible = data?.sunVisibility?.currentPosition?.isVisible ?? false;
-    const ringColor = isSunVisible ? '#ffffff' : 'var(--color-accent, #d4af37)';
+    const ringColor = isSunVisible ? '#FFD700' : 'var(--color-accent, #d4af37)';
     
     // Ring background
     this.ctx.strokeStyle = ringColor;
@@ -416,14 +416,12 @@ class FrontFace {
       this.ctx.moveTo(x1, y1);
       this.ctx.lineTo(x2, y2);
       this.ctx.stroke();
-      
-      // Add day numbers every 10 days
-      if (isMultipleOf10 && day > 0) {
-        this.ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
-        this.ctx.font = '9px Georgia';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        
+    }
+    
+    // Draw day numbers AFTER all ticks so they appear on top
+    for (let day = 0; day < 360; day++) {
+      if (day % 10 === 0 && day > 0) {
+        const angle = (day - 90) * Math.PI / 180;
         const textAngle = angle;
         const textRadius = outerRadius - 15;
         const tx = this.centerX + Math.cos(textAngle) * textRadius;
@@ -431,6 +429,11 @@ class FrontFace {
         
         // Day number within month (1-30)
         const dayInMonth = (day % 30) || 30;
+        
+        this.ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
+        this.ctx.font = '9px Georgia';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
         this.ctx.save();
         this.ctx.translate(tx, ty);
         this.ctx.rotate(textAngle + Math.PI / 2);
