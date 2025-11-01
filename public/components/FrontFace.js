@@ -387,7 +387,6 @@ class FrontFace {
     this.ctx.arc(this.centerX, this.centerY, outerRadius, 0, Math.PI * 2);
     this.ctx.stroke();
     
-    this.ctx.lineWidth = 3 * lineWidthMultiplier;
     this.ctx.beginPath();
     this.ctx.arc(this.centerX, this.centerY, innerRadius, 0, Math.PI * 2);
     this.ctx.stroke();
