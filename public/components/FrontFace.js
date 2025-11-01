@@ -361,18 +361,33 @@ class FrontFace {
     const outerRadius = this.maxRadius;
     const innerRadius = this.maxRadius - 35;
     
-    // Determine ring color based on sun visibility
+    // Determine ring color and style based on sun visibility
     // Gold (sundial color) when sun is above horizon, bronze when below
     const isSunVisible = data?.sunVisibility?.currentPosition?.isVisible ?? false;
-    const ringColor = isSunVisible ? '#FFD700' : '#d4af37';
+    
+    let ringColor, lineWidthMultiplier;
+    
+    if (isSunVisible) {
+      // Daytime - refined with subtle glow
+      ringColor = '#FFD700';
+      lineWidthMultiplier = 0.8;  // 20% thinner
+      this.ctx.shadowBlur = 5;
+      this.ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+    } else {
+      // Nighttime - dimmer and thinner, no glow
+      ringColor = 'rgba(212, 175, 55, 0.7)';
+      lineWidthMultiplier = 0.65;
+      this.ctx.shadowBlur = 0;
+    }
     
     // Ring background
     this.ctx.strokeStyle = ringColor;
-    this.ctx.lineWidth = 3;
+    this.ctx.lineWidth = 3 * lineWidthMultiplier;
     this.ctx.beginPath();
     this.ctx.arc(this.centerX, this.centerY, outerRadius, 0, Math.PI * 2);
     this.ctx.stroke();
     
+    this.ctx.lineWidth = 3 * lineWidthMultiplier;
     this.ctx.beginPath();
     this.ctx.arc(this.centerX, this.centerY, innerRadius, 0, Math.PI * 2);
     this.ctx.stroke();
@@ -411,7 +426,7 @@ class FrontFace {
       const y2 = this.centerY + Math.sin(angle) * outerRadius;
       
       this.ctx.strokeStyle = ringColor;
-      this.ctx.lineWidth = lineWidth;
+      this.ctx.lineWidth = lineWidth * lineWidthMultiplier;
       this.ctx.beginPath();
       this.ctx.moveTo(x1, y1);
       this.ctx.lineTo(x2, y2);
@@ -455,6 +470,10 @@ class FrontFace {
       );
       this.ctx.stroke();
     }
+    
+    // Clear shadow settings so they don't affect other elements
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowColor = 'transparent';
   }
   
   drawMonthNames() {
