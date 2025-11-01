@@ -361,9 +361,28 @@ class FrontFace {
     const outerRadius = this.maxRadius;
     const innerRadius = this.maxRadius - 35;
     
+    // Determine ring color and style based on sun visibility
+    // Gold (sundial color) when sun is above horizon, bronze when below
+    const isSunVisible = data?.sunVisibility?.currentPosition?.isVisible ?? false;
+    
+    let ringColor, lineWidthMultiplier;
+    
+    if (isSunVisible) {
+      // Daytime - refined with subtle glow
+      ringColor = '#FFD700';
+      lineWidthMultiplier = 0.8;  // 20% thinner
+      this.ctx.shadowBlur = 5;
+      this.ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+    } else {
+      // Nighttime - dimmer and thinner, no glow
+      ringColor = 'rgba(212, 175, 55, 0.7)';
+      lineWidthMultiplier = 0.65;
+      this.ctx.shadowBlur = 0;
+    }
+    
     // Ring background
-    this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
-    this.ctx.lineWidth = 3;
+    this.ctx.strokeStyle = ringColor;
+    this.ctx.lineWidth = 3 * lineWidthMultiplier;
     this.ctx.beginPath();
     this.ctx.arc(this.centerX, this.centerY, outerRadius, 0, Math.PI * 2);
     this.ctx.stroke();
@@ -405,20 +424,18 @@ class FrontFace {
       const x2 = this.centerX + Math.cos(angle) * outerRadius;
       const y2 = this.centerY + Math.sin(angle) * outerRadius;
       
-      this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
-      this.ctx.lineWidth = lineWidth;
+      this.ctx.strokeStyle = ringColor;
+      this.ctx.lineWidth = lineWidth * lineWidthMultiplier;
       this.ctx.beginPath();
       this.ctx.moveTo(x1, y1);
       this.ctx.lineTo(x2, y2);
       this.ctx.stroke();
-      
-      // Add day numbers every 10 days
-      if (isMultipleOf10 && day > 0) {
-        this.ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
-        this.ctx.font = '9px Georgia';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        
+    }
+    
+    // Draw day numbers AFTER all ticks so they appear on top
+    for (let day = 0; day < 360; day++) {
+      if (day % 10 === 0 && day > 0) {
+        const angle = (day - 90) * Math.PI / 180;
         const textAngle = angle;
         const textRadius = outerRadius - 15;
         const tx = this.centerX + Math.cos(textAngle) * textRadius;
@@ -426,6 +443,11 @@ class FrontFace {
         
         // Day number within month (1-30)
         const dayInMonth = (day % 30) || 30;
+        
+        this.ctx.fillStyle = 'rgba(240, 230, 210, 0.7)';
+        this.ctx.font = '9px Georgia';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
         this.ctx.save();
         this.ctx.translate(tx, ty);
         this.ctx.rotate(textAngle + Math.PI / 2);
@@ -447,6 +469,10 @@ class FrontFace {
       );
       this.ctx.stroke();
     }
+    
+    // Clear shadow settings so they don't affect other elements
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowColor = 'transparent';
   }
   
   drawMonthNames() {
