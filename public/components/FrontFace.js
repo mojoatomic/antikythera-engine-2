@@ -361,8 +361,13 @@ class FrontFace {
     const outerRadius = this.maxRadius;
     const innerRadius = this.maxRadius - 35;
     
+    // Determine ring color based on sun visibility
+    // White when sun is above horizon (daytime), gold when below (nighttime)
+    const isSunVisible = data?.sunVisibility?.currentPosition?.isVisible ?? false;
+    const ringColor = isSunVisible ? '#ffffff' : 'var(--color-accent, #d4af37)';
+    
     // Ring background
-    this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
+    this.ctx.strokeStyle = ringColor;
     this.ctx.lineWidth = 3;
     this.ctx.beginPath();
     this.ctx.arc(this.centerX, this.centerY, outerRadius, 0, Math.PI * 2);
@@ -405,7 +410,7 @@ class FrontFace {
       const x2 = this.centerX + Math.cos(angle) * outerRadius;
       const y2 = this.centerY + Math.sin(angle) * outerRadius;
       
-      this.ctx.strokeStyle = 'var(--color-accent, #d4af37)';
+      this.ctx.strokeStyle = ringColor;
       this.ctx.lineWidth = lineWidth;
       this.ctx.beginPath();
       this.ctx.moveTo(x1, y1);
