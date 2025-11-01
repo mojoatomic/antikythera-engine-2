@@ -268,10 +268,10 @@ class FrontFace {
         this.ctx.fillStyle = 'rgba(255, 107, 53, 0.9)';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        const srLabelR = outerRingRadius + 28;
-        const srLabelX = this.centerX + Math.cos(sunriseAngle) * srLabelR;
-        const srLabelY = this.centerY + Math.sin(sunriseAngle) * srLabelR;
-        this.ctx.fillText(label, srLabelX, srLabelY);
+        const sunriseLabelRadius = outerRingRadius + 28;
+        const sunriseLabelX = this.centerX + Math.cos(sunriseAngle) * sunriseLabelRadius;
+        const sunriseLabelY = this.centerY + Math.sin(sunriseAngle) * sunriseLabelRadius;
+        this.ctx.fillText(label, sunriseLabelX, sunriseLabelY);
       }
       
       // Sunrise line connecting rings
@@ -323,10 +323,10 @@ class FrontFace {
         this.ctx.fillStyle = 'rgba(240, 230, 210, 0.9)';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        const ssLabelR = outerRingRadius + 36;
-        const ssLabelX = this.centerX + Math.cos(sunsetAngle) * ssLabelR;
-        const ssLabelY = this.centerY + Math.sin(sunsetAngle) * ssLabelR;
-        this.ctx.fillText(label, ssLabelX, ssLabelY);
+        const sunsetLabelRadius = outerRingRadius + 36;
+        const sunsetLabelX = this.centerX + Math.cos(sunsetAngle) * sunsetLabelRadius;
+        const sunsetLabelY = this.centerY + Math.sin(sunsetAngle) * sunsetLabelRadius;
+        this.ctx.fillText(label, sunsetLabelX, sunsetLabelY);
       }
       
       // Daylight arc (between sunrise and sunset on outer ring)
