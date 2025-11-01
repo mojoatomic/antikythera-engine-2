@@ -364,7 +364,7 @@ class FrontFace {
     // Determine ring color based on sun visibility
     // Gold (sundial color) when sun is above horizon, bronze when below
     const isSunVisible = data?.sunVisibility?.currentPosition?.isVisible ?? false;
-    const ringColor = isSunVisible ? '#FFD700' : 'var(--color-accent, #d4af37)';
+    const ringColor = isSunVisible ? '#FFD700' : '#d4af37';
     
     // Ring background
     this.ctx.strokeStyle = ringColor;
