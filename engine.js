@@ -1,4 +1,5 @@
 const astronomy = require('astronomy-engine');
+const { MS_PER_DAY } = require('./constants/time');
 const TimeUtils = require('./utils/time');
 const { getUtcOffsetMinutes } = require('./utils/tz');
 
@@ -258,7 +259,7 @@ class AntikytheraEngine {
     const currentLongitude = currentEcliptic.elon;
     
     // Calculate position 1 day later
-    const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+    const nextDate = new Date(date.getTime() + MS_PER_DAY);
     const nextEquator = astronomy.Equator(body, nextDate, observer, false, true);
     const nextEcliptic = this.eclipticFromEquatorVec_EQJ(nextEquator.vec);
     const nextLongitude = nextEcliptic.elon;
@@ -458,11 +459,11 @@ class AntikytheraEngine {
 
     const findOpposition = (planet, start) => {
       const limit = synodic[planet] || 800;
-      const end = new Date(start.getTime() + limit * 86400000);
+      const end = new Date(start.getTime() + limit * MS_PER_DAY);
       // Coarse daily scan to find sign change around target 180°
       let t0 = new Date(start);
       let f0 = diff(rel(planet, t0), 180);
-      for (let t = new Date(t0.getTime() + 86400000); t <= end; t = new Date(t.getTime() + 86400000)) {
+      for (let t = new Date(t0.getTime() + MS_PER_DAY); t <= end; t = new Date(t.getTime() + MS_PER_DAY)) {
         const f1 = diff(rel(planet, t), 180);
         if (f0 === 0) return t0;
         if (f0 * f1 <= 0) {

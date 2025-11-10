@@ -6,6 +6,7 @@
  */
 
 const fetch = require('node-fetch');
+const { MS_PER_MINUTE } = require('../constants/time');
 const AntikytheraEngine = require('../engine');
 
 const engine = new AntikytheraEngine();
@@ -19,7 +20,7 @@ const engine = new AntikytheraEngine();
  */
 async function queryHORIZONS(date, latitude = 37.5, longitude = 23.0) {
   // HORIZONS requires STOP_TIME > START_TIME; request a 1-minute window
-  const stop = new Date(date.getTime() + 60 * 1000);
+  const stop = new Date(date.getTime() + MS_PER_MINUTE);
 
   const params = new URLSearchParams({
     format: 'text',

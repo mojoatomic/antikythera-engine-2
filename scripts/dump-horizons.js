@@ -1,5 +1,6 @@
 // Usage: node scripts/dump-horizons.js [body_code] [observer_lat] [observer_lon]
 const fetch = require('node-fetch');
+const { MS_PER_MINUTE } = require('../constants/time');
 
 const bodyCode = process.argv[2] || '301'; // Default to Moon
 const lat = process.argv[3] || '37.751';
@@ -9,7 +10,7 @@ console.log(`Querying HORIZONS for body ${bodyCode} from ${lat}°N, ${lon}°E`);
 
 (async () => {
   const date = new Date();
-  const stop = new Date(date.getTime() + 60*1000);
+  const stop = new Date(date.getTime() + MS_PER_MINUTE);
   const params = new URLSearchParams({
     format: 'text',
     COMMAND: `'${bodyCode}'`,
