@@ -45,3 +45,7 @@ build/
 
 # Local submissions/ASCL metadata
 /ASCL/
+
+# Generated issue documentation (source of truth: GitHub issues)
+/issues/
+/issues-enhanced/
