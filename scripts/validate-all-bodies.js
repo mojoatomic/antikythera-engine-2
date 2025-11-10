@@ -6,6 +6,7 @@
  */
 
 const fetch = require('node-fetch');
+const { MS_PER_MINUTE } = require('../constants/time');
 
 // HORIZONS body codes
 const BODY_CODES = {
@@ -126,7 +127,7 @@ async function validateBody(bodyName, bodyCode, apiCoords, timestamp, observer) 
 }
 
 async function queryHORIZONS(bodyCode, date, observer) {
-  const stop = new Date(date.getTime() + 60 * 1000);
+  const stop = new Date(date.getTime() + MS_PER_MINUTE);
   
   const params = new URLSearchParams({
     format: 'text',

@@ -6,6 +6,7 @@
  */
 
 const fetch = require('node-fetch');
+const { MS_PER_MINUTE } = require('../constants/time');
 
 async function validateMoon() {
   // 1. Get your API data
@@ -43,7 +44,7 @@ async function validateMoon() {
 }
 
 async function queryHORIZONS(date) {
-  const stop = new Date(date.getTime() + 60 * 1000);
+  const stop = new Date(date.getTime() + MS_PER_MINUTE);
   
   const params = new URLSearchParams({
     format: 'text',

@@ -8,6 +8,7 @@
  */
 
 const fetch = require('node-fetch');
+const { MS_PER_MINUTE, MS_PER_DAY } = require('../constants/time');
 
 const BODY_CODES = {
   sun: '10',
@@ -49,7 +50,7 @@ function quantile(sorted, p) {
 }
 
 async function queryHorizons(bodyCode, date, observer) {
-  const stop = new Date(date.getTime() + 60 * 1000);
+  const stop = new Date(date.getTime() + MS_PER_MINUTE);
   const params = new URLSearchParams({
     format: 'text',
     COMMAND: `'${bodyCode}'`,
@@ -105,7 +106,7 @@ async function main() {
   console.log(`Observer: ${observer.latitude}°N, ${observer.longitude}°E\n`);
 
   for (let i = 0; i < samples; i++) {
-    const t = new Date(start.getTime() + (i * spanDays * 86400000) / Math.max(1, samples-1));
+    const t = new Date(start.getTime() + (i * spanDays * MS_PER_DAY) / Math.max(1, samples-1));
     const dateISO = t.toISOString();
 
     process.stdout.write(`[${i+1}/${samples}] ${dateISO.slice(0,19)}Z `);
@@ -171,7 +172,7 @@ async function main() {
   // Emit JSON blob
   const out = { 
     engine: 'VSOP87 via astronomy-engine',
-    span: { start: start.toISOString(), end: new Date(start.getTime()+spanDays*86400000).toISOString() },
+    span: { start: start.toISOString(), end: new Date(start.getTime()+spanDays*MS_PER_DAY).toISOString() },
     samples, observer, summary,
     aggregate: {
       lon: { p50: quantile(allLon, 0.5), p95: quantile(allLon, 0.95), max: allLon.length ? allLon[allLon.length-1] : null },
