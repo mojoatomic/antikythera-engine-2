@@ -49,3 +49,10 @@ build/
 # Generated issue documentation (source of truth: GitHub issues)
 /issues/
 /issues-enhanced/
+
+# ESLint artifacts
+eslint-results.json
+analysis-*.json
+.eslintcache
+# Ensure legacy config is not reintroduced
+eslint.config.js
