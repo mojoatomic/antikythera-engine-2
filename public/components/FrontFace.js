@@ -898,7 +898,7 @@ class FrontFace {
     
     // ========== LOWER RIGHT: Location + Real-time Clock ==========
     this.ctx.textAlign = 'right';
-    let lowerRightY = this.canvas.height - padding;
+    const lowerRightY = this.canvas.height - padding;
     
     // Display time (controlled) using observer timezone when available
     {

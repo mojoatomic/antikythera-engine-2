@@ -35,7 +35,7 @@ function parseArgs() {
 
 function wrapLonDiffDeg(a, b) {
   // Smallest absolute difference in degrees
-  let d = (a - b + 540) % 360 - 180;
+  const d = (a - b + 540) % 360 - 180;
   return Math.abs(d);
 }
 

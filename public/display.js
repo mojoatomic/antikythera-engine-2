@@ -1,6 +1,6 @@
 // Global state
 let currentData = null;
-let currentFaceIndex = 0;
+const currentFaceIndex = 0;
 
 // Component instances
 let frontFace = null;

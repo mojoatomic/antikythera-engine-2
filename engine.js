@@ -394,7 +394,7 @@ class AntikytheraEngine {
         type: next.type,
         kind: next.data.kind || null,
         date: peakDate ? peakDate.toISOString() : null,
-        daysUntil: peakDate ? ((peakDate - date) / (1000 * 60 * 60 * 24)) : null
+        daysUntil: peakDate ? ((peakDate - date) / (86400000)) : null
       };
 
       // Add local observer context when solar eclipse is next

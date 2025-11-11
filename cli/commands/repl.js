@@ -790,7 +790,7 @@ class AntikytheraREPL {
     positions.forEach(p => { axis[p] = '|'; });
     console.log(chalk.gray(axis.join('')));
     // Labels line
-    let labels = ''.padEnd(axisWidth, ' ').split('');
+    const labels = ''.padEnd(axisWidth, ' ').split('');
     for (let i = 0; i < positions.length; i++) {
       const idx = Math.round((times.length - 1) * (i / (positions.length - 1)));
       const lbl = times[idx].replace('T', ' ').slice(5, 16); // MM-DD HH:MM
