@@ -88,12 +88,30 @@ export default [
   },
   {
     files: ["**/*.test.js","**/*.spec.js","**/tests/**/*.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.jest
+      }
+    },
     rules: {
       'max-lines-per-function': "off",
       'max-statements': "off",
       'complexity': "off",
       'max-depth': "off",
       'camelcase': "off"
+    }
+  },
+  {
+    files: ["public/**/*.js"],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        languageManager: 'readonly',
+        FrontFace: 'readonly',
+        BackUpperFace: 'readonly',
+        BackLowerFace: 'readonly'
+      }
     }
   }
 ];
