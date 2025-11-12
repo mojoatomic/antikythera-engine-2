@@ -1,2 +1,6 @@
 npm run ci
-npm run ci:ratchet
+if [ -x node_modules/.bin/eslint-plugin-ai-code-snifftest-ratchet ]; then
+  npm run ci:ratchet
+else
+  echo "[ratchet] Plugin not installed; skipping ratchet"
+fi
