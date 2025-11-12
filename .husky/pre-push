@@ -1,1 +1,2 @@
 npm run ci
+npm run ci:ratchet
