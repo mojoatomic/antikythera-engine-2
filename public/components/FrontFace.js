@@ -362,7 +362,7 @@ class FrontFace {
     //this.ctx.fillText(languageManager.t(`front_face.${eotStatusKey}`), this.canvas.width - 20, 60);
     const padding = 15;
     const lineHeight = 18;
-    this.ctx.fillText(languageManager.t(`front_face.${eotStatusKey}`), this.canvas.width - padding, padding + lineHeight * 2);
+    this.ctx.fillText(languageManager.t(`front_face.${eotStatusKey}`), 600 - padding, padding + lineHeight * 2);
   }
   
   drawEgyptianCalendar(data) {
@@ -867,7 +867,7 @@ class FrontFace {
       this.ctx.font = 'bold 16px Georgia';
       this.ctx.fillText(
         `${eot.minutes > 0 ? '+' : '−'}${eotMins.toFixed(1)} min`,
-        this.canvas.width - padding,
+        600 - padding,
         padding + lineHeight
       );
     }
@@ -879,10 +879,10 @@ class FrontFace {
       const zodiacName = languageManager.getZodiacName(data.zodiac.signIndex);
       this.ctx.fillStyle = 'var(--color-accent, #d4af37)';
       this.ctx.font = 'bold 13px Georgia';
-      this.ctx.fillText(
+        this.ctx.fillText(
         `${zodiacName} ${data.zodiac.degreeInSign.toFixed(1)}°`,
         padding,
-        this.canvas.height - padding - lineHeight * 2
+        600 - padding - lineHeight * 2
       );
     }
     
@@ -901,13 +901,13 @@ class FrontFace {
       this.ctx.fillText(
         dateStr,
         padding,
-        this.canvas.height - padding - lineHeight
+        600 - padding - lineHeight
       );
     }
     
     // ========== LOWER RIGHT: Location + Real-time Clock ==========
     this.ctx.textAlign = 'right';
-    let lowerRightY = this.canvas.height - padding;
+    let lowerRightY = 600 - padding;
     
     // Display time (controlled) using observer timezone when available
     {
@@ -922,7 +922,7 @@ class FrontFace {
       this.ctx.font = 'bold 16px "Courier New", monospace';
       this.ctx.fillText(
         timeStr,
-        this.canvas.width - padding,
+        600 - padding,
         lowerRightY - lineHeight * 3
       );
     }
@@ -959,7 +959,7 @@ class FrontFace {
       if (locationText) {
         this.ctx.fillText(
           `${sourceIcon} ${locationText}`,
-          this.canvas.width - padding,
+          600 - padding,
           lowerRightY - lineHeight * 2
         );
       }
@@ -974,7 +974,7 @@ class FrontFace {
         const lonDir = data.observer.longitude >= 0 ? 'E' : 'W';
         this.ctx.fillText(
           `${lat}°${latDir} ${lon}°${lonDir}`,
-          this.canvas.width - padding,
+          600 - padding,
           lowerRightY - lineHeight
         );
       }

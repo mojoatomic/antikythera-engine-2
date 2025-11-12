@@ -180,7 +180,7 @@ class BackLowerFace {
   
   drawSubDials(data) {
     // Exeligmos sub-dial (triple Saros = 54 years)
-    const subDialX = this.canvas.width - 80;
+    const subDialX = 600 - 80;
     const subDialY = 100;
     const subDialRadius = 50;
     
@@ -266,7 +266,7 @@ class BackLowerFace {
         month: monthsInCycle
       }),
       this.centerX,
-      this.canvas.height - 65
+      600 - 65
     );
     
     this.ctx.font = '12px Georgia';
@@ -277,7 +277,7 @@ class BackLowerFace {
         days: daysInYearRemaining
       }),
       this.centerX,
-      this.canvas.height - 45
+      600 - 45
     );
     
     // Next eclipse info
@@ -292,7 +292,7 @@ class BackLowerFace {
         days: daysUntil
       }),
       this.centerX,
-      this.canvas.height - 25
+      600 - 25
     );
     
     // Progress percentage
@@ -304,7 +304,7 @@ class BackLowerFace {
         percent: progressPercent
       }),
       this.centerX,
-      this.canvas.height - 8
+      600 - 8
     );
   }
 }
