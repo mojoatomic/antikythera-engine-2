@@ -2,9 +2,14 @@ class BackLowerFace {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.centerX = canvas.width / 2;
-    this.centerY = canvas.height / 2;
-    this.maxRadius = Math.min(canvas.width, canvas.height) / 2 - 60;
+    
+    // Calculate scale factor (1800/600 = 3x for high-res displays)
+    this.scale = canvas.width / 600;
+    
+    // Use original 600x600 coordinate system, not scaled canvas size
+    this.centerX = 600 / 2;
+    this.centerY = 600 / 2;
+    this.maxRadius = Math.min(600, 600) / 2 - 60;
     this.spiralTurns = 4.5; // 223 months in ~4.5 turns
   }
   
@@ -22,10 +27,14 @@ class BackLowerFace {
     this.ctx.save();
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Apply scale for high-resolution rendering
+    this.ctx.scale(this.scale, this.scale);
+    
     if (angle !== 0) {
-      this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+      this.ctx.translate(300, 300);
       this.ctx.rotate(angle);
-      this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+      this.ctx.translate(-300, -300);
     }
 
     this.drawTitle();
