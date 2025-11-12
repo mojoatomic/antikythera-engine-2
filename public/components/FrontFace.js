@@ -6,6 +6,9 @@ class FrontFace {
     this.centerY = canvas.height / 2;
     this.maxRadius = Math.min(canvas.width, canvas.height) / 2 - 80;
     
+    // Calculate scale factor (1800/600 = 3x for high-res displays)
+    this.scale = canvas.width / 600;
+    
     // Planet orbital radii (concentric circles)
     this.orbits = {
       saturn: 0.95,
@@ -57,6 +60,10 @@ class FrontFace {
     this.ctx.save();
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Apply scale for high-resolution rendering
+    this.ctx.scale(this.scale, this.scale);
+    
     if (angle !== 0) {
       this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
       this.ctx.rotate(angle);
