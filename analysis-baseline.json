@@ -1,0 +1,41 @@
+{
+  "categories": {
+    "magicNumbers": [],
+    "complexity": [],
+    "domainTerms": [],
+    "architecture": [],
+    "counts": {
+      "errors": 0,
+      "warnings": 0,
+      "autoFixable": 0
+    },
+    "domainSummary": [
+      {
+        "domain": "astronomy",
+        "count": 0,
+        "rank": 0
+      },
+      {
+        "domain": "cli",
+        "count": 0,
+        "rank": 1
+      },
+      {
+        "domain": "repl",
+        "count": 0,
+        "rank": 2
+      }
+    ]
+  },
+  "effort": {
+    "hours": 0,
+    "days": 0,
+    "weeks": 0,
+    "byCategory": {
+      "magicNumbers": 0,
+      "domainTerms": 0,
+      "architecture": 0,
+      "complexity": 0
+    }
+  }
+}

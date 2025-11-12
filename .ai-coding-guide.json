@@ -1,0 +1,118 @@
+{
+  "domain": "general",
+  "domains": {
+    "primary": "astronomy",
+    "additional": [
+      "cli",
+      "repl"
+    ]
+  },
+  "domainPriority": [
+    "astronomy",
+    "cli",
+    "repl"
+  ],
+  "constantResolution": {
+    "365.25": "astronomy"
+  },
+  "version": "1.0",
+  "constants": {
+    "astronomy": [
+      365.25,
+      29.53059,
+      27.32166,
+      27.55455,
+      27.21222
+    ]
+  },
+  "terms": {
+    "entities": [],
+    "properties": [],
+    "actions": []
+  },
+  "naming": {
+    "style": "camelCase",
+    "booleanPrefix": [
+      "is",
+      "has",
+      "should",
+      "can"
+    ],
+    "asyncPrefix": [
+      "fetch",
+      "load",
+      "save"
+    ],
+    "pluralizeCollections": true
+  },
+  "antiPatterns": {
+    "forbiddenNames": [
+      "data",
+      "result",
+      "state",
+      "list"
+    ],
+    "forbiddenTerms": []
+  },
+  "experimentalExternalConstants": false,
+  "externalConstantsAllowlist": [],
+  "minimumMatch": 0.6,
+  "minimumConfidence": 0.7,
+  "architecture": {
+    "fileStructure": {
+      "pattern": "feature-based"
+    },
+    "maxFileLength": {
+      "cli": 100,
+      "command": 150,
+      "util": 200,
+      "generator": 250,
+      "component": 300,
+      "default": 250
+    },
+    "organization": {
+      "commands": "lib/commands/{command}/",
+      "utils": "lib/utils/",
+      "generators": "lib/generators/",
+      "tests": "tests/"
+    },
+    "functions": {
+      "maxLength": 50,
+      "maxComplexity": 10,
+      "maxDepth": 4,
+      "maxParams": 4,
+      "maxStatements": 30,
+      "singlePurpose": true,
+      "preferPure": true
+    },
+    "patterns": {
+      "cliStyle": "orchestration-shell",
+      "errorHandling": "explicit",
+      "asyncStyle": "async-await"
+    }
+  },
+  "_constantMeta": {
+    "astronomy": [
+      {
+        "value": 365.25,
+        "name": "TROPICAL_YEAR_DAYS",
+        "description": "Mean tropical year in days"
+      },
+      {
+        "value": 29.53059,
+        "name": "SYNODIC_MONTH_DAYS",
+        "description": "Lunar synodic month in days"
+      },
+      {
+        "value": 27.32166,
+        "name": "SIDEREAL_MONTH_DAYS",
+        "description": "Moon sidereal month in days"
+      },
+      {
+        "value": 23.43,
+        "name": "EARTH_AXIAL_TILT_DEG",
+        "description": "Obliquity of the ecliptic (deg, approx)"
+      }
+    ]
+  }
+}

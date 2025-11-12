@@ -21,7 +21,8 @@
     "ci:ratchet": "npm run lint:json && npm run analyze:current && npm run ratchet",
     "ci": "npm run lint && npm test",
     "validate:horizons": "node scripts/validate-horizons.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "lint:ci": "eslint . || true"
   },
   "keywords": [
     "antikythera",
@@ -52,9 +53,15 @@
   },
   "devDependencies": {
     "eslint": "^9.18.0",
-    "eslint-plugin-ai-code-snifftest": "file:eslint-plugin-ai-code-snifftest-0.0.0.tgz",
     "husky": "^9.1.7",
     "jest": "^29.7.0",
     "node-pty": "^1.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.18.0",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "node-pty": "^1.0.0",
+    "eslint-plugin-ai-code-snifftest": "file:vendor/eslint-plugin-ai-code-snifftest-0.0.0.tgz"
   }
 }

@@ -1,0 +1,9 @@
+{
+  "rules": [
+    "Primary domain: astronomy",
+    "Additional domains: cli, repl",
+    "Prefer explicit @domain annotations for ambiguous constants.",
+    "Use UPPER_SNAKE_CASE for true constants; camelCase for variables.",
+    "Boolean vars must be prefixed: is/has/should/can/did/will."
+  ]
+}
