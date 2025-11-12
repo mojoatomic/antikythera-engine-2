@@ -2,13 +2,15 @@ class BackUpperFace {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.centerX = canvas.width / 2;
-    this.centerY = canvas.height / 2;
-    this.maxRadius = Math.min(canvas.width, canvas.height) / 2 - 60;
-    this.spiralTurns = 4.75; // 19 years in ~5 turns looks good
     
     // Calculate scale factor (1800/600 = 3x for high-res displays)
     this.scale = canvas.width / 600;
+    
+    // Use original 600x600 coordinate system, not scaled canvas size
+    this.centerX = 600 / 2;
+    this.centerY = 600 / 2;
+    this.maxRadius = Math.min(600, 600) / 2 - 60;
+    this.spiralTurns = 4.75; // 19 years in ~5 turns looks good
   }
   
   // Helper to replace placeholders in translated strings
@@ -30,9 +32,9 @@ class BackUpperFace {
     this.ctx.scale(this.scale, this.scale);
     
     if (angle !== 0) {
-      this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+      this.ctx.translate(300, 300);
       this.ctx.rotate(angle);
-      this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+      this.ctx.translate(-300, -300);
     }
 
     this.drawTitle();

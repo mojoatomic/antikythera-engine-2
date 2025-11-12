@@ -2,12 +2,14 @@ class FrontFace {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.centerX = canvas.width / 2;
-    this.centerY = canvas.height / 2;
-    this.maxRadius = Math.min(canvas.width, canvas.height) / 2 - 80;
     
     // Calculate scale factor (1800/600 = 3x for high-res displays)
     this.scale = canvas.width / 600;
+    
+    // Use original 600x600 coordinate system, not scaled canvas size
+    this.centerX = 600 / 2;
+    this.centerY = 600 / 2;
+    this.maxRadius = Math.min(600, 600) / 2 - 80;
     
     // Planet orbital radii (concentric circles)
     this.orbits = {
@@ -65,9 +67,9 @@ class FrontFace {
     this.ctx.scale(this.scale, this.scale);
     
     if (angle !== 0) {
-      this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+      this.ctx.translate(300, 300);
       this.ctx.rotate(angle);
-      this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+      this.ctx.translate(-300, -300);
     }
 
     // Draw from outside in - EoT rings are OUTERMOST
