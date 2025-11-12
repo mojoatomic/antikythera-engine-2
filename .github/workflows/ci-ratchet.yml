@@ -1,0 +1,13 @@
+name: ci-ratchet
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  ratchet-and-tests:
+    uses: mojoatomic/eslint-plugin-ai-code-snifftest/.github/workflows/ratchet-reusable.yml@main
+    with:
+      node-version: '20'

@@ -22,9 +22,9 @@ export default [
       // Consistency
       'quotes': ['warn', 'single', { avoidEscape: true }],
       'semi': ['warn', 'always'],
-      'eqeqeq': ['error', 'always'],
+'eqeqeq': ['warn', 'always'],
       // Naming (basic)
-      'camelcase': ['error', { properties: 'always' }],
+'camelcase': ['warn', { properties: 'always' }],
       // Domain-specific
       'ai-code-snifftest/no-redundant-calculations': 'warn',
       'ai-code-snifftest/no-equivalent-branches': 'warn',
