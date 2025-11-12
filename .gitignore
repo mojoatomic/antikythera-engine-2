@@ -49,3 +49,8 @@ build/
 # Generated issue documentation (source of truth: GitHub issues)
 /issues/
 /issues-enhanced/
+
+# Lint/analysis outputs
+lint-results.json
+analysis-current.json
+.eslintcache
