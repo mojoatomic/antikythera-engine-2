@@ -487,14 +487,19 @@ app.post('/api/control/location', controlGuard, (req, res) => {
     if (!timezone || typeof timezone !== 'string') {
       return res.status(400).json({ error: 'timezone required (IANA, e.g., Europe/Athens)' });
     }
+    // Normalize timezone: trim whitespace and strip surrounding quotes from common shells / REPL input
+    const tz = String(timezone).trim().replace(/^['"]+|['"]+$/g, '');
+    if (!tz) {
+      return res.status(400).json({ error: 'timezone required (IANA, e.g., Europe/Athens)' });
+    }
     // Validate IANA tz identifier
-    try { new Intl.DateTimeFormat('en-US', { timeZone: timezone }); } catch (_e) {
+    try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); } catch (_e) {
       return res.status(400).json({ error: 'invalid timezone identifier' });
     }
     const loc = {
       latitude: Number(latitude),
       longitude: Number(longitude),
-      timezone: String(timezone),
+      timezone: tz,
       name: name ? String(name) : `${latitude}, ${longitude}`,
     };
     if (Number.isFinite(elevation)) loc.elevation = Number(elevation);

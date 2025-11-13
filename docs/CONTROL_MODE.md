@@ -94,6 +94,17 @@ curl http://localhost:3000/api/state
 - `antikythera control stop`
 - `antikythera control status`
 
+### Control from REPL
+
+The interactive REPL (`antikythera repl`) uses the same unified `control` command implementation as the CLI. This allows you to:
+
+- Push the REPL context (location and timezone) into control mode with `control location here`.
+- Set control time from the REPL context date with `control time now` (after `goto` / relative steps).
+- Inspect control state via `control location status` (alias for `control status`).
+- Pull the current control location/timezone back into the REPL context using `sync control`.
+
+See `docs/CLI-REPL.md` for concrete REPL examples and `README.md` → "Control from REPL" for a quick overview.
+
 ### Control Location
 
 Set observer location explicitly for classroom scenarios. Timezone is required; elevation optional (meters). When set, reads use this location until `stop`.

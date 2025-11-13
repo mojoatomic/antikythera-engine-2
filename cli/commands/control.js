@@ -23,7 +23,10 @@ async function get(path) {
   return res.data;
 }
 
-module.exports = async function control(action, value, options) {
+module.exports = async function control(action, value, options = {}) {
+  const adapter = options.__adapter || 'cli';
+  const safeOpts = { ...options };
+  delete safeOpts.__adapter;
   try {
     const act = String(action || '').toLowerCase();
     if (!act) {
@@ -57,10 +60,10 @@ module.exports = async function control(action, value, options) {
       return;
     }
     if (act === 'animate') {
-      const { from, to } = options;
+      const { from, to } = safeOpts;
       let speed;
-      if (options.speed !== undefined) {
-        const n = Number(options.speed);
+      if (safeOpts.speed !== undefined) {
+        const n = Number(safeOpts.speed);
         speed = Number.isFinite(n) ? Math.abs(n) : undefined;
       }
       if (!from || !to) return console.log(chalk.red('Usage: control animate --from <ISO> --to <ISO> [--speed <Nx>]'));
@@ -69,22 +72,22 @@ module.exports = async function control(action, value, options) {
       return;
     }
     if (act === 'scene') {
-      const { preset } = options;
-      const bodies = options.bodies || undefined;
+      const { preset } = safeOpts;
+      const bodies = safeOpts.bodies || undefined;
       if (!preset) return console.log(chalk.red('Usage: control scene --preset <name> [--bodies a,b,c]'));
       const out = await post('/api/control/scene', { preset, bodies });
       console.log(JSON.stringify(out, null, 2));
       return;
     }
     if (act === 'location') {
-      const coords = value || options.coords;
+      const coords = value || safeOpts.coords;
       if (!coords || !coords.includes(',')) return console.log(chalk.red('Usage: control location <lat,lon> --timezone <tz> [--name <str>] [--elevation <m>]'));
       const [latStr, lonStr] = coords.split(',');
       const lat = parseFloat(String(latStr).trim());
       const lon = parseFloat(String(lonStr).trim());
-      const tz = options.timezone || options.tz;
-      const name = options.name || undefined;
-      const elevation = options.elevation !== undefined ? Number(options.elevation) : undefined;
+      const tz = safeOpts.timezone || safeOpts.tz;
+      const name = safeOpts.name || undefined;
+      const elevation = safeOpts.elevation !== undefined ? Number(safeOpts.elevation) : undefined;
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) return console.log(chalk.red('Invalid coordinates. Example: 37.98,23.73'));
       if (!tz) return console.log(chalk.red('Timezone required. Example: --timezone "Europe/Athens"'));
       const out = await post('/api/control/location', { latitude: lat, longitude: lon, elevation, timezone: tz, name });
@@ -103,11 +106,25 @@ module.exports = async function control(action, value, options) {
     }
     console.log(chalk.red('Unknown control action. Use: time | run | pause | animate | scene | location | stop | status'));
   } catch (err) {
-    const msg = err?.response?.data?.error || err.message;
-    console.error(chalk.red('Error:'), msg);
-    if (String(msg || '').includes('Control authentication')) {
-      console.error(chalk.gray('Set CONTROL_TOKEN env var and pass token via Authorization: Bearer'));
+    const status = err?.response?.status;
+    const raw = err?.response?.data;
+    let msg = err?.response?.data?.error || err.message || String(raw || '');
+    if (!msg || msg === 'Error') {
+      msg = `Control request failed${status ? ` (status ${status})` : ''}.`;
     }
-    process.exit(1);
+    console.error(chalk.red('Error:'), msg);
+    const msgStr = String(msg || '');
+    if (msgStr.toLowerCase().includes('timezone')) {
+      console.error(chalk.gray('Hint: use a valid IANA timezone like Europe/Athens. In the REPL, quotes are supported: --timezone "Europe/Athens"'));
+    } else if (msgStr.toLowerCase().includes('latitude') || msgStr.toLowerCase().includes('longitude')) {
+      console.error(chalk.gray('Hint: latitude must be between -90 and 90, longitude between -180 and 180. Example: 37.98,23.73'));
+    }
+    if (msgStr.includes('Control authentication') || status === 401 || status === 403) {
+      console.error(chalk.gray('Set CONTROL_TOKEN env var and ensure the control API is running and reachable.'));
+    }
+    if (adapter === 'cli') {
+      process.exit(1);
+    }
+    // In REPL, do not exit the whole process; just return control to the prompt
   }
 };

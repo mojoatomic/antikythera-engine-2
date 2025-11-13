@@ -2,105 +2,24 @@
 
 const { Command } = require('commander');
 const { version, description } = require('../package.json');
+const { registerCLICommands } = require('./adapters/cli-adapter');
+const { commands } = require('./commands');
+const cmdRepl = require('./commands/repl');
 
 const program = new Command();
-
-// Import commands
-const cmdNow = require('./commands/now');
-const cmdPosition = require('./commands/position');
-const cmdWatch = require('./commands/watch');
-const cmdCompare = require('./commands/compare');
-const cmdValidate = require('./commands/validate');
-const cmdRepl = require('./commands/repl');
 
 program
   .name('antikythera')
   .description(description)
   .version(version);
 
-// Now command - current astronomical state
-program
-  .command('now')
-  .description('Show current astronomical state')
-  .option('--format <type>', 'Output format (table, json, csv)', 'table')
-  .option('--debug', 'Show debug information')
-  .option('--local', 'Use embedded engine')
-  .option('--remote', 'Force API connection')
-  .option('--lat <num>', 'Observer latitude')
-  .option('--lon <num>', 'Observer longitude')
-  .option('--elev <num>', 'Observer elevation (meters)')
-  .action(cmdNow);
+// Register all core CLI commands via unified registry
+registerCLICommands(program, commands);
 
-// Position command - specific body position
-program
-  .command('position <body>')
-  .description('Get position of celestial body (sun, moon, mercury, venus, mars, jupiter, saturn)')
-  .option('--date <iso>', 'Date (ISO 8601 format)', new Date().toISOString())
-  .option('--format <type>', 'Output format (table, json, csv)', 'table')
-  .option('--debug', 'Show calculation steps')
-  .option('--verbose', 'Include raw data')
-  .option('--profile', 'Show timing information')
-  .option('--local', 'Use embedded engine')
-  .option('--remote', 'Force API connection')
-  .option('--lat <num>', 'Observer latitude')
-  .option('--lon <num>', 'Observer longitude')
-  .option('--elev <num>', 'Observer elevation (meters)')
-  .action(cmdPosition);
-
-// Watch command - live updates
-program
-  .command('watch [body]')
-  .description('Watch live updates of astronomical positions')
-  .option('--interval <ms>', 'Update interval in milliseconds', '1000')
-  .option('--compare', 'Show comparison with API')
-  .option('--format <type>', 'Output format (table, json)', 'table')
-  .option('--lat <num>', 'Observer latitude')
-  .option('--lon <num>', 'Observer longitude')
-  .option('--elev <num>', 'Observer elevation (meters)')
-  .action(cmdWatch);
-
-// Compare command - compare sources
-program
-  .command('compare <body> <source1> <source2>')
-  .description('Compare calculations from different sources (cli, api, snapshot)')
-  .option('--date <iso>', 'Date to compare', new Date().toISOString())
-  .option('--format <type>', 'Output format (table, json)', 'table')
-  .option('--lat <num>', 'Observer latitude')
-  .option('--lon <num>', 'Observer longitude')
-  .option('--elev <num>', 'Observer elevation (meters)')
-  .action(cmdCompare);
-
-// Validate command - check for discontinuities
-program
-  .command('validate')
-  .description('Validate calculations over date range')
-  .option('--from <iso>', 'Start date')
-  .option('--to <iso>', 'End date')
-  .option('--suite <name>', 'Test suite to run (dst, leap-year, full)', 'dst')
-  .option('--format <type>', 'Output format (table, json)', 'table')
-  .action(cmdValidate);
-
-// REPL command - interactive shell
+// REPL command - interactive shell (kept as a separate entry)
 program
   .command('repl')
   .description('Start interactive REPL mode')
   .action(cmdRepl);
-
-// Control commands
-const cmdControl = require('./commands/control');
-program
-  .command('control')
-  .description('Classroom control: time | run | pause | animate | scene | location | stop | status')
-  .argument('<action>', 'time|run|pause|animate|scene|location|stop|status')
-  .argument('[value]', 'ISO for time OR "lat,lon" for location')
-  .option('--from <iso>', 'Animation start ISO')
-  .option('--to <iso>', 'Animation end ISO')
-  .option('--speed <Nx>', 'Animation speed multiplier (default 1)')
-  .option('--preset <name>', 'Scene preset name')
-  .option('--bodies <list>', 'Comma-separated bodies list for scene')
-  .option('--timezone <tz>', 'IANA timezone for control location (e.g., Europe/Athens)')
-  .option('--elevation <m>', 'Elevation (meters) for control location')
-  .option('--name <str>', 'Friendly location name')
-  .action(cmdControl);
 
 program.parse(process.argv);
