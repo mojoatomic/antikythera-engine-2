@@ -14,11 +14,6 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "lint:json": "eslint . -f json -o lint-results.json",
-    "analyze:current": "eslint-plugin-ai-code-snifftest analyze --input=lint-results.json --format=json --output=analysis-current.json",
-    "ratchet": "eslint-plugin-ai-code-snifftest-ratchet --baseline=analysis-baseline.json --current=analysis-current.json",
-    "ratchet:context": "eslint-plugin-ai-code-snifftest-ratchet --mode=context --baseline=analysis-baseline.json --current=analysis-current.json",
-    "ci:ratchet": "npm run lint:json && npm run analyze:current && npm run ratchet",
     "ci": "npm run lint && npm test",
     "validate:horizons": "node scripts/validate-horizons.js",
     "prepare": "husky"
@@ -52,7 +47,6 @@
   },
   "devDependencies": {
     "eslint": "^9.18.0",
-    "eslint-plugin-ai-code-snifftest": "file:eslint-plugin-ai-code-snifftest-0.0.0.tgz",
     "husky": "^9.1.7",
     "jest": "^29.7.0",
     "node-pty": "^1.0.0"
