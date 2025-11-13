@@ -2,10 +2,53 @@ const readline = require('readline');
 const os = require('os');
 const chalk = require('chalk');
 const asciichart = require('asciichart');
+const axios = require('axios');
 const { getData, getFromAPI, getFromEngine, getDisplayFromAPI } = require('../sources');
 const { format } = require('../formatters');
 const { loadContext, saveContext, getHistoryPath, loadHistory, saveHistory } = require('../utils/repl-config');
 const { parseDateInput, echoParsedDate, addRelativeToDate } = require('../utils/date-parse');
+const { getControlToken } = require('../lib/control-token');
+
+// Optional unified commands adapter for REPL
+// Enabled by default; set ANTIKYTHERA_COMMANDS_ADAPTER=0 to disable.
+const USE_ADAPTER = process.env.ANTIKYTHERA_COMMANDS_ADAPTER !== '0';
+let dispatchUnified = null;
+
+function controlBaseURL() {
+  const host = process.env.ANTIKYTHERA_API_BASE || 'http://localhost:3000';
+  return host.replace(/\/$/, '');
+}
+
+async function fetchControlStatus() {
+  const token = getControlToken();
+  if (!token) {
+    console.error(chalk.red('✗ Control token not found')); 
+    console.error(chalk.gray('Start the server (npm start) or set ANTIKYTHERA_CONTROL_TOKEN/CONTROL_TOKEN.'));
+    return null;
+  }
+  const url = `${controlBaseURL()}/api/control/status`;
+  try {
+    const res = await axios.get(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 5000
+    });
+    return res.data;
+  } catch (err) {
+    const status = err && err.response && err.response.status;
+    const msg = (err && err.response && err.response.data && err.response.data.error) || err.message || String(err || '');
+    console.error(chalk.red('Error:'), msg || `Control status request failed${status ? ` (status ${status})` : ''}.`);
+    return null;
+  }
+}
+if (USE_ADAPTER) {
+  try {
+    const { createReplDispatcher } = require('../adapters/repl-adapter');
+    const { commands } = require('../commands');
+    dispatchUnified = createReplDispatcher(commands);
+  } catch (_e) {
+    dispatchUnified = null;
+  }
+}
 
 const VALID_BODIES = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
 
@@ -23,6 +66,9 @@ class AntikytheraREPL {
     if (!this.context.compareToleranceDeg) this.context.compareToleranceDeg = 0.001;
     // Watch state
     this.activeWatch = null; // { timer, body, interval }
+
+    // Adapter state
+    this.useAdapter = !!dispatchUnified;
   }
 
   start() {
@@ -94,13 +140,101 @@ class AntikytheraREPL {
     this.saveAndPrompt();
   }
 
+  // Basic shell-like tokenizer: split on whitespace but keep quoted substrings together
+  _tokenize(input) {
+    const out = [];
+    let current = '';
+    let inSingle = false;
+    let inDouble = false;
+    let escape = false;
+    for (let i = 0; i < input.length; i++) {
+      const ch = input[i];
+      if (escape) {
+        current += ch;
+        escape = false;
+        continue;
+      }
+      if (ch === '\\') {
+        escape = true;
+        continue;
+      }
+      if (ch === '"' && !inSingle) {
+        inDouble = !inDouble;
+        continue;
+      }
+      if (ch === '\'' && !inDouble) {
+        inSingle = !inSingle;
+        continue;
+      }
+      if (!inSingle && !inDouble && /\s/.test(ch)) {
+        if (current) {
+          out.push(current);
+          current = '';
+        }
+        continue;
+      }
+      current += ch;
+    }
+    if (current) out.push(current);
+    return out;
+  }
+
   async execute(input) {
     // Pipeline support: detect '|' and delegate
     if (input.includes('|')) {
       return this.handlePipeline(input);
     }
-    const tokens = input.split(/\s+/);
+    const tokens = this._tokenize(input);
+    if (!tokens.length) return;
     const cmd = tokens[0].toLowerCase();
+
+    // Unified adapter routing (feature-flagged)
+    if (this.useAdapter && dispatchUnified) {
+      // Route now via unified command (REPL 'now' no longer aliases to 'all' when adapter is on)
+      if (cmd === 'now') {
+        const opts = this._buildNowOptionsFromContext();
+        await dispatchUnified('now', opts, { repl: true });
+        return;
+      }
+      // Route compare via unified "compare" command: compare <body>
+      if (cmd === 'compare') {
+        const args = this._buildCompareOptionsFromContext(tokens.slice(1));
+        if (args) {
+          await dispatchUnified('compare', args, { repl: true });
+        }
+        return;
+      }
+      // Route position via unified command: position <body> [--flags]
+      if (cmd === 'position') {
+        const args = this._buildPositionOptionsFromTokens(tokens.slice(1));
+        if (args) {
+          await dispatchUnified('position', args, { repl: true });
+        }
+        return;
+      }
+      // Route validate via unified command: validate [--from --to --suite]
+      if (cmd === 'validate') {
+        const args = this._buildValidateOptionsFromTokens(tokens.slice(1));
+        if (args) {
+          await dispatchUnified('validate', args, { repl: true });
+        }
+        return;
+      }
+      // control passthrough with REPL-specific sugar: control <action> [value] [--flags]
+      if (cmd === 'control') {
+        // Allow: control --help | control help
+        const sub = (tokens[1] || '').toLowerCase();
+        if (sub === '--help' || sub === '-h' || sub === 'help') {
+          this.showControlHelp();
+          return;
+        }
+        const args = this._buildControlOptionsFromTokens(tokens.slice(1));
+        if (args) {
+          await this._handleControlWithAdapter(args);
+        }
+        return;
+      }
+    }
 
     // Pause/Resume for watch
     if (cmd === 'pause') return this.handlePause();
@@ -117,7 +251,11 @@ class AntikytheraREPL {
 
     // Built-ins
     if (['exit', 'quit', '.exit'].includes(cmd)) return this.rl.close();
-    if (cmd === 'help' || cmd === '?') return this.showHelp();
+    if (cmd === 'help' || cmd === '?') {
+      const sub = (tokens[1] || '').toLowerCase();
+      if (sub === 'control') return this.showControlHelp();
+      return this.showHelp();
+    }
     if (cmd === 'clear' || cmd === 'cls') {
       console.clear();
       return;
@@ -156,14 +294,17 @@ class AntikytheraREPL {
     // set commands
     if (cmd === 'set') return this.handleSet(tokens.slice(1));
 
+    // sync commands
+    if (cmd === 'sync') return this.handleSync(tokens.slice(1));
+
     // compare / watch / plot
-    if (cmd === 'compare') return this.handleCompare(tokens.slice(1));
+    if (cmd === 'compare' && !this.useAdapter) return this.handleCompare(tokens.slice(1));
     if (cmd === 'watch') return this.handleWatch(tokens.slice(1));
     if (cmd === 'plot') return this.handlePlot(tokens.slice(1));
     if (cmd === 'sample') return this.handleSample(tokens.slice(1));
 
-    // all / now short-hands
-    if (cmd === 'all' || (cmd === 'now' && tokens.length === 1)) return this.showAllPositions(tokens[1]);
+    // all / now short-hands (when adapter is OFF). When adapter ON, 'now' routes to unified command above
+    if (cmd === 'all' || (cmd === 'now' && tokens.length === 1 && !this.useAdapter)) return this.showAllPositions(tokens[1]);
 
     // body queries: <body>, <body> at <date>, <body> now
     if (VALID_BODIES.includes(cmd)) {
@@ -184,6 +325,299 @@ class AntikytheraREPL {
     }
 
     console.log(chalk.yellow('Unknown command. Type "help".'));
+  }
+
+  _buildNowOptionsFromContext() {
+    const opts = {};
+    const fmt = (this.context && this.context.format) ? String(this.context.format).toLowerCase() : 'table';
+    // Map compact -> table for unified formatter
+    opts.format = (fmt === 'compact') ? 'table' : fmt;
+    const src = (this.context && this.context.source) ? String(this.context.source).toLowerCase() : 'auto';
+    opts.local = src === 'local';
+    opts.remote = src === 'api';
+    if (this.context && this.context.location) {
+      const loc = this.context.location;
+      if (isFinite(loc.latitude) && isFinite(loc.longitude)) {
+        opts.lat = Number(loc.latitude);
+        opts.lon = Number(loc.longitude);
+      }
+      if (isFinite(loc.elevation)) opts.elev = Number(loc.elevation);
+    }
+    return opts;
+  }
+
+  _buildCompareOptionsFromContext(args) {
+    const tokens = Array.isArray(args) ? args : [];
+    const bodyToken = (tokens[0] || this.context.lastBody || 'moon').toLowerCase();
+    if (!VALID_BODIES.includes(bodyToken)) {
+      console.log(chalk.red(`Invalid body: ${bodyToken}`));
+      console.log(chalk.gray(`Valid: ${VALID_BODIES.join(', ')}`));
+      return null;
+    }
+    const date = this._currentDate();
+    const fmt = (this.context && this.context.format) ? String(this.context.format).toLowerCase() : 'table';
+    const out = {
+      body: bodyToken,
+      // REPL semantics: API vs engine
+      source1: 'api',
+      source2: 'engine',
+      date: date.toISOString(),
+      format: fmt === 'json' ? 'json' : 'table'
+    };
+    if (this.context && this.context.location) {
+      const loc = this.context.location;
+      if (isFinite(loc.latitude) && isFinite(loc.longitude)) {
+        out.lat = Number(loc.latitude);
+        out.lon = Number(loc.longitude);
+      }
+      if (isFinite(loc.elevation)) out.elev = Number(loc.elevation);
+    }
+    return out;
+  }
+
+  _buildControlOptionsFromTokens(args) {
+    const tokens = Array.isArray(args) ? args.slice() : [];
+    if (!tokens.length) {
+      console.log(chalk.red('Usage: control <action> [value] [--flags]'));
+      console.log(chalk.gray('Actions: time | run | pause | animate | scene | location | stop | status'));
+      return null;
+    }
+    const action = String(tokens.shift() || '').toLowerCase();
+    if (!action) {
+      console.log(chalk.red('Usage: control <action> [value] [--flags]'));
+      return null;
+    }
+    let value = null;
+    if (tokens.length && !tokens[0].startsWith('--')) {
+      value = tokens.shift();
+    }
+    const opts = {};
+    for (let i = 0; i < tokens.length; i++) {
+      let tok = tokens[i];
+      if (!tok.startsWith('--')) continue;
+      tok = tok.slice(2);
+      let key = tok;
+      let val = null;
+      const eqIdx = tok.indexOf('=');
+      if (eqIdx !== -1) {
+        key = tok.slice(0, eqIdx);
+        val = tok.slice(eqIdx + 1);
+      } else {
+        const next = tokens[i + 1];
+        if (next && !next.startsWith('--')) {
+          val = next;
+          i += 1;
+        } else {
+          val = 'true';
+        }
+      }
+      switch (key) {
+        case 'from':
+        case 'to':
+        case 'speed':
+        case 'preset':
+        case 'bodies':
+        case 'timezone':
+        case 'tz':
+        case 'elevation':
+        case 'name':
+        case 'date':
+        case 'iso':
+        case 'coords':
+          opts[key] = val;
+          break;
+        default:
+          console.log(chalk.gray(`(control) ignoring unknown option --${key}`));
+      }
+    }
+    return { action, value, ...opts };
+  }
+
+  // Build options for unified position command from REPL context
+  _buildPositionOptionsFromTokens(args) {
+    const tokens = Array.isArray(args) ? args.slice() : [];
+    if (!tokens.length) {
+      console.log(chalk.red('Usage: position <body> [--date <ISO>] [--format <table|json|csv>]'));
+      return null;
+    }
+    const body = String(tokens.shift() || '').toLowerCase();
+    if (!VALID_BODIES.includes(body)) {
+      console.log(chalk.red(`Invalid body: ${body}`));
+      console.log(chalk.gray(`Valid: ${VALID_BODIES.join(', ')}`));
+      return null;
+    }
+    const opts = { body };
+    for (let i = 0; i < tokens.length; i++) {
+      let tok = tokens[i];
+      if (!tok.startsWith('--')) continue;
+      tok = tok.slice(2);
+      let key = tok;
+      let val = null;
+      const eqIdx = tok.indexOf('=');
+      if (eqIdx !== -1) {
+        key = tok.slice(0, eqIdx);
+        val = tok.slice(eqIdx + 1);
+      } else {
+        const next = tokens[i + 1];
+        if (next && !next.startsWith('--')) {
+          val = next;
+          i += 1;
+        } else {
+          val = 'true';
+        }
+      }
+      switch (key) {
+        case 'date':
+        case 'format':
+        case 'debug':
+        case 'verbose':
+        case 'profile':
+        case 'lat':
+        case 'lon':
+        case 'elev':
+          opts[key] = val;
+          break;
+        case 'local':
+        case 'remote':
+          opts[key] = true;
+          break;
+        default:
+          console.log(chalk.gray(`(position) ignoring unknown option --${key}`));
+      }
+    }
+    // Defaults from REPL context
+    const fmt = (this.context && this.context.format) ? String(this.context.format).toLowerCase() : 'table';
+    if (!opts.format) opts.format = fmt === 'compact' ? 'table' : fmt;
+    if (!opts.date) opts.date = this._currentDate().toISOString();
+    const src = (this.context && this.context.source) ? String(this.context.source).toLowerCase() : 'auto';
+    if (!opts.local && !opts.remote) {
+      if (src === 'local') opts.local = true;
+      if (src === 'api') opts.remote = true;
+    }
+    if (this.context && this.context.location) {
+      const loc = this.context.location;
+      if (!opts.lat && isFinite(loc.latitude)) opts.lat = Number(loc.latitude);
+      if (!opts.lon && isFinite(loc.longitude)) opts.lon = Number(loc.longitude);
+      if (!opts.elev && isFinite(loc.elevation)) opts.elev = Number(loc.elevation);
+    }
+    return opts;
+  }
+
+  // Build options for unified validate command from REPL context
+  _buildValidateOptionsFromTokens(args) {
+    const tokens = Array.isArray(args) ? args.slice() : [];
+    const opts = {};
+    for (let i = 0; i < tokens.length; i++) {
+      let tok = tokens[i];
+      if (!tok.startsWith('--')) {
+        // Bare token: treat first as suite if not set
+        if (!opts.suite) opts.suite = tok;
+        continue;
+      }
+      tok = tok.slice(2);
+      let key = tok;
+      let val = null;
+      const eqIdx = tok.indexOf('=');
+      if (eqIdx !== -1) {
+        key = tok.slice(0, eqIdx);
+        val = tok.slice(eqIdx + 1);
+      } else {
+        const next = tokens[i + 1];
+        if (next && !next.startsWith('--')) {
+          val = next;
+          i += 1;
+        } else {
+          val = 'true';
+        }
+      }
+      switch (key) {
+        case 'from':
+        case 'to':
+        case 'suite':
+        case 'format':
+          opts[key] = val;
+          break;
+        default:
+          console.log(chalk.gray(`(validate) ignoring unknown option --${key}`));
+      }
+    }
+    const fmt = (this.context && this.context.format) ? String(this.context.format).toLowerCase() : 'table';
+    if (!opts.format) opts.format = fmt === 'compact' ? 'table' : fmt;
+    if (!opts.suite) opts.suite = 'dst';
+    return opts;
+  }
+
+  async _handleControlWithAdapter(args) {
+    const outArgs = { ...args };
+    const act = String(outArgs.action || '').toLowerCase();
+
+    if (act === 'location') {
+      const valRaw = outArgs.value != null ? String(outArgs.value) : '';
+      const val = valRaw.toLowerCase();
+      if (val === 'here') {
+        const loc = this.context && this.context.location;
+        if (!loc || !isFinite(loc.latitude) || !isFinite(loc.longitude)) {
+          console.log(chalk.red('Context location not set. Use: set location <lat,lon[,elev]> first.'));
+          return;
+        }
+        outArgs.value = `${loc.latitude},${loc.longitude}`;
+        if (!outArgs.timezone && !outArgs.tz) {
+          let tz = (this.context && this.context.tz && this.context.tz !== 'auto') ? this.context.tz : null;
+          if (!tz) {
+            try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (_) {}
+          }
+          if (tz) outArgs.timezone = tz;
+        }
+        if (!outArgs.elevation && loc.elevation != null && isFinite(loc.elevation)) {
+          outArgs.elevation = String(loc.elevation);
+        }
+      } else if (val === 'status') {
+        // Alias: control location status -> control status
+        await dispatchUnified('control', { action: 'status' }, { repl: true });
+        return;
+      }
+    }
+
+    if (act === 'time') {
+      const valRaw = outArgs.value != null ? String(outArgs.value) : '';
+      const lower = valRaw.toLowerCase();
+      if (!valRaw || lower === 'now') {
+        const date = this._currentDate();
+        outArgs.value = date.toISOString();
+      } else {
+        try {
+          const parsed = parseDateInput(valRaw, this.context);
+          outArgs.value = parsed.date.toISOString();
+        } catch (_e) {
+          console.log(chalk.red('Invalid time. Use ISO or natural date (e.g., "today 18:00").'));
+          return;
+        }
+      }
+    }
+
+    await dispatchUnified('control', outArgs, { repl: true });
+
+    // After a location update, update REPL context from args
+    if (act === 'location' && outArgs.value && typeof outArgs.value === 'string') {
+      const coordsStr = outArgs.value.replace(/\s+/g, '');
+      const m = coordsStr.match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,(-?\d+(?:\.\d+)?))?$/);
+      if (m) {
+        const lat = parseFloat(m[1]);
+        const lon = parseFloat(m[2]);
+        const elev = m[3] ? parseFloat(m[3]) : undefined;
+        if (isFinite(lat) && isFinite(lon)) {
+          this.context.location = {
+            latitude: lat,
+            longitude: lon,
+            elevation: typeof elev === 'number' ? elev : (this.context.location && this.context.location.elevation) || 0,
+            source: 'control'
+          };
+          const tz = outArgs.timezone || outArgs.tz;
+          if (tz) this.context.tz = tz;
+          console.log(chalk.gray(`(context updated from control location: ${lat},${lon}${elev != null ? ',' + elev : ''}${(tz || this.context.tz) ? ' tz=' + (tz || this.context.tz) : ''})`));
+        }
+      }
+    }
   }
 
   maybeEchoIntent(text) {
@@ -963,6 +1397,37 @@ class AntikytheraREPL {
   }
 
   // Sample range: sample <body> from <date> to <date> every <step> [json|csv]
+  async handleSync(args) {
+    const sub = (args[0] || '').toLowerCase();
+    if (!sub || sub === 'control') {
+      if (typeof fetchControlStatus !== 'function') {
+        console.log(chalk.red('Control status sync unavailable in this build.'));
+        return;
+      }
+      const status = await fetchControlStatus();
+      if (!status) return;
+      const loc = status.location;
+      if (!loc || !isFinite(loc.latitude) || !isFinite(loc.longitude)) {
+        console.log(chalk.red('Control has no active location.'));
+        return;
+      }
+      const lat = Number(loc.latitude);
+      const lon = Number(loc.longitude);
+      const elev = Number.isFinite(loc.elevation) ? Number(loc.elevation) : (this.context.location && this.context.location.elevation) || 0;
+      this.context.location = {
+        latitude: lat,
+        longitude: lon,
+        elevation: elev,
+        source: 'control'
+      };
+      if (loc.timezone) this.context.tz = String(loc.timezone);
+      console.log(chalk.green('Synced REPL context from control location.'));
+      console.log(chalk.gray(`location=${lat},${lon}${elev ? ',' + elev : ''}${loc.timezone ? ' tz=' + loc.timezone : ''}`));
+      return;
+    }
+    console.log(chalk.red('Usage: sync control'));
+  }
+
   async handleSample(args) {
     const body = (args[0] || this.context.lastBody || 'moon').toLowerCase();
     if (!VALID_BODIES.includes(body)) {
@@ -1124,9 +1589,14 @@ class AntikytheraREPL {
     console.log(chalk.cyan.bold('\nCommands'));
     console.log('  <body>                show position now');
     console.log('  <body> at <date>      show position at date (ISO | +2h | today 18:00)');
+    console.log('  now                   unified "now" snapshot (CLI-equivalent, respects format/source)');
     console.log('  all                   show all bodies (compact)');
+    console.log('  position <body>       CLI-style position (respects format/source/location)');
     console.log('  compare <body>        api vs engine (Δ with tolerance)');
     console.log('  watch <body> [interval N] [compare]');
+    console.log('  validate [...]         CLI validation suite (unified)');
+    console.log('  control ...           classroom control (type "help control" for details)');
+    console.log('  sync control          sync REPL context from control location');
     console.log('  next eclipse          show next eclipse (API)');
     console.log('  next opposition [p]   show next opposition (API)');
     console.log('  find next conjunction [A] [B]   geocentric ecliptic conjunction');
@@ -1135,8 +1605,41 @@ class AntikytheraREPL {
     console.log('  goto <date>           set context date (ISO | +2h | today 18:00)');
     console.log('  reset                 reset context date to now');
     console.log('  +2h / -30m            step context date by relative amount');
+    console.log('  plot ...              charts (moon.illumination, visibility, longitude, speed)');
+    console.log('  sample ...            sample <body> over range every <step> [json|csv]');
     console.log('  set format <v> | set source <v> | set tz <v> | set intent on|off | set tolerance <deg>');
     console.log('  context | history | help | clear | exit');
+    console.log();
+    console.log(chalk.cyan.bold('Pipelines'));
+    console.log('  all | visible | sort alt desc | limit 3');
+    console.log('  all | fields name lon alt | grep MARS');
+    console.log('  all | where alt > 0 | fields name alt | limit 2');
+    console.log('  all | visible | json    # JSON rows array');
+    console.log();
+    console.log(chalk.gray('Tip: CLI commands are also available outside the REPL:'));
+    console.log(chalk.gray('  antikythera now | position | watch | compare | validate | control'));
+    console.log();
+  }
+
+  showControlHelp() {
+    console.log(chalk.cyan.bold('\nControl commands'));
+    console.log('  control time <ISO>          set control time (UTC ISO)');
+    console.log('  control time now            set control time to current REPL date');
+    console.log('  control time <natural>      set using REPL parser (e.g., "today 18:00")');
+    console.log('  control run [--speed N]     start continuous animation');
+    console.log('  control pause               freeze at current time');
+    console.log('  control animate --from <ISO> --to <ISO> [--speed N]');
+    console.log('  control scene --preset <name> [--bodies a,b,c]');
+    console.log('  control location <lat,lon> --timezone <tz> [--name <str>] [--elevation <m>]');
+    console.log('  control location here       push REPL context location/tz into control');
+    console.log('  control location status     show full control status');
+    console.log('  control stop                clear control state');
+    console.log('  control status              show full control status (JSON)');
+    console.log();
+    console.log(chalk.gray('Examples:'));
+    console.log(chalk.gray('  control time now'));
+    console.log(chalk.gray('  control location here'));
+    console.log(chalk.gray('  control location 37.98,23.73 --timezone "Europe/Athens" --name "Athens, Greece"'));
     console.log();
   }
 
@@ -1213,7 +1716,7 @@ class AntikytheraREPL {
 
     const base = [
       ...VALID_BODIES,
-      'all','now','watch','compare','plot','next','goto','reset','help','exit','quit','.exit','context','history','clear','set','format','source','tz','intent','tolerance'
+      'all','now','position','validate','watch','compare','plot','next','goto','reset','help','exit','quit','.exit','context','history','clear','set','sync','format','source','tz','intent','tolerance','control'
     ];
     const hits = base.filter(c => c.startsWith(last));
     return [hits.length ? hits : base, last];
@@ -1241,4 +1744,10 @@ module.exports.__getCompleter = (context = {}) => {
   const r = new AntikytheraREPL();
   r.context = { ...r.context, ...context };
   return r.completer.bind(r);
+};
+
+module.exports.__createForTest = (context = {}) => {
+  const r = new AntikytheraREPL();
+  r.context = { ...r.context, ...context };
+  return r;
 };

@@ -53,33 +53,40 @@ Notes
 ### Command Reference (copy/paste)
 - `<body>` → position now (sun, moon, mercury, venus, mars, jupiter, saturn)
 - `<body> at <date>` → position at date (ISO | relative | natural)
-- `all` → sun, moon, planets (compact)
+- `now` → unified snapshot (CLI-equivalent, respects format/source/location)
+- `position <body> [--flags]` → CLI-style position (body, --date, --format, --local/--remote, etc.)
 - `compare <body>` → API vs Engine (Δ with tolerance)
 - `watch <body[,body...]> [interval N] [compare]` → live updates; `pause` / `resume`; Ctrl+C to stop
+- `all` → sun, moon, planets (compact; can be piped)
 - `next eclipse` | `next opposition [planet]`
 - `find next conjunction [A] [B]` (aliases: `A with B`, `with sun A`)
 - `find next equinox` | `find next solstice`
 - `plot <body|list|planets> <Nd|Nh|Nw> [csv]`
 - `plot moon.illumination <Nd>` | `plot visibility sun 1d`
 - `sample <body> from <date> to <date> every <step> [json|csv]`
+- `validate [--from --to --suite <dst|leap-year|full>] [--format <table|json>]`
 - `set source <auto|local|api>` | `set location <lat,lon[,elev]>` | `set tz <auto|IANA>`
 - `set format <table|json|compact>` | `set intent <on|off>` | `set tolerance <deg>`
-- `context` | `history` | `help` | `clear` | `exit`
-- `set intent <on|off>`
-- `set tolerance <degrees>`
-- `context`, `history`, `help`, `clear`, `exit|quit|.exit`
+- `control ...` → control commands (see "Control from REPL" below)
+- `sync control` → sync REPL context from control location
+- `context` | `history` | `help` | `clear` | `exit|quit|.exit`
 
 ### Control Commands (Classroom Control)
 Authentication is automatic in local development: start the server first and a control token is generated at `.antikythera/control-token`. The CLI reads it automatically.
 
 - `control time <ISO>` — Set display to specific time (UTC ISO recommended)
+- `control time now` — Set control time from the current REPL context date (set via `goto` / relative steps)
+- `control time <natural>` — Set using REPL date parsing (e.g., `today 18:00`, `+2h`)
 - `control run [--speed <Nx>]` — Start time flow from current controlled time (default 1x)
 - `control pause` — Freeze at current time
 - `control animate --from <ISO> --to <ISO> [--speed <Nx>]` — Animate through a time range (finite)
 - `control scene --preset <name> [--bodies a,b,c]` — Change scene preset
 - `control location <lat,lon> --timezone <IANA> [--name <str>] [--elevation <m>]` — Set observer location (explicit)
+- `control location here` — Push REPL context location/tz into control mode
+- `control location status` — Show current control status (alias for `control status`)
 - `control stop` — Return to real-time now (also clears control location)
 - `control status` — Show current control state (includes location)
+- `sync control` — Sync REPL context from the current control location/timezone
 
 #### Reset to Real-Time
 To stop control mode and return to live time:
@@ -129,15 +136,16 @@ antikythera control status
 | Command | Description |
 |---------|-------------|
 | `control time <ISO>` | Set display to specific time |
+| `control time now` | Set display to REPL context time |
 | `control run [--speed <N>]` | Start time flow from current time |
 | `control pause` | Freeze at current time |
 | `control animate --from <ISO> --to <ISO> --speed <N>` | Animate through time range |
 | `control scene --preset <name>` | Change display scene |
 | `control location <lat,lon> --timezone <IANA> [--name] [--elevation]` | Set observer location (explicit) |
+| `control location here` | Push REPL context location/tz into control mode |
 | `control stop` | Return to real-time (clears control location) |
 | `control status` | Show current control state (includes location) |
-
-Reserved for Phase 2: `next`, `find`, `goto`, `reset`, `+/-`, `where`.
+| `sync control` | Sync REPL context from current control location |
 
 ### Pipes & Filters
 - Syntax: `all | <stage> | <stage> ...`
@@ -154,7 +162,7 @@ all | where alt > 0 | fields name alt | json
 ```
 
 ### Completion
-- Global: help, exit, clear, context, history, set, format, source, tz, watch, compare, all, bodies
+- Global: help, exit, clear, context, history, set, format, source, tz, watch, compare, position, validate, sync, control, all, bodies
 - Contextual:
   - after `set` → `format|source|tz|intent|tolerance`
   - after `format` → `table|json|compact`

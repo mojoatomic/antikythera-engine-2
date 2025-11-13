@@ -251,6 +251,35 @@ Notes:
 - When a control location is set, `/api/state` and `/api/display` ignore `?lat/lon` overrides and use the control location (observer.source = "control").
 - FrontFace lower-right shows the control location name and coordinates; sunrise/sunset/time use the provided timezone.
 
+### Control from REPL
+
+The REPL shares the same unified `control` command implementation as the CLI, so you can drive the display directly from `antikythera repl`:
+
+```bash
+antikythera repl
+set location 37.9838,23.7275,100
+set tz Europe/Athens
+control location here                 # push REPL context into control mode
+control location status               # inspect control status (alias for control status)
+```
+
+- `control time now` uses the current REPL context date (set via `goto` and relative steps):
+
+```bash
+goto 2025-01-02T03:04:05Z
+control time now                      # sets control displayTime to the REPL date
+control status                        # displayTime now ~ 2025-01-02T03:04:05Z
+```
+
+- `sync control` pulls the current control location/timezone back into the REPL context:
+
+```bash
+sync control
+context                               # location source=control, tz from control status
+```
+
+See `docs/CLI-REPL.md` for the full REPL command reference and `docs/CONTROL_MODE.md` for detailed control mode behavior.
+
 ## Control Token Management
 
 See also: docs/CONTROL_MODE.md

@@ -316,6 +316,51 @@ $ antikythera validate --suite dst
 
 ---
 
+### `control`
+
+Control the classroom display or physical device via the control API (`/api/control/*`).
+
+**Syntax:**
+```bash
+antikythera control <action> [value] [options]
+```
+
+**Actions:**
+- `time <ISO>` – Set control time (UTC ISO recommended)
+- `run [--speed <Nx>]` – Start continuous time flow
+- `pause` – Freeze at current effective time
+- `animate --from <ISO> --to <ISO> [--speed <Nx>]` – Animate through a finite time range
+- `scene --preset <name> [--bodies a,b,c]` – Change scene preset
+- `location <lat,lon> --timezone <IANA> [--name <str>] [--elevation <m>]` – Pin observer location
+- `status` – Show full control state (JSON)
+- `stop` – Clear control mode and return to real-time
+
+**Token handling (local development):**
+- On first `npm start`, the server writes `.antikythera/control-token`.
+- The CLI reads this token automatically; no extra env configuration is required on the same machine.
+- To override, set `ANTIKYTHERA_CONTROL_TOKEN` or `CONTROL_TOKEN`.
+
+**Examples:**
+```bash
+# Set historical time
+antikythera control time 1969-07-20T20:17:00Z
+
+# Set location (timezone required; elevation optional)
+antikythera control location 37.9838,23.7275 --timezone "Europe/Athens" --name "Athens, Greece"
+
+# Run / pause
+antikythera control run --speed 10
+antikythera control pause
+
+# Inspect / reset
+antikythera control status
+antikythera control stop
+```
+
+See `docs/CONTROL_MODE.md` for full control mode semantics.
+
+---
+
 ## Output Formats
 
 ### Table (Default)
