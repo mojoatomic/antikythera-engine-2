@@ -19,13 +19,13 @@ module.exports = [
     },
     rules: {
       'no-unused-vars': ['error', {
-        'argsIgnorePattern': '^_',
-        'varsIgnorePattern': '^_|^[A-Z]',  // Allow unused classes and _ prefix
-        'caughtErrorsIgnorePattern': '^_'
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_|^[A-Z]',
+        caughtErrorsIgnorePattern: '^_'
       }],
       'no-console': 'off',
       'semi': ['error', 'always'],
-      'quotes': ['error', 'single', { 'avoidEscape': true }]
+      'quotes': ['error', 'single', { avoidEscape: true }]
     }
   }
 ];

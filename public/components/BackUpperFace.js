@@ -168,7 +168,7 @@ class BackUpperFace {
   drawSubDials(data) {
     // Callippic sub-dial (76-year cycle = 4 Metonic cycles)
     // Draw small dial in upper right
-    const subDialX = this.canvas.width - 80;
+    const subDialX = 600 - 80;
     const subDialY = 100;
     const subDialRadius = 50;
     
@@ -238,7 +238,7 @@ class BackUpperFace {
         month: monthsInCycle
       }),
       this.centerX,
-      this.canvas.height - 50
+      600 - 50
     );
     
     this.ctx.font = '12px Georgia';
@@ -249,7 +249,7 @@ class BackUpperFace {
         days: daysInYearRemaining
       }),
       this.centerX,
-      this.canvas.height - 30
+      600 - 30
     );
     
     // Progress percentage
@@ -261,7 +261,7 @@ class BackUpperFace {
         percent: progressPercent
       }),
       this.centerX,
-      this.canvas.height - 12
+      600 - 12
     );
   }
 }
