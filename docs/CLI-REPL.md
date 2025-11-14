@@ -58,13 +58,13 @@ Notes
 - `compare <body>` → API vs Engine (Δ with tolerance)
 - `watch <body[,body...]> [interval N] [compare]` → live updates; `pause` / `resume`; Ctrl+C to stop
 - `all` → sun, moon, planets (compact; can be piped)
-- `next eclipse` | `next opposition [planet]`
+- `next eclipse` | `next opposition [planet]`  *(API only; prints `✗ API unavailable (timeout or error)` when server is down)*
 - `find next conjunction [A] [B]` (aliases: `A with B`, `with sun A`)
 - `find next equinox` | `find next solstice`
 - `plot <body|list|planets> <Nd|Nh|Nw> [csv]`
-- `plot moon.illumination <Nd>` | `plot visibility sun 1d`
+- `plot moon.illumination <Nd>` | `plot visibility sun 1d` | `plot speed <body[,..]> <Nd> [csv]`
 - `sample <body> from <date> to <date> every <step> [json|csv]`
-- `validate [--from --to --suite <dst|leap-year|full>] [--format <table|json>]`
+- `validate [--from --to --suite <dst|leap-year|full>] [--format <table|json>]`  *(stubbed; see separate issue)*
 - `set source <auto|local|api>` | `set location <lat,lon[,elev]>` | `set tz <auto|IANA>`
 - `set format <table|json|compact>` | `set intent <on|off>` | `set tolerance <deg>`
 - `control ...` → control commands (see "Control from REPL" below)
@@ -86,7 +86,9 @@ Authentication is automatic in local development: start the server first and a c
 - `control location status` — Show current control status (alias for `control status`)
 - `control stop` — Return to real-time now (also clears control location)
 - `control status` — Show current control state (includes location)
-- `sync control` — Sync REPL context from the current control location/timezone
+- `sync control` — Sync REPL context from the current *control* location/timezone
+
+> Note: `sync control` does **not** pull whatever location the browser/config/IP auto-detected. It only syncs from an active control location (set via `control location ...` or `control location here`). If control mode has no location, you will see `Control has no active location.` and should set one first.
 
 #### Reset to Real-Time
 To stop control mode and return to live time:
@@ -106,6 +108,11 @@ antikythera control location 37.9838,23.7275 --timezone "Europe/Athens" --name "
 # Inspect
 antikythera control status
 # → shows { mode: 'time', displayTime: ..., location: { latitude, longitude, timezone, name } }
+
+# From another REPL, pull that control location into context
+sync control
+context
+# → location and tz now match the control location
 
 # Return to live time & auto-detected location
 antikythera control stop
@@ -294,7 +301,7 @@ MARS | JUPITER
 - X-axis: labeled with tick marks and time labels
 - Data sources:
   - `plot <body> <Nd>` → body ecliptic longitude
-  - `plot moon.illumination <Nd>` → percent illumination ×100
+- `plot moon.illumination <Nd>` → percent illumination ×100 (Moon only; other `*.illumination` inputs will error)
   - `plot visibility sun 1d` → solar altitude (°) across a day
 
 ## Architecture

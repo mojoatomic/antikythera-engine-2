@@ -22,7 +22,7 @@ function controlBaseURL() {
 async function fetchControlStatus() {
   const token = getControlToken();
   if (!token) {
-    console.error(chalk.red('✗ Control token not found')); 
+    console.error(chalk.red('✗ Control token not found'));
     console.error(chalk.gray('Start the server (npm start) or set ANTIKYTHERA_CONTROL_TOKEN/CONTROL_TOKEN.'));
     return null;
   }
@@ -35,8 +35,24 @@ async function fetchControlStatus() {
     return res.data;
   } catch (err) {
     const status = err && err.response && err.response.status;
-    const msg = (err && err.response && err.response.data && err.response.data.error) || err.message || String(err || '');
-    console.error(chalk.red('Error:'), msg || `Control status request failed${status ? ` (status ${status})` : ''}.`);
+    const serverMsg = err && err.response && err.response.data && err.response.data.error;
+
+    if (!err.response) {
+      console.error(chalk.red('✗ Control status request failed (cannot reach control API).'));
+      console.error(chalk.gray('  Ensure server is running (npm start) and control token is configured.'));
+      return null;
+    }
+
+    if (status === 401) {
+      console.error(chalk.red('✗ Control authentication failed'));
+      console.error(chalk.gray('  Ensure CONTROL_TOKEN/ANTIKYTHERA_CONTROL_TOKEN matches the server token.'));
+      return null;
+    }
+
+    console.error(chalk.red('✗ Control status request failed'), status ? chalk.gray(`(status ${status})`) : '');
+    if (serverMsg) {
+      console.error(chalk.gray(`  ${serverMsg}`));
+    }
     return null;
   }
 }
@@ -1098,21 +1114,46 @@ class AntikytheraREPL {
     const expandBodies = (list) => {
       if (!list || !list.length) return [];
       const parts = list.split(',').map(s => s.trim()).filter(Boolean);
-      return parts.flatMap(p => (p === 'planets') ? ['mercury','venus','mars','jupiter','saturn'] : [p]);
+      const out = [];
+      for (const p of parts) {
+        if (p === 'planets') {
+          out.push('mercury','venus','mars','jupiter','saturn');
+          continue;
+        }
+        if (!VALID_BODIES.includes(p)) {
+          console.log(chalk.red(`Invalid body: ${p}`));
+          console.log(chalk.gray(`Valid: ${VALID_BODIES.join(', ')} or "planets"`));
+          return null;
+        }
+        out.push(p);
+      }
+      return out;
     };
 
     const seriesDefs = [];
     if (spec.startsWith('visibility ')) {
-      const target = spec.split(/\s+/)[1] || 'sun';
+      const targetRaw = spec.split(/\s+/)[1] || 'sun';
+      const target = String(targetRaw || '').toLowerCase();
+      if (!VALID_BODIES.includes(target)) {
+        console.log(chalk.red(`Invalid body: ${target}`));
+        console.log(chalk.gray(`Valid: ${VALID_BODIES.join(', ')}`));
+        return;
+      }
       seriesDefs.push({ type: 'visibility', target });
     } else if (spec.startsWith('speed ')) {
       const list = spec.slice('speed '.length);
       const bodies = expandBodies(list);
+      if (!bodies || !bodies.length) return;
       bodies.forEach(b => seriesDefs.push({ type: 'speed', target: b }));
-    } else if (spec.includes('illum')) {
+    } else if (spec === 'moon.illumination') {
+      // Only support illumination plots for the Moon; other bodies are not modeled
       seriesDefs.push({ type: 'illumination', target: 'moon' });
+    } else if (spec.includes('illum')) {
+      console.log(chalk.red('Illumination plots are only supported for the Moon. Use: plot moon.illumination <N[d|h|w]>.'));
+      return;
     } else {
       const bodies = expandBodies(spec);
+      if (!bodies || !bodies.length) return;
       bodies.forEach(b => seriesDefs.push({ type: 'longitude', target: b }));
     }
 
@@ -1409,6 +1450,7 @@ class AntikytheraREPL {
       const loc = status.location;
       if (!loc || !isFinite(loc.latitude) || !isFinite(loc.longitude)) {
         console.log(chalk.red('Control has no active location.'));
+        console.log(chalk.gray('Use: control location here or antikythera control location <lat,lon> --timezone <tz> first.'));
         return;
       }
       const lat = Number(loc.latitude);
