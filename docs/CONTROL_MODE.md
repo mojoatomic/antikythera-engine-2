@@ -98,7 +98,7 @@ curl http://localhost:3000/api/state
 
 The interactive REPL (`antikythera repl`) uses the same unified `control` command implementation as the CLI. This allows you to:
 
-- Push the REPL context (location and timezone) into control mode with `control location here`.
+- Push "here" into control with `control location here`: prefer explicit REPL location when set, otherwise use the server's effective observer and also store it into REPL context.
 - Set control time from the REPL context date with `control time now` (after `goto` / relative steps).
 - Inspect control state via `control location status` (alias for `control status`).
 - Pull the current control location/timezone back into the REPL context using `sync control`.
@@ -140,6 +140,7 @@ Notes:
   2. Query parameters (`?lat=X&lon=Y`)
   3. IP geolocation (if `observer.mode === 'auto'` or no config)
   4. Fallback (Memphis, TN)
+- When the REPL has no explicit location, `control location here` uses this same effective observer (via `/api/state`) as its "here" location.
 - See `docs/TECHNICAL_OPERATIONS_MANUAL.md` for complete location resolution priority
 
 ### Example Session

@@ -571,11 +571,36 @@ class AntikytheraREPL {
       const valRaw = outArgs.value != null ? String(outArgs.value) : '';
       const val = valRaw.toLowerCase();
       if (val === 'here') {
-        const loc = this.context && this.context.location;
+        let loc = this.context && this.context.location;
+
+        // Option C: prefer explicit REPL context location; otherwise, ask the API
+        if (!loc || !isFinite(loc.latitude) || !isFinite(loc.longitude)) {
+          try {
+            const now = this._currentDate();
+            const state = await getFromAPI(now, { validate: false });
+            const obs = state && state.observer;
+            if (obs && isFinite(obs.latitude) && isFinite(obs.longitude)) {
+              loc = {
+                latitude: Number(obs.latitude),
+                longitude: Number(obs.longitude),
+                elevation: Number.isFinite(obs.elevation) ? Number(obs.elevation) : 0,
+                source: obs.source || 'api',
+              };
+              // Seed REPL context from API observer so future commands can reuse it
+              this.context.location = loc;
+              if (obs.timezone) this.context.tz = String(obs.timezone);
+            }
+          } catch (_e) {
+            console.log(chalk.red('Could not infer location from API; use: set location <lat,lon[,elev]> first.'));
+            return;
+          }
+        }
+
         if (!loc || !isFinite(loc.latitude) || !isFinite(loc.longitude)) {
           console.log(chalk.red('Context location not set. Use: set location <lat,lon[,elev]> first.'));
           return;
         }
+
         outArgs.value = `${loc.latitude},${loc.longitude}`;
         if (!outArgs.timezone && !outArgs.tz) {
           let tz = (this.context && this.context.tz && this.context.tz !== 'auto') ? this.context.tz : null;

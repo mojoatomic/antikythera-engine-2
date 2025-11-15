@@ -82,13 +82,15 @@ Authentication is automatic in local development: start the server first and a c
 - `control animate --from <ISO> --to <ISO> [--speed <Nx>]` — Animate through a time range (finite)
 - `control scene --preset <name> [--bodies a,b,c]` — Change scene preset
 - `control location <lat,lon> --timezone <IANA> [--name <str>] [--elevation <m>]` — Set observer location (explicit)
-- `control location here` — Push REPL context location/tz into control mode
+- `control location here` — Push "here" into control: prefer explicit REPL location, otherwise use the server's effective observer and seed REPL context
 - `control location status` — Show current control status (alias for `control status`)
 - `control stop` — Return to real-time now (also clears control location)
 - `control status` — Show current control state (includes location)
 - `sync control` — Sync REPL context from the current *control* location/timezone
 
-> Note: `sync control` does **not** pull whatever location the browser/config/IP auto-detected. It only syncs from an active control location (set via `control location ...` or `control location here`). If control mode has no location, you will see `Control has no active location.` and should set one first.
+> Note: `sync control` does **not** pull whatever location the browser/config/IP auto-detected on its own. It only syncs from an active control location (set via `control location ...` or `control location here`). If control mode has no location, you will see `Control has no active location.` and should set one first.
+>
+> To align the REPL with whatever observer the server is currently using (config/IP/fallback), run `control location here` once in the REPL; this will push that observer into control and also store it into the REPL context.
 
 #### Reset to Real-Time
 To stop control mode and return to live time:
