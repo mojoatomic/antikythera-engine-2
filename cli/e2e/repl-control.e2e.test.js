@@ -1,6 +1,8 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 const pty = require('node-pty');
+const fs = require('fs');
+const os = require('os');
 
 function stripAnsi(s) {
   return s.replace(/[\u001b\u009b][[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PR-TZcf-ntqry=><~]/g, '');
@@ -184,5 +186,58 @@ describeControl('REPL control integration (opt-in E2E)', () => {
     expect(status.displayTime).toMatch(/^2025-01-02T03:04:05/);
     expect(status.mode).toBe('time');
     expect(status.active).toBe(true);
+  });
+
+  test('control location here uses API observer when REPL has no explicit location', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'antikythera-repl-control-here-'));
+    const env = { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1', XDG_CONFIG_HOME: tmpBase };
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80,
+      rows: 24,
+      cwd: process.cwd(),
+      env
+    });
+
+    let out = '';
+    term.onData(d => { out += d.toString(); });
+
+    // Without an explicit REPL location, "here" should resolve via API observer
+    await new Promise(res => setTimeout(res, 200));
+    term.write('control location here\r');
+    await new Promise(res => setTimeout(res, 800));
+
+    // Inspect control status and REPL context
+    term.write('control location status\r');
+    await new Promise(res => setTimeout(res, 600));
+    term.write('context\r');
+    await new Promise(res => setTimeout(res, 400));
+
+    term.write('exit\r');
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+
+    // Context should be updated from control location with some numeric coordinates
+    expect(clean).toMatch(/context updated from control location:/i);
+    const ctxIdx = clean.lastIndexOf('=== CONTEXT ===');
+    expect(ctxIdx).toBeGreaterThanOrEqual(0);
+    const ctxTail = ctxIdx >= 0 ? clean.slice(ctxIdx) : clean;
+    expect(ctxTail).toMatch(/location:\s+-?\d+(?:\.\d+)?,\s*-?\d+(?:\.\d+)?/);
+    expect(ctxTail).not.toMatch(/tz:\s+auto/i);
+
+    // Control status JSON should contain a location object
+    const start2 = clean.indexOf('{');
+    const end2 = clean.lastIndexOf('}');
+    expect(start2).toBeGreaterThanOrEqual(0);
+    expect(end2).toBeGreaterThan(start2);
+    const jsonStr2 = clean.slice(start2, end2 + 1);
+    const status2 = JSON.parse(jsonStr2);
+    expect(status2).toHaveProperty('location');
+    expect(status2.location).toEqual(expect.objectContaining({
+      latitude: expect.any(Number),
+      longitude: expect.any(Number)
+    }));
   });
 });

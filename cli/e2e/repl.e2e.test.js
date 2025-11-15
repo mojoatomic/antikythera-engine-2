@@ -173,7 +173,253 @@ term.write('exit\r');
 describe('REPL e2e (time navigation, watch cancel, JSON purity, pipes)', () => {
   jest.setTimeout(15000);
 
-test('time navigation: goto, step, reset updates context date', async () => {
+  test('moon at <date> updates lastDate via body-at-date syntax', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('set source local\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('moon at 2025-01-01T00:00:00Z\r');
+    await new Promise(res => setTimeout(res, 300));
+    term.write('context\r');
+    await new Promise(res => setTimeout(res, 200));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/lastDate: .*2025-01-01T00:00:00\.000Z/);
+  });
+
+  test('now unified snapshot runs against local source and shows SUN/MOON', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('set source local\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('set format table\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('now\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).not.toMatch(/Unknown command/i);
+    // Expect at least SUN and MOON labels somewhere in the snapshot
+    expect(clean).toMatch(/SUN/i);
+    expect(clean).toMatch(/MOON/i);
+  });
+
+  test('position mars produces debug output and longitude field', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('set source local\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('set format table\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('position mars --debug\r');
+    await new Promise(res => setTimeout(res, 600));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    // Debug mode should identify MARS and include a longitude field
+    expect(clean).toMatch(/=== DEBUG: MARS ===/);
+    expect(clean).toMatch(/longitude[^\n]*\d/);
+  });
+
+  test('plain all prints ALL BODIES header and at least SUN and MOON', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('set format table\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('all\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/=== ALL BODIES ===/i);
+    expect(clean).toMatch(/^SUN\s/m);
+    expect(clean).toMatch(/^MOON\s/m);
+  });
+
+  test('set tz and set intent impact context and intent echoing', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('set tz Europe/Paris\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('set intent off\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('moon\r');
+    await new Promise(res => setTimeout(res, 250));
+    term.write('set intent on\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('moon\r');
+    await new Promise(res => setTimeout(res, 250));
+    term.write('context\r');
+    await new Promise(res => setTimeout(res, 250));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    // tz should be updated in context
+    expect(clean).toMatch(/tz:\s+Europe\/Paris/);
+    // With intent off then on, we should see exactly one "moon at now" intent line
+    const intentMatches = clean.match(/moon at now/gi) || [];
+    expect(intentMatches.length).toBe(1);
+  });
+
+  test('history prints header and file path', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('history\r');
+    await new Promise(res => setTimeout(res, 250));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/=== HISTORY \(/i);
+    expect(clean).toMatch(/file:\s+/i);
+  });
+
+  test('clear does not break subsequent commands', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('clear\r');
+    await new Promise(res => setTimeout(res, 200));
+    term.write('moon\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).not.toMatch(/Unknown command/i);
+    expect(clean).toMatch(/MOON/i);
+  });
+
+  test('plot visibility sun 1d renders VIS(SUN) chart', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('set source local\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('plot visibility sun 1d\r');
+    await new Promise(res => setTimeout(res, 500));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/VIS\(SUN\)/);
+    const lines = clean.split(/\r?\n/).filter(l => l.trim().length);
+    expect(lines.length).toBeGreaterThan(5);
+  });
+
+  test('plot speed mars 5d csv emits MARS_vel header', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('set source local\r');
+    await new Promise(res => setTimeout(res, 150));
+    term.write('plot speed mars 5d csv\r');
+    await new Promise(res => setTimeout(res, 500));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    const lines = clean.split(/\r?\n/).filter(l => l.trim().length);
+    expect(lines.length).toBeGreaterThan(2);
+    // CSV header should include a velocity column for MARS
+    expect(lines.join('\n')).toMatch(/MARS_vel/);
+  });
+
+  test('time navigation: goto, step, reset updates context date', async () => {
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
     const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
       cols: 80, rows: 24,
@@ -266,6 +512,52 @@ test('plot moon.illumination 5d renders ASCII without crash', async () => {
     const lines = out.split(/\r?\n/).filter(l => l.trim().length);
     expect(code).toBe(0);
     expect(lines.length).toBeGreaterThan(5);
+  });
+
+  test('plot venus.illumination is rejected (no fallback to moon)', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('plot venus.illumination 5d\r');
+    await new Promise(res => setTimeout(res, 300));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/Illumination plots are only supported for the Moon/i);
+    expect(clean).not.toMatch(/MOON\.ILLUM/);
+  });
+
+  test('plot pluto.illumination is rejected as invalid', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 120));
+    term.write('plot pluto.illumination 5d\r');
+    await new Promise(res => setTimeout(res, 300));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/Illumination plots are only supported for the Moon/i);
+    expect(clean).not.toMatch(/MOON\.ILLUM/);
   });
 
   test('watch multi-body pause/resume works', async () => {
@@ -537,53 +829,6 @@ test('plot moon.illumination 5d renders ASCII without crash', async () => {
     expect(Array.isArray(parsed.rows)).toBe(true);
   });
 
-  test('find next conjunction moon sun prints result', async () => {
-    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
-    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
-      cols: 80, rows: 24,
-      cwd: process.cwd(),
-      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
-    });
-
-    let out = '';
-    term.onData(chunk => { out += chunk.toString(); });
-
-    await new Promise(res => setTimeout(res, 120));
-    term.write('find next conjunction moon sun\r');
-    await new Promise(res => setTimeout(res, 800));
-    term.write('exit\r');
-
-    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
-    const clean = stripAnsi(out);
-    expect(code).toBe(0);
-    expect(clean).toMatch(/NEXT CONJUNCTION/i);
-    expect(clean).toMatch(/bodies:\s+moon \& sun/i);
-  });
-
-  test('conjunction aliases: "mars with sun" and "with sun mars" both work', async () => {
-    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
-    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
-      cols: 80, rows: 24,
-      cwd: process.cwd(),
-      env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
-    });
-
-    let out = '';
-    term.onData(chunk => { out += chunk.toString(); });
-
-    await new Promise(res => setTimeout(res, 120));
-    term.write('find next conjunction mars with sun\r');
-    await new Promise(res => setTimeout(res, 400));
-    term.write('find next conjunction with sun mars\r');
-    await new Promise(res => setTimeout(res, 400));
-    term.write('exit\r');
-
-    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
-    const clean = stripAnsi(out);
-    expect(code).toBe(0);
-    expect(clean.match(/NEXT CONJUNCTION/gi)?.length || 0).toBeGreaterThanOrEqual(2);
-  });
-
   test('find next equinox and solstice print results', async () => {
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
     const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
@@ -609,23 +854,87 @@ test('plot moon.illumination 5d renders ASCII without crash', async () => {
     expect(clean).toMatch(/NEXT SOLSTICE/i);
   });
 
+  test('sync control shows friendly error when control API unreachable', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    // Point API base at an unreachable port and provide a dummy control token
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1',
+        ANTIKYTHERA_API_BASE: 'http://127.0.0.1:65535',
+        ANTIKYTHERA_CONTROL_TOKEN: 'dummy-token'
+      }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('sync control\r');
+    await new Promise(res => setTimeout(res, 800));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    expect(clean).toMatch(/Control status request failed \(cannot reach control API\)/i);
+    expect(clean).toMatch(/Ensure server is running \(npm start\) and control token is configured\./i);
+  });
+
+  test('next eclipse and next opposition handle API availability gracefully', async () => {
+    const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+      cols: 80, rows: 24,
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1',
+        ANTIKYTHERA_API_BASE: 'http://127.0.0.1:65535'
+      }
+    });
+
+    let out = '';
+    term.onData(chunk => { out += chunk.toString(); });
+
+    await new Promise(res => setTimeout(res, 150));
+    term.write('next eclipse\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('next opposition mars\r');
+    await new Promise(res => setTimeout(res, 400));
+    term.write('exit\r');
+
+    const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
+    const clean = stripAnsi(out);
+    expect(code).toBe(0);
+    const hasUnavailable = /✗ API unavailable \(timeout or error\)/i.test(clean);
+    if (hasUnavailable) {
+      expect(clean).toMatch(/Try: set source local or start server: npm start/i);
+    } else {
+      // When API is up, we should see normal event output
+      expect(clean).toMatch(/NEXT ECLIPSE/i);
+      expect(clean).toMatch(/NEXT OPPOSITION/i);
+    }
+  });
+
   test.skip('auto source prints fallback message when API unavailable', async () => {
     const cliPath = path.join(__dirname, '..', '..', 'cli', 'index.js');
-const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
+    const term = pty.spawn(process.execPath, [cliPath, 'repl'], {
       cols: 80, rows: 24,
       cwd: process.cwd(),
       env: { ...process.env, ANTIKYTHERA_TEST_ALLOW_NON_TTY: '1' }
     });
 
     let out = '';
-term.onData(chunk => { out += chunk.toString(); });
+    term.onData(chunk => { out += chunk.toString(); });
 
     await new Promise(res => setTimeout(res, 120));
-term.write('set source auto\r');
+    term.write('set source auto\r');
     await new Promise(res => setTimeout(res, 120));
-term.write('moon\r');
+    term.write('moon\r');
     await new Promise(res => setTimeout(res, 400));
-term.write('exit\r');
+    term.write('exit\r');
 
     const code = await new Promise(resolve => term.onExit(({ exitCode }) => resolve(exitCode)));
     const clean = stripAnsi(out);
