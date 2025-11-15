@@ -63,8 +63,18 @@ app.get('/api/settings', (req, res) => {
 // Get current state
 app.get('/api/state', async (req, res) => {
   try {
-    const requested = req.query.date ? new Date(req.query.date) : new Date();
-    const date = effectiveDate(requested);
+    const hasExplicitDate = !!req.query.date;
+    const requested = hasExplicitDate ? new Date(req.query.date) : new Date();
+
+    if (hasExplicitDate && isNaN(requested.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format' });
+    }
+
+    // When the client supplies an explicit date, treat it as an absolute
+    // override even if control time/animation is active. Otherwise, use the
+    // effective control time for "now" semantics.
+    const date = hasExplicitDate ? requested : effectiveDate(requested);
+
     const cs = controlStatus();
     const currentConfig = configLoader.getConfig();
     let observer;
@@ -80,14 +90,18 @@ app.get('/api/state', async (req, res) => {
   }
 });
 
-// Get state for a specific date
+// Get state for a specific date (absolute, independent of control time)
 app.get('/api/state/:date', async (req, res) => {
   try {
     const reqDate = new Date(req.params.date);
     if (isNaN(reqDate.getTime())) {
       return res.status(400).json({ error: 'Invalid date format' });
     }
-    const date = effectiveDate(reqDate);
+
+    // Path parameter always represents an absolute timestamp; do not route
+    // it through effectiveDate, which is reserved for "now"/control flows.
+    const date = reqDate;
+
     const cs = controlStatus();
     const currentConfig = configLoader.getConfig();
     let observer;

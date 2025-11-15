@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const fetch = require('node-fetch');
+const { getOrCreateControlToken } = require('../lib/control-token');
 
 jest.setTimeout(30000);
 
@@ -144,4 +145,54 @@ test('GET /api/display baseline omits stepsForInterval and intervalSec', async (
   // velocityDegPerSec and direction are always present
   expect(typeof sun.velocityDegPerSec).toBe('number');
   expect(['CW', 'CCW']).toContain(sun.direction);
+});
+
+// Explicit date on /api/state must be honored even when control time is active
+// so that CLI position/compare commands can perform historical queries.
+test('GET /api/state?date=... uses requested date instead of control time', async () => {
+  const baseUrl = 'http://localhost:3000';
+  const controlToken = getOrCreateControlToken();
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${controlToken}`,
+  };
+
+  // Activate a control time far in the past
+  const controlTime = '1919-05-29T14:00:00Z';
+  let res = await fetch(`${baseUrl}/api/control/time`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ date: controlTime }),
+  });
+  expect(res.ok).toBe(true);
+
+  // Query two widely separated dates explicitly via /api/state
+  const d1 = '2026-01-01T00:00:00Z';
+  const d2 = '2026-06-01T00:00:00Z';
+
+  const [res1, res2] = await Promise.all([
+    fetch(`${baseUrl}/api/state?date=${encodeURIComponent(d1)}`),
+    fetch(`${baseUrl}/api/state?date=${encodeURIComponent(d2)}`),
+  ]);
+
+  expect(res1.ok).toBe(true);
+  expect(res2.ok).toBe(true);
+
+  const s1 = await res1.json();
+  const s2 = await res2.json();
+
+  // The engine should reflect the requested dates, not the control time.
+  expect(new Date(s1.date).toISOString()).toBe(new Date(d1).toISOString());
+  expect(new Date(s2.date).toISOString()).toBe(new Date(d2).toISOString());
+
+  // Mars longitude/velocity must differ across these dates
+  expect(s1.planets.mars.longitude).not.toBeCloseTo(s2.planets.mars.longitude, 10);
+  expect(s1.planets.mars.velocity).not.toBeCloseTo(s2.planets.mars.velocity, 10);
+
+  // Clean up: stop control mode so other tests see normal behaviour
+  res = await fetch(`${baseUrl}/api/control/stop`, {
+    method: 'POST',
+    headers: authHeaders,
+  });
+  expect(res.ok).toBe(true);
 });
