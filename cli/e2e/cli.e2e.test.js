@@ -36,6 +36,30 @@ describe('CLI unified registry + adapter', () => {
     expect(data).toHaveProperty('moon');
   });
 
+  test('control location accepts negative latitude/longitude without unknown option error', () => {
+    const { code, stderr } = runCli(
+      [
+        'control',
+        'location',
+        '-4.2333,-38.5000',
+        '--timezone',
+        'America/Fortaleza',
+        '--name',
+        'Sobral, Brazil'
+      ],
+      {
+        ANTIKYTHERA_CONTROL_TOKEN: 'dummy-token',
+        ANTIKYTHERA_API_BASE: 'http://127.0.0.1:65535'
+      }
+    );
+    // We expect the command to reach our control handler (and likely fail with a network error),
+    // but we must not see Commander complaining about an unknown option for the coordinates.
+    expect(stderr).not.toMatch(/unknown option '-4\.2333,-38\.5000'/i);
+    // When the handler runs, it should emit an Error: message from control.js
+    expect(code).not.toBe(0);
+    expect(stderr || '').toMatch(/Error:/i);
+  });
+
   test('position moon --format json with explicit date works via adapter', () => {
     const { code, stdout } = runCli(['position', 'moon', '--format', 'json', '--date', '2025-01-01T00:00:00Z']);
     expect(code).toBe(0);
