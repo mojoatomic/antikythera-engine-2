@@ -1,5 +1,7 @@
 const TimeUtils = require('./time');
 
+const { parseISODate } = require('./time');
+
 describe('TimeUtils', () => {
   describe('UTC date functions', () => {
     test('utcStartOfDay returns midnight UTC', () => {
@@ -69,6 +71,22 @@ describe('TimeUtils', () => {
     test('yearProgress360 handles leap years', () => {
       const date = new Date('2024-12-31T23:59:59Z');
       expect(TimeUtils.yearProgress360(date)).toBeCloseTo(360, 0);
+    });
+  });
+
+  describe('ISO parsing with BCE support', () => {
+    test('parses normal ISO strings via native Date', () => {
+      const d = parseISODate('2025-01-02T03:04:05Z');
+      expect(d.toISOString()).toBe('2025-01-02T03:04:05.000Z');
+    });
+
+    test('parses extended negative-year ISO for ancient dates', () => {
+      const d = parseISODate('-490-09-12T06:00:00Z');
+      expect(d.toISOString()).toBe('-000490-09-12T06:00:00.000Z');
+    });
+
+    test('throws on invalid ISO input', () => {
+      expect(() => parseISODate('not-a-date')).toThrow(/Invalid ISO time/);
     });
   });
 

@@ -887,15 +887,36 @@ class FrontFace {
     }
     
     if (data.egyptianCalendar) {
-      // Show full Gregorian date with year, using observer timezone when available
+      // Show full Gregorian-like date with year, using observer timezone when available.
+      // When the underlying Date uses astronomical years (year 0 = 1 BCE), display
+      // a human-friendly BCE label (e.g., "491 BCE").
       const tz = data?.observer?.timezone;
       const dateObj = new Date(data.date);
-      const dateStr = dateObj.toLocaleDateString('en-US', {
+
+      // Month + day portion in the observer timezone
+      const baseDateStr = dateObj.toLocaleDateString('en-US', {
         timeZone: tz || undefined,
         month: 'long',
-        day: 'numeric',
-        year: 'numeric'
+        day: 'numeric'
       });
+
+      // Year component: rely on astronomical year from UTC, so that
+      // year 0 = 1 BCE, -1 = 2 BCE, etc. Timezone shifts can change the
+      // month/day but should not flip the BCE/CE era itself.
+      const astroYear = dateObj.getUTCFullYear();
+
+      let yearLabel;
+      let astroLabel = null;
+      if (Number.isFinite(astroYear) && astroYear <= 0) {
+        const bceYear = 1 - astroYear; // astronomical 0 → 1 BCE, -1 → 2 BCE, etc.
+        yearLabel = `${bceYear} BCE`;
+        astroLabel = `(astronomical year ${astroYear})`;
+      } else {
+        yearLabel = String(astroYear);
+      }
+
+      const dateStr = `${baseDateStr}, ${yearLabel}`;
+
       this.ctx.font = '11px Georgia';
       this.ctx.fillStyle = 'rgba(240, 230, 210, 0.8)';
       this.ctx.fillText(
@@ -903,6 +924,18 @@ class FrontFace {
         padding,
         600 - padding - lineHeight
       );
+
+      if (astroLabel) {
+        // Draw the astronomical year just below the date line to avoid overlapping
+        // the zodiac label while still keeping it visually associated with the date.
+        this.ctx.font = '9px Georgia';
+        this.ctx.fillStyle = 'rgba(240, 230, 210, 0.6)';
+        this.ctx.fillText(
+          astroLabel,
+          padding,
+          600 - padding
+        );
+      }
     }
     
     // ========== LOWER RIGHT: Location + Real-time Clock ==========

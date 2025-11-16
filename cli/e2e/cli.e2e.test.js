@@ -60,6 +60,25 @@ describe('CLI unified registry + adapter', () => {
     expect(stderr || '').toMatch(/Error:/i);
   });
 
+  test('control time accepts BCE ISO date without unknown option error', () => {
+    const { code, stderr } = runCli(
+      [
+        'control',
+        'time',
+        '-490-09-12T06:00:00Z'
+      ],
+      {
+        ANTIKYTHERA_CONTROL_TOKEN: 'dummy-token',
+        ANTIKYTHERA_API_BASE: 'http://127.0.0.1:65535'
+      }
+    );
+    // As with negative coordinates, Commander must not treat the BCE date as an unknown option.
+    expect(stderr).not.toMatch(/unknown option '-490-09-12T06:00:00Z'/i);
+    // With a dead control server, we expect a non-zero exit and a generic Error: message.
+    expect(code).not.toBe(0);
+    expect(stderr || '').toMatch(/Error:/i);
+  });
+
   test('position moon --format json with explicit date works via adapter', () => {
     const { code, stdout } = runCli(['position', 'moon', '--format', 'json', '--date', '2025-01-01T00:00:00Z']);
     expect(code).toBe(0);

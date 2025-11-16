@@ -1,6 +1,7 @@
 const { getData } = require('../sources');
 const { format } = require('../formatters');
 const chalk = require('chalk');
+const { parseISODate } = require('../../utils/time');
 
 const VALID_BODIES = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
 
@@ -13,7 +14,7 @@ async function position(body, options) {
       process.exit(1);
     }
     
-    const date = new Date(options.date);
+    const date = options.date ? parseISODate(options.date) : new Date();
     const startTime = Date.now();
     const observer = (isFinite(options.lat) && isFinite(options.lon)) ? {
       latitude: Number(options.lat),

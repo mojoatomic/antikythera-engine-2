@@ -47,6 +47,24 @@ Endpoints:
 - `POST /api/control/location` `{ latitude: number, longitude: number, timezone: IANA, name?: string, elevation?: number }`
 - `POST /api/control/stop` `{}`
 
+### BCE dates
+
+Control time endpoints support BCE timestamps using astronomical year numbering with a signed year and year zero:
+
+- Example (astronomical year -490, roughly the Marathon era):
+
+```bash
+antikythera control time -490-09-12T06:00:00Z
+antikythera control status   # displayTime: "-000490-09-12T06:00:00.000Z"
+```
+
+Mapping rule:
+- Historical year `n BCE` → astronomical year `1 - n` (e.g., `1 BCE → 0`, `2 BCE → -1`, `490 BCE → -489`).
+
+Range guidance:
+- Dates between approximately 3000 BCE and 3000 CE are expected to produce physically meaningful positions.
+- Larger magnitudes may parse but are not validated against external ephemerides.
+
 State behavior:
 - When control is active, `/api/state` and `/api/display` honor the effective (controlled) time
 - `stop` reverts to real-time now
@@ -145,8 +163,12 @@ Notes:
 
 ### Example Session
 ```bash
-# Set historical time
+# Set historical time (CE)
 antikythera control time 1969-07-20T20:17:00Z
+
+# Set an ancient BCE time using astronomical year numbering
+# (astronomical year -490 ≈ 491 BCE)
+antikythera control time -490-09-12T06:00:00Z
 
 # Check control status
 antikythera control status
@@ -161,7 +183,7 @@ antikythera control stop
   - Remedy: Start server to generate token, or export `ANTIKYTHERA_CONTROL_TOKEN`
 - 400 Invalid payload (e.g., bad date)
   - Cause: Invalid ISO timestamp or range
-  - Remedy: Provide valid ISO (UTC recommended)
+  - Remedy: Provide valid ISO (UTC recommended). BCE dates must use signed astronomical years (e.g., `-490-09-12T06:00:00Z`).
 
 ## Operational Guidance
 - Rate-limit control endpoints separately from reads if exposing publicly

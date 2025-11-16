@@ -3,6 +3,46 @@
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
+/**
+ * Parse an ISO-like string into a Date, with support for extended years
+ * including year 0 and negative (BCE) years.
+ *
+ * Strategy:
+ * - First, let the built-in Date parser handle normal CE inputs.
+ * - If that fails, fall back to a strict UTC parser that understands
+ *   leading sign and 1–4 digit years, e.g. "-490-09-12T06:00:00Z".
+ */
+function parseISODate(input) {
+  const str = String(input).trim();
+
+  // Fast path: native parser for most modern CE dates, offsets, etc.
+  const native = new Date(str);
+  if (!isNaN(native.getTime())) return native;
+
+  // Extended form with explicit UTC 'Z' and signed year, e.g. -490-09-12T06:00:00Z
+  const m = str.match(/^(-?\d{1,4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(\.\d{1,3})?)?Z$/);
+  if (!m) {
+    throw new Error('Invalid ISO time');
+  }
+
+  const year = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10); // 1-12
+  const day = parseInt(m[3], 10);
+  const hour = parseInt(m[4], 10);
+  const minute = parseInt(m[5], 10);
+  const second = m[6] ? parseInt(m[6], 10) : 0;
+  const ms = m[7] ? Math.round(parseFloat(m[7]) * 1000) : 0;
+
+  const d = new Date(0);
+  d.setUTCFullYear(year, month - 1, day);
+  d.setUTCHours(hour, minute, second, ms);
+
+  if (isNaN(d.getTime())) {
+    throw new Error('Invalid ISO time');
+  }
+  return d;
+}
+
 function utcStartOfDay(date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
@@ -47,6 +87,7 @@ function sameUtcDate(a, b) {
 
 module.exports = {
   MS_PER_DAY,
+  parseISODate,
   utcStartOfDay,
   utcEndOfDay,
   utcNoon,

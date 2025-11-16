@@ -196,3 +196,50 @@ test('GET /api/state?date=... uses requested date instead of control time', asyn
   });
   expect(res.ok).toBe(true);
 });
+
+// BCE control time should be accepted and reflected by /api/state
+// using astronomical year numbering (-000490 = 491 BCE, etc.).
+test('control time accepts BCE ISO dates and surfaces via /api/state', async () => {
+  const baseUrl = 'http://localhost:3000';
+  const controlToken = getOrCreateControlToken();
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${controlToken}`,
+  };
+
+  const bceIso = '-490-09-12T06:00:00Z';
+  const expectedStoredIso = '-000490-09-12T06:00:00.000Z';
+
+  // Set a BCE control time
+  let res = await fetch(`${baseUrl}/api/control/time`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ date: bceIso }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`BCE control/time failed: status=${res.status} body=${text}`);
+  }
+
+  const control = await res.json();
+  expect(control.ok).toBe(true);
+  expect(control.status).toBeDefined();
+  expect(control.status.displayTime).toBe(expectedStoredIso);
+
+  // Query state at the same BCE instant via path param
+  res = await fetch(`${baseUrl}/api/state/${encodeURIComponent(bceIso)}`);
+  expect(res.ok).toBe(true);
+  const state = await res.json();
+
+  expect(state.date).toBe(expectedStoredIso);
+  expect(state.planets).toBeDefined();
+  expect(state.planets.mars).toBeDefined();
+
+  // Clean up: stop control mode so other tests see normal behaviour
+  res = await fetch(`${baseUrl}/api/control/stop`, {
+    method: 'POST',
+    headers: authHeaders,
+  });
+  expect(res.ok).toBe(true);
+});

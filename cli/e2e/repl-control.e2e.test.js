@@ -21,6 +21,16 @@ function runCli(args, extraEnv = {}) {
   };
 }
 
+function extractJson(stdout) {
+  const start = stdout.indexOf('{');
+  const end = stdout.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error('No JSON object found in CLI output');
+  }
+  const jsonStr = stdout.slice(start, end + 1);
+  return JSON.parse(jsonStr);
+}
+
 const envControlE2E = process.env.ANTIKYTHERA_CONTROL_E2E === '1';
 
 // Preflight: only run when env flag is on AND control server responds to `control status` via CLI
@@ -239,5 +249,24 @@ describeControl('REPL control integration (opt-in E2E)', () => {
       latitude: expect.any(Number),
       longitude: expect.any(Number)
     }));
+  });
+
+  test('CLI control time accepts BCE ISO dates and persists in control status', () => {
+    const bceIso = '-490-09-12T06:00:00Z';
+    const expectedStoredIso = '-000490-09-12T06:00:00.000Z';
+
+    const timeRes = runCli(['control', 'time', bceIso]);
+    expect(timeRes.code).toBe(0);
+    expect(timeRes.stderr || '').toBe('');
+
+    const statusRes = runCli(['control', 'status']);
+    expect(statusRes.code).toBe(0);
+    expect(statusRes.stderr || '').toBe('');
+
+    const status = extractJson(statusRes.stdout);
+    expect(status).toHaveProperty('displayTime');
+    expect(status.displayTime).toBe(expectedStoredIso);
+    expect(status.mode).toBe('time');
+    expect(status.active).toBe(true);
   });
 });
