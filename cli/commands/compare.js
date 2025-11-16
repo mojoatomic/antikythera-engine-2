@@ -1,6 +1,7 @@
 const { getFromEngine, getFromAPI } = require('../sources');
 const chalk = require('chalk');
 const Table = require('cli-table3');
+const { parseISODate } = require('../../utils/time');
 
 const VALID_BODIES = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'];
 
@@ -21,7 +22,7 @@ async function compare(body, source1, source2, options) {
       process.exit(1);
     }
 
-    const date = new Date(options.date);
+    const date = parseISODate(options.date);
     
     console.log(chalk.cyan.bold(`\n=== COMPARE ${body.toUpperCase()} ===`));
     console.log(chalk.gray(`Date: ${date.toISOString()}\n`));

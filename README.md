@@ -192,8 +192,11 @@ Examples:
 # Start server (generates token on first run)
 npm start
 
-# Set time (UTC) — no env needed locally
+# Set time (UTC, CE) — no env needed locally
 antikythera control time 2025-10-29T12:00:00Z
+
+# Set an ancient BCE time using signed astronomical years (year 0 = 1 BCE)
+antikythera control time -490-09-12T06:00:00Z
 
 # Set location (explicit, timezone required; elevation optional)
 antikythera control location 37.9838,23.7275 --timezone "Europe/Athens" --name "Athens, Greece"
@@ -231,6 +234,66 @@ Use case:
 - Synchronized classroom or exhibit: operators change time/location via CLI/API; all displays follow.
 
 Shared classroom token (optional): set `ANTIKYTHERA_CONTROL_TOKEN` on server and clients.
+
+BCE date support (astronomical year numbering):
+- The engine and CLI accept BCE timestamps using signed astronomical years with a year zero.
+- Historical year `n BCE` maps to astronomical year `1 - n` (e.g., `1 BCE → 0`, `2 BCE → -1`, `491 BCE → -490`).
+- BCE dates are supported across `control time`, `/api/control/time`, `/api/state`, CLI `position`, and `compare`.
+
+Examples:
+```bash
+# Control time (CLI, BCE)
+antikythera control time -490-09-12T06:00:00Z
+
+# State API (absolute BCE timestamp via path parameter)
+curl "http://localhost:3000/api/state/-490-09-12T06:00:00Z"
+
+# Position CLI (BCE date for Mars)
+antikythera position mars --date -490-09-12T06:00:00Z --format table
+```
+
+Internally, BCE timestamps are stored and echoed using astronomical year formatting, e.g.:
+- Input:  `-490-09-12T06:00:00Z`
+- Stored: `-000490-09-12T06:00:00.000Z`
+
+## Understanding BCE Dates (Astronomical Year Numbering)
+
+The Antikythera Engine uses **astronomical year numbering**, which differs from historical BCE notation:
+
+| Historical | Astronomical | Why? |
+|------------|--------------|------|
+| 1 BCE      | Year 0       | Astronomers need year zero |
+| 2 BCE      | Year -1      | for mathematical calculations |
+| 100 BCE    | Year -99     | |
+| 101 BCE    | Year -100    | One year offset |
+
+### Why This Matters
+
+When you set `--year -100`, the display shows `101 BCE`.
+
+**This is correct!** Astronomical year -100 = historical year 101 BCE.
+
+### Quick Reference
+
+Want to view Battle of Thermopylae (480 BCE)?
+```bash
+antikythera control time -0479-08-11T06:00:00Z  # Note: -479, not -480
+```
+
+Want to view Julius Caesar assassination (44 BCE)?
+```bash
+antikythera control time -0043-03-15T12:00:00Z  # Note: -43, not -44
+```
+
+**Formula:** `Astronomical Year = 1 - BCE Year`
+
+### For Educators
+
+This offset confuses students initially but teaches an important lesson:
+- Historians use "1 BCE → 1 CE" (no year zero)
+- Astronomers use "Year -1 → Year 0 → Year 1" (with year zero)
+
+The Antikythera Engine is astronomically accurate, so we use astronomical numbering.
 
 ### Control Location (explicit)
 Use POST /api/control/location to pin the observer location for all reads until `control stop`.

@@ -122,9 +122,14 @@ antikythera control stop
 
 #### Example Session
 ```bash
-# Set historical time
+# Set historical time (CE)
 antikythera control time 1969-07-20T20:17:00Z
 # Display shows: Apollo 11 moon landing
+
+# Set an ancient BCE time using astronomical year numbering
+# (astronomical year -490 ≈ 491 BCE)
+antikythera control time -490-09-12T06:00:00Z
+# Display shows: sky around the Battle of Marathon era
 
 # Check status
 antikythera control status
@@ -141,10 +146,26 @@ antikythera control status
 # Display: real-time
 ```
 
+#### BCE Example (REPL context → control)
+```bash
+antikythera repl
+
+# Set REPL context date to an ancient BCE instant using astronomical year numbering
+# (astronomical year -490 ≈ 491 BCE)
+goto -490-09-12T06:00:00Z
+
+# Push that context date into control mode
+control time now
+
+# Inspect control status (displayTime uses astronomical year formatting)
+control status
+# → displayTime: "-000490-09-12T06:00:00.000Z", mode: "time", active: true
+```
+
 #### Control Commands Quick Reference
 | Command | Description |
 |---------|-------------|
-| `control time <ISO>` | Set display to specific time |
+| `control time <ISO>` | Set display to specific time (supports BCE via signed astronomical years, e.g. `-490-09-12T06:00:00Z`) |
 | `control time now` | Set display to REPL context time |
 | `control run [--speed <N>]` | Start time flow from current time |
 | `control pause` | Freeze at current time |

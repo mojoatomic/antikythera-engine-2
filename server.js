@@ -7,6 +7,7 @@ const { getObserverFromRequest } = require('./lib/location-service');
 const { effectiveDate, status: controlStatus, setTime: controlSetTime, setAnimate: controlSetAnimate, setScene: controlSetScene, run: controlRun, pause: controlPause, stop: controlStop, setLocation: controlSetLocation } = require('./lib/control-state');
 const { getConfigLoader } = require('./lib/config-loader');
 const AntikytheraEngine = require('./engine');
+const { parseISODate } = require('./utils/time');
 
 const app = express();
 const engine = new AntikytheraEngine();
@@ -64,11 +65,7 @@ app.get('/api/settings', (req, res) => {
 app.get('/api/state', async (req, res) => {
   try {
     const hasExplicitDate = !!req.query.date;
-    const requested = hasExplicitDate ? new Date(req.query.date) : new Date();
-
-    if (hasExplicitDate && isNaN(requested.getTime())) {
-      return res.status(400).json({ error: 'Invalid date format' });
-    }
+    const requested = hasExplicitDate ? parseISODate(String(req.query.date)) : new Date();
 
     // When the client supplies an explicit date, treat it as an absolute
     // override even if control time/animation is active. Otherwise, use the
@@ -93,14 +90,10 @@ app.get('/api/state', async (req, res) => {
 // Get state for a specific date (absolute, independent of control time)
 app.get('/api/state/:date', async (req, res) => {
   try {
-    const reqDate = new Date(req.params.date);
-    if (isNaN(reqDate.getTime())) {
-      return res.status(400).json({ error: 'Invalid date format' });
-    }
+    const date = parseISODate(String(req.params.date));
 
     // Path parameter always represents an absolute timestamp; do not route
     // it through effectiveDate, which is reserved for "now"/control flows.
-    const date = reqDate;
 
     const cs = controlStatus();
     const currentConfig = configLoader.getConfig();
@@ -120,7 +113,7 @@ app.get('/api/state/:date', async (req, res) => {
 // Get just sun position
 app.get('/api/sun', async (req, res) => {
   try {
-    const date = req.query.date ? new Date(req.query.date) : new Date();
+    const date = req.query.date ? parseISODate(String(req.query.date)) : new Date();
     const currentConfig = configLoader.getConfig();
     const observer = await getObserverFromRequest(req, currentConfig);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
@@ -133,7 +126,7 @@ app.get('/api/sun', async (req, res) => {
 // Get just moon position
 app.get('/api/moon', async (req, res) => {
   try {
-    const date = req.query.date ? new Date(req.query.date) : new Date();
+    const date = req.query.date ? parseISODate(String(req.query.date)) : new Date();
     const currentConfig = configLoader.getConfig();
     const observer = await getObserverFromRequest(req, currentConfig);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
@@ -146,7 +139,7 @@ app.get('/api/moon', async (req, res) => {
 // Get planetary positions
 app.get('/api/planets', async (req, res) => {
   try {
-    const date = req.query.date ? new Date(req.query.date) : new Date();
+    const date = req.query.date ? parseISODate(String(req.query.date)) : new Date();
     const currentConfig = configLoader.getConfig();
     const observer = await getObserverFromRequest(req, currentConfig);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
@@ -161,7 +154,7 @@ app.get('/api/planets', async (req, res) => {
 app.get('/api/display', async (req, res) => {
   try {
     const startTime = Date.now();
-    const requested = req.query.date ? new Date(req.query.date) : new Date();
+    const requested = req.query.date ? parseISODate(String(req.query.date)) : new Date();
     const date = effectiveDate(requested);
     const cs = controlStatus();
     const currentConfig = configLoader.getConfig();
@@ -502,7 +495,7 @@ app.post('/api/control/location', controlGuard, (req, res) => {
       return res.status(400).json({ error: 'timezone required (IANA, e.g., Europe/Athens)' });
     }
     // Normalize timezone: trim whitespace and strip surrounding quotes from common shells / REPL input
-    const tz = String(timezone).trim().replace(/^['"]+|['"]+$/g, '');
+    const tz = String(timezone).trim().replace(/^[\'"]+|[\'"]+$/g, '');
     if (!tz) {
       return res.status(400).json({ error: 'timezone required (IANA, e.g., Europe/Athens)' });
     }
@@ -528,7 +521,11 @@ app.post('/api/control/time', controlGuard, (req, res) => {
   try {
     const date = req.body && req.body.date;
     if (!date) return res.status(400).json({ error: 'Missing body.date (ISO)' });
-    controlSetTime(date);
+
+    // Parse once with BCE-aware parser, then pass Date through to control state.
+    const parsed = parseISODate(String(date));
+    controlSetTime(parsed);
+
     res.json({ ok: true, status: controlStatus() });
   } catch (e) {
     res.status(400).json({ error: e.message });
@@ -558,7 +555,11 @@ app.post('/api/control/animate', controlGuard, (req, res) => {
   try {
     const { from, to, speed } = req.body || {};
     if (!from || !to) return res.status(400).json({ error: 'Missing body.from/body.to (ISO)' });
-    controlSetAnimate(from, to, speed);
+
+    const fromParsed = parseISODate(String(from));
+    const toParsed = parseISODate(String(to));
+    controlSetAnimate(fromParsed, toParsed, speed);
+
     res.json({ ok: true, status: controlStatus() });
   } catch (e) {
     res.status(400).json({ error: e.message });
