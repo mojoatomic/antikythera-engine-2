@@ -7,7 +7,7 @@
     <style>
         /* CSS Variables for theming */
         :root {
-            --bg-primary: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --bg-primary: #000000;
             --bg-dial: radial-gradient(circle, #2a2a2a 0%, #1a1a1a 100%);
             --color-accent: #d4af37;
             --color-pointer: #ffaa00;
@@ -17,7 +17,7 @@
         
         /* Ancient Bronze Theme (default) */
         [data-theme="ancient-bronze"] {
-            --bg-primary: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --bg-primary: #000000;
             --bg-dial: radial-gradient(circle, #2a2a2a 0%, #1a1a1a 100%);
             --color-accent: #d4af37;
             --color-pointer: #ffaa00;
@@ -70,14 +70,23 @@
             font-family: var(--font-primary);
             background: var(--bg-primary);
             color: var(--color-text);
-            min-height: 100vh;
-            overflow-x: hidden;
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         .app-container {
             width: 100%;
-            min-height: 100vh;
+            height: 100%;
             padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         /* Layout: Hero (single large face) */
@@ -85,7 +94,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 70vh;
+            width: 100%;
+            height: 100%;
         }
         
         .layout-hero .face {
@@ -95,34 +105,36 @@
             max-height: 800px;
         }
         
-        /* Layout: Gallery (three faces side-by-side) */
+        /* Layout: Gallery (three faces, fill viewport) */
         .layout-gallery .faces-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 30px;
-            max-width: 1800px;
-            margin: 0 auto;
+            width: 100%;
+            height: 100%;
+            gap: 20px;
+            padding: 0;
+            box-sizing: border-box;
+            justify-items: center;
+            align-items: center;
+        }
+        
+        /* Mount-based layout using gallery grid */
+        body[data-mount="landscape"] .layout-gallery .faces-container {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-rows: 1fr;
+        }
+        
+        body[data-mount="portrait-right"] .layout-gallery .faces-container,
+        body[data-mount="portrait-left"] .layout-gallery .faces-container {
+            grid-template-columns: 1fr;
+            grid-template-rows: repeat(3, minmax(0, 1fr));
         }
         
         .layout-gallery .face {
             width: 100%;
-            aspect-ratio: 1;
-        }
-        
-        /* Mount-based layout and rotation */
-        body[data-mount="landscape"] .faces-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: 1fr;
-            gap: 30px;
-        }
-        
-        body[data-mount="portrait-right"] .faces-container,
-        body[data-mount="portrait-left"] .faces-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            grid-template-rows: repeat(3, 1fr);
-            gap: 30px;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         /* Canvas rotation now handled in component render via context; keep no transforms here */
@@ -157,6 +169,12 @@
             padding: 0;
             box-shadow: none;
             backdrop-filter: none;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
         }
         
         .face-card canvas {
@@ -165,7 +183,7 @@
             height: 100%;
             background: var(--bg-dial) !important;
             border-radius: 10px;
-            box-shadow: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
         
         .hidden {
