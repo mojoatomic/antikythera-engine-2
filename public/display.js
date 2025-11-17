@@ -12,8 +12,12 @@ window.addEventListener('load', async () => {
     await languageManager.load();
     await loadSettings();
     initComponents();
+    resizeCanvases();
     updateDisplay();
     startPolling();
+
+    // Recompute canvas sizes when the window resizes (orientation/layout changes)
+    window.addEventListener('resize', resizeCanvases);
 });
 
 async function loadSettings() {
@@ -49,6 +53,44 @@ function initComponents() {
     frontFace = new FrontFace(frontCanvas);
     backUpperFace = new BackUpperFace(backUpperCanvas);
     backLowerFace = new BackLowerFace(backLowerCanvas);
+}
+
+// Hi-DPI responsive canvas resizing helper
+function resizeCanvases() {
+    const dpr = window.devicePixelRatio || 1;
+
+    const ids = ['frontCanvas', 'backUpperCanvas', 'backLowerCanvas'];
+    ids.forEach((id) => {
+        const canvas = document.getElementById(id);
+        if (!canvas) return;
+
+        const parent = canvas.parentElement;
+        if (!parent) return;
+
+        const rect = parent.getBoundingClientRect();
+        const size = Math.min(rect.width, rect.height);
+        if (!size || size <= 0) return;
+
+        // Physical canvas size for hi-DPI rendering
+        const physicalSize = Math.round(size * dpr);
+
+        if (canvas.width !== physicalSize || canvas.height !== physicalSize) {
+            canvas.width = physicalSize;
+            canvas.height = physicalSize;
+        }
+
+        // CSS display size: keep canvas square and centered within its cell
+        canvas.style.width = `${size}px`;
+        canvas.style.height = `${size}px`;
+    });
+
+    // After resizing, re-render using the last known data so visuals stay in sync
+    if (currentData && frontFace && backUpperFace && backLowerFace) {
+        const renderData = { ...currentData, settings: window.appSettings };
+        frontFace.render(renderData);
+        backUpperFace.render(renderData);
+        backLowerFace.render(renderData);
+    }
 }
 
 

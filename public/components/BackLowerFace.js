@@ -3,7 +3,8 @@ class BackLowerFace {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     
-    // Calculate scale factor (1800/600 = 3x for high-res displays)
+    // Initial scale factor based on a 600x600 logical coordinate system.
+    // This value is recalculated on each render to follow dynamic canvas resizing.
     this.scale = canvas.width / 600;
     
     // Use original 600x600 coordinate system, not scaled canvas size
@@ -21,6 +22,9 @@ class BackLowerFace {
   }
   
   render(data) {
+    // Recompute scale in case the canvas was resized (hi-DPI / responsive layout)
+    this.scale = this.canvas.width / 600;
+
     const rotate = (data && data.settings && data.settings.rotate) || (window.appSettings && window.appSettings.rotate) || 'none';
     const angle = rotate === 'ccw90' ? -Math.PI / 2 : (rotate === 'cw90' ? Math.PI / 2 : 0);
 
