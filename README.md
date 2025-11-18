@@ -42,6 +42,7 @@ Complete validation methodology and results documented in `docs/VALIDATION.md`.
 
 ```bash
 npm install
+npm link
 npm start
 ```
 
