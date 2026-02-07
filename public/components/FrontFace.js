@@ -738,26 +738,35 @@ class FrontFace {
   }
   
   drawMoonPhase(x, y, radius, illumination, phase) {
-    // Full circle
+    // Full circle (moon base)
     this.ctx.fillStyle = this.colors.moon;
     this.ctx.beginPath();
     this.ctx.arc(x, y, radius, 0, Math.PI * 2);
     this.ctx.fill();
-    
+
     // Shadow based on illumination
     if (illumination < 1) {
       this.ctx.fillStyle = '#1a1a1a';
       this.ctx.beginPath();
-      const shadowOffset = radius * (1 - illumination * 2);
-      
-      if (phase < 180) {
-        // Waning - shadow on right
+
+      // Determine if waxing (0-180°) or waning (180-360°)
+      const isWaning = phase >= 180;
+
+      // Calculate terminator position
+      // illumination 0 = new (full shadow), 0.5 = quarter, 1 = full (no shadow)
+      // terminatorX ranges from -radius (new) to +radius (full)
+      const terminatorX = radius * (2 * illumination - 1);
+
+      if (isWaning) {
+        // Waning: shadow grows from right side
+        // Draw right half-circle, then terminator arc
         this.ctx.arc(x, y, radius, -Math.PI/2, Math.PI/2);
-        this.ctx.arc(x + shadowOffset, y, radius, Math.PI/2, -Math.PI/2);
+        this.ctx.ellipse(x, y, Math.abs(terminatorX), radius, 0, Math.PI/2, -Math.PI/2, terminatorX > 0);
       } else {
-        // Waxing - shadow on left
+        // Waxing: shadow shrinks from left side
+        // Draw left half-circle, then terminator arc
         this.ctx.arc(x, y, radius, Math.PI/2, -Math.PI/2);
-        this.ctx.arc(x - shadowOffset, y, radius, -Math.PI/2, Math.PI/2);
+        this.ctx.ellipse(x, y, Math.abs(terminatorX), radius, 0, -Math.PI/2, Math.PI/2, terminatorX > 0);
       }
       this.ctx.fill();
     }
