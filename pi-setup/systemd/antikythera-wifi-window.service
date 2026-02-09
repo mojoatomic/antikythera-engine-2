@@ -1,0 +1,18 @@
+[Unit]
+Description=Antikythera WiFi Setup Window
+Documentation=https://github.com/your-repo/antikythera-engine-2
+# Run after Comitup starts, manages the setup window
+After=comitup.service network.target
+Wants=comitup.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/antikythera-wifi-window.sh
+Restart=no
+StandardOutput=journal
+StandardError=journal
+# Give it time to complete the full window
+TimeoutStopSec=660
+
+[Install]
+WantedBy=multi-user.target
