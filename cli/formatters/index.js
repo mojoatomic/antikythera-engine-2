@@ -85,7 +85,4 @@ function format(data, type = 'table') {
 
 module.exports = {
   format,
-  formatTable,
-  formatJSON,
-  formatCSV
 };

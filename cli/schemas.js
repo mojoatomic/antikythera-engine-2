@@ -66,8 +66,4 @@ const APIResponseSchema = z.object({
 
 module.exports = {
   APIResponseSchema,
-  PositionSchema,
-  SunSchema,
-  MoonSchema,
-  PlanetsSchema
 };

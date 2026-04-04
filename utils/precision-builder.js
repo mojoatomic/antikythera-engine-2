@@ -80,8 +80,5 @@ function buildSystemMetadata(options) {
 }
 
 module.exports = {
-  buildPrecisionMetadata,
-  buildReproducibilityMetadata,
-  addPerBodyErrors,
   buildSystemMetadata,
 };

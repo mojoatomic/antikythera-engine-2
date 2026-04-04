@@ -163,6 +163,5 @@ function validateConfig(data, filePath = 'config', looseMode = false) {
 }
 
 module.exports = {
-  configSchema,
-  validateConfig
+  validateConfig,
 };
