@@ -106,11 +106,39 @@ class AntikytheraEngine {
     const sunsetPos = sunsetDate ? this.getSunPosition(sunsetDate, observer) : null;
     
     // Calculate daylight duration
-    const daylightMs = sunsetDate - sunriseDate;
-    const daylightHours = daylightMs / (1000 * 60 * 60);
-    const daylightPercent = daylightHours / 24;
-    const arcDegrees = daylightPercent * 360;
-    
+    // When only one of sunrise/sunset is available (polar twilight transitions),
+    // we cannot compute a meaningful daylight duration from the pair.
+    let daylightHours, daylightPercent, arcDegrees, daylightType;
+    if (sunriseDate && sunsetDate) {
+      const daylightMs = sunsetDate - sunriseDate;
+      daylightHours = daylightMs / (1000 * 60 * 60);
+      // Negative duration means sunset is before sunrise (sun is up at midnight);
+      // wrap to get the actual sunlit portion of the day.
+      if (daylightHours < 0) daylightHours += 24;
+      daylightPercent = daylightHours / 24;
+      arcDegrees = daylightPercent * 360;
+      daylightType = 'normal';
+    } else if (sunriseDate && !sunsetDate) {
+      // Sun rises but doesn't set today — approaching polar day
+      daylightHours = 24;
+      daylightPercent = 1.0;
+      arcDegrees = 360;
+      daylightType = 'no_sunset';
+    } else if (!sunriseDate && sunsetDate) {
+      // Sun sets but didn't rise today — approaching polar night
+      daylightHours = 0;
+      daylightPercent = 0.0;
+      arcDegrees = 0;
+      daylightType = 'no_sunrise';
+    } else {
+      // Neither sunrise nor sunset found — determine from current altitude
+      const isPolarDay = sunPos.altitude > 0;
+      daylightHours = isPolarDay ? 24 : 0;
+      daylightPercent = isPolarDay ? 1.0 : 0.0;
+      arcDegrees = isPolarDay ? 360 : 0;
+      daylightType = isPolarDay ? 'polar_day' : 'polar_night';
+    }
+
     return {
       currentPosition: {
         azimuth: sunPos.azimuth,
@@ -119,17 +147,17 @@ class AntikytheraEngine {
       },
       sunrise: sunrise ? {
         time: (sunrise.date || sunrise),
-        azimuth: sunrisePos.azimuth
+        azimuth: sunrisePos ? sunrisePos.azimuth : null
       } : null,
       sunset: sunset ? {
         time: (sunset.date || sunset),
-        azimuth: sunsetPos.azimuth
+        azimuth: sunsetPos ? sunsetPos.azimuth : null
       } : null,
       daylight: {
         hours: daylightHours,
         percent: daylightPercent,
         arcDegrees: arcDegrees,
-        type: 'normal'
+        type: daylightType
       }
     };
   }
@@ -318,7 +346,7 @@ class AntikytheraEngine {
       'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
     ];
     
-    const signIndex = Math.floor(longitude / 30);
+    const signIndex = Math.floor(longitude / 30) % 12;
     const degreeInSign = longitude % 30;
     
     return {
@@ -349,8 +377,9 @@ class AntikytheraEngine {
     const referenceDate = new Date('2000-01-01');
     const yearsSince = (date - referenceDate) / (1000 * 60 * 60 * 24 * 365.25);
     
-    const metonicYear = Math.floor(yearsSince % 19) + 1;
-    const progress = (yearsSince % 19) / 19; // 0-1 for dial position
+    const cyclePosition = ((yearsSince % 19) + 19) % 19; // always in [0, 19)
+    const metonicYear = Math.floor(cyclePosition) + 1;
+    const progress = cyclePosition / 19; // 0-1 for dial position
     
     return {
       year: metonicYear,
@@ -382,9 +411,21 @@ class AntikytheraEngine {
       const lunarEclipse = astronomy.SearchLunarEclipse(date);
       const solarEclipse = astronomy.SearchGlobalSolarEclipse(date);
 
-      const next = (lunarEclipse.peak.date < solarEclipse.peak.date)
-        ? { type: 'lunar', data: lunarEclipse }
-        : { type: 'solar', data: solarEclipse };
+      const lunarPeakDate = lunarEclipse?.peak?.date ?? null;
+      const solarPeakDate = solarEclipse?.peak?.date ?? null;
+
+      let next;
+      if (lunarPeakDate && solarPeakDate) {
+        next = (lunarPeakDate < solarPeakDate)
+          ? { type: 'lunar', data: lunarEclipse }
+          : { type: 'solar', data: solarEclipse };
+      } else if (lunarPeakDate) {
+        next = { type: 'lunar', data: lunarEclipse };
+      } else if (solarPeakDate) {
+        next = { type: 'solar', data: solarEclipse };
+      } else {
+        return { error: 'Could not calculate next eclipse' };
+      }
 
       const peakDate = next.data.peak && (next.data.peak.date || (next.data.peak.time && next.data.peak.time.date))
         ? (next.data.peak.date || next.data.peak.time.date)
