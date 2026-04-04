@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const { VALIDATION, CONVENTIONS } = require('./constants/validation');
@@ -37,7 +38,12 @@ const LOCAL_CONTROL_TOKEN = getOrCreateControlToken();
 function controlGuard(req, res, next) {
   const expected = (process.env.ANTIKYTHERA_CONTROL_TOKEN || process.env.CONTROL_TOKEN || LOCAL_CONTROL_TOKEN || '').trim();
   const auth = req.headers['authorization'] || '';
-  if (expected && typeof auth === 'string' && auth.startsWith('Bearer ') && auth.slice(7) === expected) return next();
+  const token = (typeof auth === 'string' && auth.startsWith('Bearer ')) ? auth.slice(7) : '';
+  if (expected && token.length === expected.length) {
+    const a = Buffer.from(token);
+    const b = Buffer.from(expected);
+    if (crypto.timingSafeEqual(a, b)) return next();
+  }
   return res.status(401).json({ error: 'Control authentication failed', code: 'CONTROL_AUTH_FAILED' });
 }
 
