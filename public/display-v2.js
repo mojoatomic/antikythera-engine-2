@@ -113,7 +113,7 @@ async function updateDisplay() {
     const date = dateInput ? new Date(dateInput).toISOString() : new Date().toISOString();
     
     try {
-        const response = await fetch(`http://localhost:3000/api/state/${date}`);
+        const response = await fetch(`/api/state/${date}`);
         const data = await response.json();
         currentData = data;
         

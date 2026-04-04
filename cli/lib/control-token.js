@@ -26,4 +26,4 @@ function requireControlToken() {
   return token;
 }
 
-module.exports = { getControlToken, requireControlToken, TOKEN_FILE };
+module.exports = { getControlToken, requireControlToken };
