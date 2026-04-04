@@ -22,7 +22,7 @@ window.addEventListener('load', async () => {
 
 async function loadSettings() {
     try {
-        const res = await fetch('http://localhost:3000/api/settings');
+        const res = await fetch('/api/settings');
         const data = await res.json();
         window.appSettings = data;
         
@@ -144,7 +144,7 @@ function changeTheme(theme) {
 
 async function updateDisplay() {
     try {
-        const response = await fetch('http://localhost:3000/api/state');
+        const response = await fetch('/api/state');
         const data = await response.json();
         currentData = data;
         
