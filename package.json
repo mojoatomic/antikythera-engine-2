@@ -17,6 +17,7 @@
     "ci": "npm run lint && npm test",
     "knip": "knip",
     "validate:horizons": "node scripts/validate-horizons.js",
+    "validate:ecl": "node scripts/validate-ecl-vectors.js",
     "prepare": "husky"
   },
   "keywords": [

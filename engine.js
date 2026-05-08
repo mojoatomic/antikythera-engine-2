@@ -3,6 +3,42 @@ const { MS_PER_DAY } = require('./constants/time');
 const TimeUtils = require('./utils/time');
 const { getUtcOffsetMinutes } = require('./utils/tz');
 
+// =============================================================================
+// REGRESSION PREVENTION — DO NOT REMOVE
+// -----------------------------------------------------------------------------
+// astronomy.Ecliptic(eqj) is NOT the right way to obtain J2000 mean ecliptic
+// (ECL) coordinates, despite the suggestive name. It applies precession +
+// nutation and returns *true ecliptic of date* (ECT) — i.e. the ecliptic of
+// the moment, not the J2000 ecliptic. Using it where ECL is expected silently
+// rotates outputs by the accumulated precession (~50.3"/yr ≈ 22 arcmin since
+// J2000 by 2026) plus a small nutation envelope.
+//
+// The canonical J2000 ECL pattern is:
+//     RotateVector(Rotation_EQJ_ECL(), eqjVec) → SphereFromVector(...)
+// The rotation matrix is constant (both EQJ and ECL are J2000-fixed), so we
+// cache it at module load. Per-call recomputation buys nothing.
+//
+// If you need ECT (true ecliptic of date) — e.g. for the zodiac path or for
+// comparison against HORIZONS OBSERVER/QUANTITIES=31 output — use the explicit
+// `eclipticFromEquatorVec_EQJ_to_ECT` helper, which wraps astronomy.Ecliptic().
+// =============================================================================
+const ROT_EQJ_TO_ECL = astronomy.Rotation_EQJ_ECL();
+
+// Frame-stamp every API output that has a coordinate frame. Surfaced as a
+// top-level `coordinate_frames` field on /api/state and /api/display; same
+// shape across endpoints. Calendar/cycle/phase fields (egyptianCalendar,
+// metonicCycle, sarosCycle, moon.phase, moon.illumination,
+// equationOfTime.meanSun) don't have celestial frames — correctly absent.
+const COORDINATE_FRAMES = Object.freeze({
+  'bodies.ecliptic': 'ecliptic_j2000',
+  'bodies.equatorial': 'equatorial_j2000',
+  'bodies.horizontal': 'topocentric_apparent',
+  'zodiac': 'ecliptic_of_date',
+  'lunarNodes': 'ecliptic_j2000',
+  'sunVisibility.horizontal': 'topocentric_apparent',
+  'equationOfTime.apparentSun': 'ecliptic_j2000'
+});
+
 class AntikytheraEngine {
   /**
    * Convert an equator-of-date vector to J2000 mean ecliptic angles
@@ -15,10 +51,26 @@ class AntikytheraEngine {
     return { elon, elat: sph.lat };
   }
 
+  /**
+   * Convert a J2000 equator vector (EQJ) to J2000 mean ecliptic (ECL) angles.
+   * Uses the canonical Rotation_EQJ_ECL → RotateVector → SphereFromVector chain.
+   * See REGRESSION PREVENTION block above.
+   */
   eclipticFromEquatorVec_EQJ(equatorJ2000Vec) {
-    // Convert J2000 equator topocentric vector to true ecliptic of date
+    const eclVec = astronomy.RotateVector(ROT_EQJ_TO_ECL, equatorJ2000Vec);
+    const sph = astronomy.SphereFromVector(eclVec);
+    return { elon: sph.lon, elat: sph.lat };
+  }
+
+  /**
+   * Convert a J2000 equator vector (EQJ) to true ecliptic of date (ECT) angles.
+   * Wraps astronomy.Ecliptic(), which applies precession + nutation under the
+   * hood. Use only where ECT is the intended frame (zodiac path, OBSERVER/Q31
+   * HORIZONS comparisons). For inertial/orbital outputs default to ECL via
+   * `eclipticFromEquatorVec_EQJ`.
+   */
+  eclipticFromEquatorVec_EQJ_to_ECT(equatorJ2000Vec) {
     const ecl = astronomy.Ecliptic(equatorJ2000Vec);
-    // astronomy.Ecliptic returns EclipticCoordinates with elon/elat
     return { elon: ecl.elon, elat: ecl.elat };
   }
 
@@ -218,6 +270,7 @@ class AntikytheraEngine {
       date: date.toISOString(),
       location: { latitude, longitude },
       observer: observerOut,
+      coordinate_frames: COORDINATE_FRAMES,
       sun: this.getSunPosition(date, observer),
       moon: this.getMoonPosition(date, observer),
       planets: this.getPlanetaryPositions(date, observer),
@@ -231,6 +284,29 @@ class AntikytheraEngine {
       equationOfTime: this.getEquationOfTime(date),
       sunVisibility: this.getSunVisibility(date, observer)
     };
+  }
+
+  /**
+   * Compute ecliptic-of-date (ECT) coordinates for the standard set of bodies.
+   * Parallel to the ECL block in /api/display but routed through the explicit
+   * ECT helper. Used by the OBSERVER+Q31 HORIZONS validators (validate-extended,
+   * validate-all-bodies, validate-horizons, validate-simple) which inherently
+   * compare against ECT.
+   *
+   * Accepts the same observer-shape used by getState (latitude, longitude,
+   * optional elevation) to keep callers from having to construct an
+   * astronomy.Observer themselves.
+   */
+  getEclipticCoordsECT(date, latitude = 37.5, longitude = 23.0, elevation = 0) {
+    const observer = new astronomy.Observer(latitude, longitude, elevation);
+    const result = {};
+    const bodies = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
+    for (const body of bodies) {
+      const eq = astronomy.Equator(body, date, observer, false, true); // EQJ
+      const ect = this.eclipticFromEquatorVec_EQJ_to_ECT(eq.vec);
+      result[body.toLowerCase()] = { lon: ect.elon, lat: ect.elat };
+    }
+    return result;
   }
 
   getSunPosition(date, observer) {
@@ -334,26 +410,31 @@ class AntikytheraEngine {
   }
 
   getZodiacPosition(date) {
-    // Get Sun's ecliptic longitude (zodiac is based on Sun, not Moon!)
+    // Zodiac signs are tropical: bound to the equinoxes of the moment, which
+    // means the relevant frame is true ecliptic of date (ECT), not J2000 mean
+    // ecliptic (ECL). Routing through the ECT helper keeps the sign cusps
+    // anchored to the equinox at this date — same convention used by HORIZONS
+    // OBSERVER + QUANTITIES=31 output.
     const observer = new astronomy.Observer(0, 0, 0); // Ecliptic position same from anywhere
     const sunEquator = astronomy.Equator('Sun', date, observer, false, true); // EQJ
-    const sunEcliptic = this.eclipticFromEquatorVec_EQJ(sunEquator.vec);
+    const sunEcliptic = this.eclipticFromEquatorVec_EQJ_to_ECT(sunEquator.vec);
     const longitude = sunEcliptic.elon;
-    
+
     // Zodiac signs, 30 degrees each
     const signs = [
       'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
       'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
     ];
-    
+
     const signIndex = Math.floor(longitude / 30) % 12;
     const degreeInSign = longitude % 30;
-    
+
     return {
       sign: signs[signIndex],
       signIndex: signIndex,
       degreeInSign: degreeInSign,
-      absoluteLongitude: longitude
+      absoluteLongitude: longitude,
+      frame: 'ecliptic_of_date'
     };
   }
 
@@ -636,65 +717,85 @@ class AntikytheraEngine {
   }
 
   /**
-   * Calculate lunar orbital nodes position
-   * The nodes precess (move backwards) with an 18.613 year period
+   * Calculate lunar orbital nodes (instantaneous / osculating).
+   *
+   * Geometric computation in J2000 mean ecliptic (ECL):
+   *   1. Get geocentric Moon state vector (r, v) in EQJ via GeoMoonState.
+   *   2. Rotate r and v separately into ECL using ROT_EQJ_TO_ECL.
+   *      (MUST: never compute h = r × v in EQJ and rotate the result —
+   *       ẑ in EQJ ≠ ẑ in ECL, so n = ẑ × h in mixed frames is garbage.)
+   *   3. h = r × v is the angular-momentum vector (orbit-plane normal in ECL).
+   *   4. n = ẑ × h with ẑ = (0,0,1) in ECL gives a vector along the line of
+   *      nodes; for a prograde orbit (Moon: i ≈ 5.14°) it points toward the
+   *      ascending node.
+   *   5. Ω = atan2(n.y, n.x), normalized to [0, 360).
+   *
+   * Replaces a linear approximation (REFERENCE_ASCENDING_NODE + mean rate × Δt)
+   * which drifted from the true (osculating) value by up to ~1.5° from
+   * mid-month perturbations.
    */
   getLunarNodes(date) {
-    // Lunar nodes: points where Moon's orbit crosses the ecliptic plane
-    // The nodes precess (move backwards) completing a full cycle in 18.613 years
-    // This is known as the "Draconic" or "Nodal" cycle
-    
-    const NODAL_PERIOD_DAYS = 6798.375; // 18.613 years in days
+    const NODAL_PERIOD_DAYS = 6798.375;   // 18.613 years
     const NODAL_PERIOD_YEARS = 18.613;
-    
-    // Reference epoch: J2000.0 (January 1, 2000, 12:00 TT)
-    // Ascending node was at ~125.04° on this date
-    const referenceDate = new Date('2000-01-01T12:00:00Z');
-    const REFERENCE_ASCENDING_NODE = 125.04; // degrees
-    
-    // Calculate days since reference
-    const daysSince = (date - referenceDate) / (1000 * 60 * 60 * 24);
-    
-    // Node motion: -19.3416° per year (retrograde/westward)
-    const nodeMotionPerDay = -19.3416 / 365.25;
-    
-    // Calculate current ascending node position
-    let ascendingNode = (REFERENCE_ASCENDING_NODE + (nodeMotionPerDay * daysSince)) % 360;
+    const nodeMotionPerDay = -19.3416 / 365.25; // mean retrograde rate, deg/day
+
+    // 1. Moon state in EQJ.
+    const state = astronomy.GeoMoonState(date);
+
+    // 2. Rotate position and velocity into ECL — separately, per invariant.
+    const r_eqj = new astronomy.Vector(state.x, state.y, state.z, state.t);
+    const v_eqj = new astronomy.Vector(state.vx, state.vy, state.vz, state.t);
+    const r = astronomy.RotateVector(ROT_EQJ_TO_ECL, r_eqj);
+    const v = astronomy.RotateVector(ROT_EQJ_TO_ECL, v_eqj);
+
+    // 3. Specific angular momentum h = r × v (in ECL).
+    const hx = r.y * v.z - r.z * v.y;
+    const hy = r.z * v.x - r.x * v.z;
+    // hz omitted: only needed to confirm orientation; n.x and n.y are
+    // determined entirely by hx and hy (see step 4).
+
+    // 4. n = ẑ × h with ẑ = (0,0,1) in ECL → (-hy, hx, 0).
+    const nx = -hy;
+    const ny =  hx;
+
+    // 5. Ω = longitude of ascending node, normalized to [0, 360).
+    let ascendingNode = Math.atan2(ny, nx) * (180 / Math.PI);
     if (ascendingNode < 0) ascendingNode += 360;
-    
-    // Descending node is 180° opposite
     const descendingNode = (ascendingNode + 180) % 360;
-    
-    // Progress through current nodal cycle
-    const cycleProgress = (daysSince % NODAL_PERIOD_DAYS) / NODAL_PERIOD_DAYS;
-    
-    // Days until next node passage (approximate)
+
+    // Cycle dial: drive from time-since-reference so the dial sweeps smoothly.
+    const referenceDate = new Date('2000-01-01T12:00:00Z');
+    const daysSince = (date - referenceDate) / (1000 * 60 * 60 * 24);
+    const cycleProgress = (((daysSince % NODAL_PERIOD_DAYS) + NODAL_PERIOD_DAYS) % NODAL_PERIOD_DAYS) / NODAL_PERIOD_DAYS;
+
+    // Days until next node passage by the Moon. Moon longitude here is ECT
+    // (from EclipticGeoMoon), which is at most ~22 arcmin from ECL today;
+    // the resulting passage estimate is a few-hour resolution at best, so
+    // the frame mismatch on this auxiliary number is below the noise floor.
     const moonLongitude = astronomy.EclipticGeoMoon(date).lon;
-    
-    // Calculate angular distance to nearest node
     const distToAscending = Math.abs(((moonLongitude - ascendingNode + 180) % 360) - 180);
     const distToDescending = Math.abs(((moonLongitude - descendingNode + 180) % 360) - 180);
     const distToNearestNode = Math.min(distToAscending, distToDescending);
-    
-    // Approximate days until node passage (moon moves ~13.2°/day)
-    const daysUntilNodePassage = distToNearestNode / 13.2;
-    
+    const daysUntilNodePassage = distToNearestNode / 13.2; // Moon moves ~13.2°/day
+
     return {
-      ascendingNode: ascendingNode, // degrees (where moon crosses ecliptic northward)
-      descendingNode: descendingNode, // degrees (where moon crosses ecliptic southward)
+      ascendingNode,
+      descendingNode,
       period: {
         days: NODAL_PERIOD_DAYS,
         years: NODAL_PERIOD_YEARS
       },
-      progress: cycleProgress, // 0-1 through current 18.6 year cycle
-      anglePosition: cycleProgress * 360, // degrees for display dial
-      motionRate: nodeMotionPerDay, // degrees per day (negative = retrograde)
+      progress: cycleProgress,
+      anglePosition: cycleProgress * 360,
+      motionRate: nodeMotionPerDay,
       nextNodePassage: {
         daysUntil: daysUntilNodePassage,
         type: distToAscending < distToDescending ? 'ascending' : 'descending'
-      }
+      },
+      frame: 'ecliptic_j2000'
     };
   }
 }
 
 module.exports = AntikytheraEngine;
+module.exports.COORDINATE_FRAMES = COORDINATE_FRAMES;

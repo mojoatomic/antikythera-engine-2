@@ -316,6 +316,14 @@ app.get('/api/display', async (req, res) => {
       saturn: { lon: state.planets.saturn.longitude, lat: state.planets.saturn.latitude }
     };
 
+    // Parallel ECT block for OBSERVER+Q31 HORIZONS validators. Same body set
+    // and shape; values come from astronomy.Ecliptic() (true ecliptic of date).
+    // Recomputes the per-body Equator() lookup — acceptable cost for a debug
+    // field; not on the mechanical-display hot path.
+    const eclipticCoordsEct = engine.getEclipticCoordsECT(
+      date, latitude, longitude, observer.elevation || 0
+    );
+
     const debugData = {
       sun_altitude: sunAltitude,
       twilight_stage: twilightStage,
@@ -332,6 +340,7 @@ app.get('/api/display', async (req, res) => {
         computationTime: Date.now() - startTime,
         fullPrecision,
         eclipticCoords,
+        eclipticCoordsEct,
         debugData,
       }),
       observer: {
@@ -350,6 +359,7 @@ app.get('/api/display', async (req, res) => {
     // Build response
     const response = {
       timestamp: state.date,
+      coordinate_frames: state.coordinate_frames,
       mechanical,
       digital,
       ...(computeSteps ? { intervalSec: dtSec } : {}),
