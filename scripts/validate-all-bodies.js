@@ -12,6 +12,24 @@
 
 const fetch = require('node-fetch');
 const { MS_PER_MINUTE } = require('../constants/time');
+const { VALIDATION } = require('../constants/validation');
+
+// Per-body 3× p95 threshold from constants/validation.js. Replaces a flat
+// 0.1° (= 360″) threshold which was 200–400× looser than the engine's
+// claimed precision and would have caught essentially nothing.
+function thresholdDegrees(body) {
+  const stats = VALIDATION.bodies && VALIDATION.bodies[body];
+  if (!stats) {
+    // Conservative fallback for unknown bodies: 30″ in degrees.
+    return 30 / 3600;
+  }
+  const lonP95 = stats.lon && typeof stats.lon.p95 === 'number' ? stats.lon.p95 : 30;
+  const latP95 = stats.lat && typeof stats.lat.p95 === 'number' ? stats.lat.p95 : 30;
+  return {
+    lon: (3 * lonP95) / 3600,
+    lat: (3 * latP95) / 3600,
+  };
+}
 
 // HORIZONS body codes
 const BODY_CODES = {
@@ -112,10 +130,11 @@ async function validateBody(bodyName, bodyCode, apiCoords, timestamp, observer) 
     console.log(`  Delta:    lon=${delta_lon.toFixed(6)}°  lat=${delta_lat.toFixed(6)}°`);
     console.log(`            (${(delta_lon * 3600).toFixed(1)}" lon, ${(delta_lat * 3600).toFixed(1)}" lat)`);
     
-    const TOLERANCE_DEG = 0.1;
-    const passed = delta_lon < TOLERANCE_DEG && delta_lat < TOLERANCE_DEG;
-    
-    console.log(`  ${passed ? '[PASS]' : '[FAIL]'} ${passed ? 'Within' : 'Exceeds'} tolerance`);
+    const t = thresholdDegrees(bodyName);
+    const passed = delta_lon < t.lon && delta_lat < t.lat;
+
+    console.log(`  threshold (3× p95): lon=${(t.lon * 3600).toFixed(2)}″  lat=${(t.lat * 3600).toFixed(2)}″`);
+    console.log(`  ${passed ? '[PASS]' : '[FAIL]'} ${passed ? 'Within' : 'Exceeds'} per-body tolerance`);
     
     return {
       body: bodyName,
