@@ -3,6 +3,27 @@ const { MS_PER_DAY } = require('./constants/time');
 const TimeUtils = require('./utils/time');
 const { getUtcOffsetMinutes } = require('./utils/tz');
 
+// =============================================================================
+// REGRESSION PREVENTION — DO NOT REMOVE
+// -----------------------------------------------------------------------------
+// astronomy.Ecliptic(eqj) is NOT the right way to obtain J2000 mean ecliptic
+// (ECL) coordinates, despite the suggestive name. It applies precession +
+// nutation and returns *true ecliptic of date* (ECT) — i.e. the ecliptic of
+// the moment, not the J2000 ecliptic. Using it where ECL is expected silently
+// rotates outputs by the accumulated precession (~50.3"/yr ≈ 22 arcmin since
+// J2000 by 2026) plus a small nutation envelope.
+//
+// The canonical J2000 ECL pattern is:
+//     RotateVector(Rotation_EQJ_ECL(), eqjVec) → SphereFromVector(...)
+// The rotation matrix is constant (both EQJ and ECL are J2000-fixed), so we
+// cache it at module load. Per-call recomputation buys nothing.
+//
+// If you need ECT (true ecliptic of date) — e.g. for the zodiac path or for
+// comparison against HORIZONS OBSERVER/QUANTITIES=31 output — use the explicit
+// `eclipticFromEquatorVec_EQJ_to_ECT` helper, which wraps astronomy.Ecliptic().
+// =============================================================================
+const ROT_EQJ_TO_ECL = astronomy.Rotation_EQJ_ECL();
+
 class AntikytheraEngine {
   /**
    * Convert an equator-of-date vector to J2000 mean ecliptic angles
@@ -15,10 +36,26 @@ class AntikytheraEngine {
     return { elon, elat: sph.lat };
   }
 
+  /**
+   * Convert a J2000 equator vector (EQJ) to J2000 mean ecliptic (ECL) angles.
+   * Uses the canonical Rotation_EQJ_ECL → RotateVector → SphereFromVector chain.
+   * See REGRESSION PREVENTION block above.
+   */
   eclipticFromEquatorVec_EQJ(equatorJ2000Vec) {
-    // Convert J2000 equator topocentric vector to true ecliptic of date
+    const eclVec = astronomy.RotateVector(ROT_EQJ_TO_ECL, equatorJ2000Vec);
+    const sph = astronomy.SphereFromVector(eclVec);
+    return { elon: sph.lon, elat: sph.lat };
+  }
+
+  /**
+   * Convert a J2000 equator vector (EQJ) to true ecliptic of date (ECT) angles.
+   * Wraps astronomy.Ecliptic(), which applies precession + nutation under the
+   * hood. Use only where ECT is the intended frame (zodiac path, OBSERVER/Q31
+   * HORIZONS comparisons). For inertial/orbital outputs default to ECL via
+   * `eclipticFromEquatorVec_EQJ`.
+   */
+  eclipticFromEquatorVec_EQJ_to_ECT(equatorJ2000Vec) {
     const ecl = astronomy.Ecliptic(equatorJ2000Vec);
-    // astronomy.Ecliptic returns EclipticCoordinates with elon/elat
     return { elon: ecl.elon, elat: ecl.elat };
   }
 
