@@ -371,26 +371,31 @@ class AntikytheraEngine {
   }
 
   getZodiacPosition(date) {
-    // Get Sun's ecliptic longitude (zodiac is based on Sun, not Moon!)
+    // Zodiac signs are tropical: bound to the equinoxes of the moment, which
+    // means the relevant frame is true ecliptic of date (ECT), not J2000 mean
+    // ecliptic (ECL). Routing through the ECT helper keeps the sign cusps
+    // anchored to the equinox at this date — same convention used by HORIZONS
+    // OBSERVER + QUANTITIES=31 output.
     const observer = new astronomy.Observer(0, 0, 0); // Ecliptic position same from anywhere
     const sunEquator = astronomy.Equator('Sun', date, observer, false, true); // EQJ
-    const sunEcliptic = this.eclipticFromEquatorVec_EQJ(sunEquator.vec);
+    const sunEcliptic = this.eclipticFromEquatorVec_EQJ_to_ECT(sunEquator.vec);
     const longitude = sunEcliptic.elon;
-    
+
     // Zodiac signs, 30 degrees each
     const signs = [
       'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
       'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
     ];
-    
+
     const signIndex = Math.floor(longitude / 30) % 12;
     const degreeInSign = longitude % 30;
-    
+
     return {
       sign: signs[signIndex],
       signIndex: signIndex,
       degreeInSign: degreeInSign,
-      absoluteLongitude: longitude
+      absoluteLongitude: longitude,
+      frame: 'ecliptic_of_date'
     };
   }
 
