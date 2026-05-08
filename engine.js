@@ -24,6 +24,21 @@ const { getUtcOffsetMinutes } = require('./utils/tz');
 // =============================================================================
 const ROT_EQJ_TO_ECL = astronomy.Rotation_EQJ_ECL();
 
+// Frame-stamp every API output that has a coordinate frame. Surfaced as a
+// top-level `coordinate_frames` field on /api/state and /api/display; same
+// shape across endpoints. Calendar/cycle/phase fields (egyptianCalendar,
+// metonicCycle, sarosCycle, moon.phase, moon.illumination,
+// equationOfTime.meanSun) don't have celestial frames — correctly absent.
+const COORDINATE_FRAMES = Object.freeze({
+  'bodies.ecliptic': 'ecliptic_j2000',
+  'bodies.equatorial': 'equatorial_j2000',
+  'bodies.horizontal': 'topocentric_apparent',
+  'zodiac': 'ecliptic_of_date',
+  'lunarNodes': 'ecliptic_j2000',
+  'sunVisibility.horizontal': 'topocentric_apparent',
+  'equationOfTime.apparentSun': 'ecliptic_j2000'
+});
+
 class AntikytheraEngine {
   /**
    * Convert an equator-of-date vector to J2000 mean ecliptic angles
@@ -255,6 +270,7 @@ class AntikytheraEngine {
       date: date.toISOString(),
       location: { latitude, longitude },
       observer: observerOut,
+      coordinate_frames: COORDINATE_FRAMES,
       sun: this.getSunPosition(date, observer),
       moon: this.getMoonPosition(date, observer),
       planets: this.getPlanetaryPositions(date, observer),
@@ -759,3 +775,4 @@ class AntikytheraEngine {
 }
 
 module.exports = AntikytheraEngine;
+module.exports.COORDINATE_FRAMES = COORDINATE_FRAMES;

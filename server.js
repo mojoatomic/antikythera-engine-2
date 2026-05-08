@@ -350,6 +350,7 @@ app.get('/api/display', async (req, res) => {
     // Build response
     const response = {
       timestamp: state.date,
+      coordinate_frames: state.coordinate_frames,
       mechanical,
       digital,
       ...(computeSteps ? { intervalSec: dtSec } : {}),
