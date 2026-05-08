@@ -286,6 +286,29 @@ class AntikytheraEngine {
     };
   }
 
+  /**
+   * Compute ecliptic-of-date (ECT) coordinates for the standard set of bodies.
+   * Parallel to the ECL block in /api/display but routed through the explicit
+   * ECT helper. Used by the OBSERVER+Q31 HORIZONS validators (validate-extended,
+   * validate-all-bodies, validate-horizons, validate-simple) which inherently
+   * compare against ECT.
+   *
+   * Accepts the same observer-shape used by getState (latitude, longitude,
+   * optional elevation) to keep callers from having to construct an
+   * astronomy.Observer themselves.
+   */
+  getEclipticCoordsECT(date, latitude = 37.5, longitude = 23.0, elevation = 0) {
+    const observer = new astronomy.Observer(latitude, longitude, elevation);
+    const result = {};
+    const bodies = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
+    for (const body of bodies) {
+      const eq = astronomy.Equator(body, date, observer, false, true); // EQJ
+      const ect = this.eclipticFromEquatorVec_EQJ_to_ECT(eq.vec);
+      result[body.toLowerCase()] = { lon: ect.elon, lat: ect.elat };
+    }
+    return result;
+  }
+
   getSunPosition(date, observer) {
     const equator = astronomy.Equator('Sun', date, observer, false, true); // EQJ
     const horizonEqd = astronomy.Equator('Sun', date, observer, true, true);

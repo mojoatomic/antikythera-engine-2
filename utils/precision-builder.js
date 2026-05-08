@@ -62,8 +62,23 @@ function buildSystemMetadata(options) {
     computationTime = 0,
     fullPrecision = false,
     eclipticCoords = {},
+    eclipticCoordsEct = null,
     debugData = {},
   } = options;
+
+  const debug = {
+    ...debugData,
+    // ecliptic_coordinates carries ECL (J2000 mean ecliptic) post-fix —
+    // matches the public-API frame label in CONVENTIONS.coordinate_frame.
+    ecliptic_coordinates: fullPrecision ? addPerBodyErrors(eclipticCoords) : eclipticCoords,
+  };
+  // ecliptic_coordinates_ect carries true-ecliptic-of-date values for the
+  // OBSERVER+Q31 HORIZONS validators (validate-extended, validate-all-bodies,
+  // validate-horizons, validate-simple). Same shape as ecliptic_coordinates;
+  // emitted when the caller opts in by passing eclipticCoordsEct.
+  if (eclipticCoordsEct) {
+    debug.ecliptic_coordinates_ect = eclipticCoordsEct;
+  }
 
   const system = {
     healthy: true,
@@ -71,10 +86,7 @@ function buildSystemMetadata(options) {
     computation_time_ms: computationTime,
     precision: buildPrecisionMetadata(),
     reproducibility: buildReproducibilityMetadata(),
-    debug: {
-      ...debugData,
-      ecliptic_coordinates: fullPrecision ? addPerBodyErrors(eclipticCoords) : eclipticCoords,
-    },
+    debug,
   };
   return system;
 }
