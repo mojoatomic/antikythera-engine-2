@@ -678,63 +678,82 @@ class AntikytheraEngine {
   }
 
   /**
-   * Calculate lunar orbital nodes position
-   * The nodes precess (move backwards) with an 18.613 year period
+   * Calculate lunar orbital nodes (instantaneous / osculating).
+   *
+   * Geometric computation in J2000 mean ecliptic (ECL):
+   *   1. Get geocentric Moon state vector (r, v) in EQJ via GeoMoonState.
+   *   2. Rotate r and v separately into ECL using ROT_EQJ_TO_ECL.
+   *      (MUST: never compute h = r × v in EQJ and rotate the result —
+   *       ẑ in EQJ ≠ ẑ in ECL, so n = ẑ × h in mixed frames is garbage.)
+   *   3. h = r × v is the angular-momentum vector (orbit-plane normal in ECL).
+   *   4. n = ẑ × h with ẑ = (0,0,1) in ECL gives a vector along the line of
+   *      nodes; for a prograde orbit (Moon: i ≈ 5.14°) it points toward the
+   *      ascending node.
+   *   5. Ω = atan2(n.y, n.x), normalized to [0, 360).
+   *
+   * Replaces a linear approximation (REFERENCE_ASCENDING_NODE + mean rate × Δt)
+   * which drifted from the true (osculating) value by up to ~1.5° from
+   * mid-month perturbations.
    */
   getLunarNodes(date) {
-    // Lunar nodes: points where Moon's orbit crosses the ecliptic plane
-    // The nodes precess (move backwards) completing a full cycle in 18.613 years
-    // This is known as the "Draconic" or "Nodal" cycle
-    
-    const NODAL_PERIOD_DAYS = 6798.375; // 18.613 years in days
+    const NODAL_PERIOD_DAYS = 6798.375;   // 18.613 years
     const NODAL_PERIOD_YEARS = 18.613;
-    
-    // Reference epoch: J2000.0 (January 1, 2000, 12:00 TT)
-    // Ascending node was at ~125.04° on this date
-    const referenceDate = new Date('2000-01-01T12:00:00Z');
-    const REFERENCE_ASCENDING_NODE = 125.04; // degrees
-    
-    // Calculate days since reference
-    const daysSince = (date - referenceDate) / (1000 * 60 * 60 * 24);
-    
-    // Node motion: -19.3416° per year (retrograde/westward)
-    const nodeMotionPerDay = -19.3416 / 365.25;
-    
-    // Calculate current ascending node position
-    let ascendingNode = (REFERENCE_ASCENDING_NODE + (nodeMotionPerDay * daysSince)) % 360;
+    const nodeMotionPerDay = -19.3416 / 365.25; // mean retrograde rate, deg/day
+
+    // 1. Moon state in EQJ.
+    const state = astronomy.GeoMoonState(date);
+
+    // 2. Rotate position and velocity into ECL — separately, per invariant.
+    const r_eqj = new astronomy.Vector(state.x, state.y, state.z, state.t);
+    const v_eqj = new astronomy.Vector(state.vx, state.vy, state.vz, state.t);
+    const r = astronomy.RotateVector(ROT_EQJ_TO_ECL, r_eqj);
+    const v = astronomy.RotateVector(ROT_EQJ_TO_ECL, v_eqj);
+
+    // 3. Specific angular momentum h = r × v (in ECL).
+    const hx = r.y * v.z - r.z * v.y;
+    const hy = r.z * v.x - r.x * v.z;
+    // hz omitted: only needed to confirm orientation; n.x and n.y are
+    // determined entirely by hx and hy (see step 4).
+
+    // 4. n = ẑ × h with ẑ = (0,0,1) in ECL → (-hy, hx, 0).
+    const nx = -hy;
+    const ny =  hx;
+
+    // 5. Ω = longitude of ascending node, normalized to [0, 360).
+    let ascendingNode = Math.atan2(ny, nx) * (180 / Math.PI);
     if (ascendingNode < 0) ascendingNode += 360;
-    
-    // Descending node is 180° opposite
     const descendingNode = (ascendingNode + 180) % 360;
-    
-    // Progress through current nodal cycle
-    const cycleProgress = (daysSince % NODAL_PERIOD_DAYS) / NODAL_PERIOD_DAYS;
-    
-    // Days until next node passage (approximate)
+
+    // Cycle dial: drive from time-since-reference so the dial sweeps smoothly.
+    const referenceDate = new Date('2000-01-01T12:00:00Z');
+    const daysSince = (date - referenceDate) / (1000 * 60 * 60 * 24);
+    const cycleProgress = (((daysSince % NODAL_PERIOD_DAYS) + NODAL_PERIOD_DAYS) % NODAL_PERIOD_DAYS) / NODAL_PERIOD_DAYS;
+
+    // Days until next node passage by the Moon. Moon longitude here is ECT
+    // (from EclipticGeoMoon), which is at most ~22 arcmin from ECL today;
+    // the resulting passage estimate is a few-hour resolution at best, so
+    // the frame mismatch on this auxiliary number is below the noise floor.
     const moonLongitude = astronomy.EclipticGeoMoon(date).lon;
-    
-    // Calculate angular distance to nearest node
     const distToAscending = Math.abs(((moonLongitude - ascendingNode + 180) % 360) - 180);
     const distToDescending = Math.abs(((moonLongitude - descendingNode + 180) % 360) - 180);
     const distToNearestNode = Math.min(distToAscending, distToDescending);
-    
-    // Approximate days until node passage (moon moves ~13.2°/day)
-    const daysUntilNodePassage = distToNearestNode / 13.2;
-    
+    const daysUntilNodePassage = distToNearestNode / 13.2; // Moon moves ~13.2°/day
+
     return {
-      ascendingNode: ascendingNode, // degrees (where moon crosses ecliptic northward)
-      descendingNode: descendingNode, // degrees (where moon crosses ecliptic southward)
+      ascendingNode,
+      descendingNode,
       period: {
         days: NODAL_PERIOD_DAYS,
         years: NODAL_PERIOD_YEARS
       },
-      progress: cycleProgress, // 0-1 through current 18.6 year cycle
-      anglePosition: cycleProgress * 360, // degrees for display dial
-      motionRate: nodeMotionPerDay, // degrees per day (negative = retrograde)
+      progress: cycleProgress,
+      anglePosition: cycleProgress * 360,
+      motionRate: nodeMotionPerDay,
       nextNodePassage: {
         daysUntil: daysUntilNodePassage,
         type: distToAscending < distToDescending ? 'ascending' : 'descending'
-      }
+      },
+      frame: 'ecliptic_j2000'
     };
   }
 }
