@@ -2,29 +2,91 @@
 
 ## Overview
 
-The API includes ecliptic coordinates in the `debug` section for validation against the NASA JPL HORIZONS ephemeris system.
+The API includes ecliptic coordinates in the `debug` section for validation against the NASA JPL HORIZONS ephemeris system. Two frames are exposed and validated independently — the dual-frame architecture is described below.
+
+## Dual-frame architecture (ECL + ECT)
+
+The engine exposes ecliptic coordinates in two frames simultaneously:
+
+| Frame | Field | Purpose |
+| --- | --- | --- |
+| **ECL** — J2000 mean ecliptic | `system.debug.ecliptic_coordinates` | Inertial/orbital outputs; default for `sun`, `moon`, `planets.*`, `lunarNodes` |
+| **ECT** — True ecliptic of date | `system.debug.ecliptic_coordinates_ect` | Tropical zodiac path (`zodiac` block); HORIZONS OBSERVER+QUANTITIES=31 validation |
+
+The two frames differ by accumulated precession of the equinoxes — ~50.291″/yr ≈ 22 arcmin between J2000 and 2026. Engine-to-engine the difference is computed by `astronomy.Ecliptic()` (which applies precession + nutation to convert EQJ→ECT) versus the canonical `Rotation_EQJ_ECL` rotation matrix (which is constant — both EQJ and ECL are J2000-fixed).
+
+**A top-level `coordinate_frames` map** appears on every `/api/state`, `/api/state/:date`, and `/api/display` response, declaring which frame each field uses. Same shape across endpoints.
+
+## Dual-validator architecture
+
+Because HORIZONS treats `REF_SYSTEM=J2000` differently for OBSERVER vs VECTORS queries, two distinct validators are needed — one for each frame:
+
+| Validator | HORIZONS query | Frame validated | API field |
+| --- | --- | --- | --- |
+| `validate-extended.js` | `EPHEM_TYPE=OBSERVER`, `QUANTITIES=31` | ECT | `ecliptic_coordinates_ect` |
+| `validate-all-bodies.js` | same | ECT | `ecliptic_coordinates_ect` |
+| `validate-horizons.js`, `validate-simple.js` | same | ECT | `ecliptic_coordinates_ect` |
+| `validate-ecl-vectors.js` | `EPHEM_TYPE=VECTORS`, `REF_PLANE=ECLIPTIC`, `REF_SYSTEM=J2000`, `VEC_CORR=LT+S` | ECL | `ecliptic_coordinates` |
+
+OBSERVER+Q31 returns `ObsEcLon/ObsEcLat` in true ecliptic of date regardless of `REF_SYSTEM` (which only affects vector ephemerides), so it's the natural ECT ground truth. `validate-ecl-vectors.js` queries VECTORS with topocentric center and `VEC_CORR=LT+S` (light-time + stellar aberration) to match the API's topocentric apparent path.
+
+### Per-body thresholds
+
+Validators use a **per-body 3× p95 tolerance** drawn from `constants/validation.js` rather than a flat ° threshold. The flat 0.1° (= 360″) threshold previously in use was 200–400× looser than the engine's claimed sub-2″ accuracy and would have masked the 22-arcmin frame bug this PR fixes.
+
+```text
+sun     2.73″   (3× 0.91″ p95)
+moon    16.53″  (3× 5.51″ p95)
+mercury 7.11″
+venus   6.30″
+mars    2.22″
+jupiter 9.96″
+saturn  25.80″
+```
+
+The threshold scales automatically as `constants/validation.js` is refreshed from measured runs.
+
+### Structural regression guard
+
+`scripts/frame-correctness-check.js` is a fast, network-free CI hook that verifies the ECL/ECT split is intact by computing Sun longitude through both helpers at four epochs (J2000.0, +10y, +26y, +50y) and asserting the precession-of-equinoxes signature:
+
+* At J2000.0: `|ECL − ECT| < 20″` (within nutation envelope only)
+* At J2000+Δt: signed `(ECT − ECL) ≈ +50.291″/yr × Δt within ±20″` — the *signed* check catches a swap of the two helpers, which is the bug class this guard exists to defend against
+* ECL longitude after one sidereal year drifts < 30″ (orbital noise; precession-free)
+
+Run as `node scripts/frame-correctness-check.js`; exit 0 on pass, non-zero on fail.
+
+
 
 ## API Structure
 
 ### Ecliptic Coordinates (Always Available)
 
+Both frames are exposed under `system.debug` (illustrative shape; values vary by date):
+
 ```json
 {
   "system": {
     "debug": {
-      "ecliptic_coordinates": {
-        "sun": { "lon": 213.421, "lat": -0.002 },
-        "moon": { "lon": 265.298, "lat": -5.353 },
-        "mercury": { "lon": 236.857, "lat": -2.701 },
-        "venus": { "lon": 195.719, "lat": 1.522 },
-        "mars": { "lon": 233.733, "lat": -0.338 },
-        "jupiter": { "lon": 115.071, "lat": 0.074 },
-        "saturn": { "lon": 356.440, "lat": -2.478 }
+      "ecliptic_coordinates": {       /* ECL — J2000 mean ecliptic */
+        "sun":     { "lon": ..., "lat": ... },
+        "moon":    { "lon": ..., "lat": ... },
+        "mercury": { "lon": ..., "lat": ... },
+        "venus":   { "lon": ..., "lat": ... },
+        "mars":    { "lon": ..., "lat": ... },
+        "jupiter": { "lon": ..., "lat": ... },
+        "saturn":  { "lon": ..., "lat": ... }
+      },
+      "ecliptic_coordinates_ect": {   /* ECT — true ecliptic of date */
+        "sun":     { "lon": ..., "lat": ... }
+        /* same shape; same body set */
       }
     }
   }
 }
 ```
+
+For 2026-era epochs, `ecliptic_coordinates_ect` longitudes are ~22 arcmin ahead of `ecliptic_coordinates` longitudes — that's the accumulated precession of the equinoxes since J2000.
 
 ### Accessing the Data
 
@@ -71,8 +133,9 @@ node scripts/validate-horizons.js
 
 ## Coordinate System
 
-- **Frame**: Ecliptic J2000
-- **Type**: Topocentric (observer-based)
+- **Default frame**: J2000 mean ecliptic (ECL) — used by `ecliptic_coordinates`, `sun`, `moon`, `planets.*`, `lunarNodes`.
+- **Zodiac frame**: True ecliptic of date (ECT) — used by `zodiac` and the `ecliptic_coordinates_ect` debug block.
+- **Type**: Topocentric apparent (observer-based, light-time + stellar aberration)
 - **Default Location**: Athens (37.5°N, 23.0°E)
 - **Elevation**: 0m (sea level)
 
@@ -186,9 +249,14 @@ Source: ip_geolocation
 [PASS] saturn     Δlon=   0.0024°  Δlat=   0.0001°
 ```
 
-### Frame/Epoch Alignment (what fixed the 0.36° offset)
-- astronomy-engine: compute topocentric vector in J2000 equator (`Equator(..., ofdate=false)`), then convert using `Astronomy.Ecliptic(eqjVector)` to obtain true ecliptic-of-date angles.
-- HORIZONS: `REF_SYSTEM=J2000`, `REF_PLANE=ECLIPTIC` (documented in header).
-- Preserve exact seconds in timestamp; for Moon, 60s ≈ 0.2–0.5°.
+### Frame/Epoch Alignment
 
-Result: arcsecond-level agreement across all bodies.
+The current dual-frame architecture replaces the historical implementation, which routed all ecliptic outputs through `astronomy.Ecliptic()` — producing *true ecliptic of date* (ECT) under an `ecliptic_j2000` label. The `~0.36°` offset historically attributed to "coordinate frame issues" was the precession-of-equinoxes signature: `astronomy.Ecliptic()` applies precession + nutation, not just the EQJ→ECL rotation the field name implied.
+
+Today:
+
+* **ECL path** uses the canonical `Rotation_EQJ_ECL → RotateVector → SphereFromVector` chain (cached rotation matrix; J2000-fixed). Validated by `validate-ecl-vectors.js` against HORIZONS `EPHEM_TYPE=VECTORS`, `REF_PLANE=ECLIPTIC`, `REF_SYSTEM=J2000`, `VEC_CORR=LT+S`.
+* **ECT path** uses an explicit `eclipticFromEquatorVec_EQJ_to_ECT` wrapper around `astronomy.Ecliptic()`. Validated by the OBSERVER+Q31 scripts against `ObsEcLon/ObsEcLat` (which is ECT regardless of `REF_SYSTEM`).
+* Timestamps preserve seconds — for Moon, 60s ≈ 0.2–0.5°.
+
+Result: arcsecond-level agreement on both frames.
