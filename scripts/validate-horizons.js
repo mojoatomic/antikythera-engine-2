@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 
+// ECT validator — compares the zodiac path and ecliptic_coordinates_ect
+// debug field against HORIZONS OBSERVER/Q31 (which is also ECT). This
+// script computes ECT directly via engine.getEclipticCoordsECT() rather
+// than going through /api/display, so it does not require a running
+// server. Pair with validate-ecl-vectors.js for ECL ground truth.
+
 /**
  * NASA HORIZONS Validation Script
- * Compares your API's Moon position against JPL HORIZONS
+ * Compares your API's Moon position against JPL HORIZONS (ECT path).
  */
 
 const fetch = require('node-fetch');
@@ -180,9 +186,16 @@ async function main() {
   const longitude = 23.0;
 
   const state = engine.getState(date, latitude, longitude);
+  // state.moon now carries ECL post-fix; ECT is the right frame for comparison
+  // against HORIZONS OBSERVER/Q31. Compute ECT for the Moon directly.
+  const ectAll = engine.getEclipticCoordsECT(date, latitude, longitude, 0);
   const yourData = {
     timestamp: state.date,
-    moon: state.moon
+    moon: {
+      longitude: ectAll.moon.lon,
+      latitude: ectAll.moon.lat,
+      velocity: state.moon.velocity // velocity is a delta-of-longitudes; frame-invariant
+    }
   };
   
   // Get direct astronomy-engine calculation (baseline)

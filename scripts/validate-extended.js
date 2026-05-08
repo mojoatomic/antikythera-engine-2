@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+// ECT validator — compares the zodiac path and ecliptic_coordinates_ect
+// debug field against HORIZONS OBSERVER/Q31 (which is also ECT). HORIZONS
+// EPHEM_TYPE: OBSERVER + QUANTITIES: '31' returns true ecliptic of date
+// regardless of REF_SYSTEM (which only affects vector ephemerides). Pair
+// this script with validate-ecl-vectors.js for the ECL ground truth via
+// EPHEM_TYPE: VECTORS, REF_PLANE: ECLIPTIC, REF_SYSTEM: J2000.
+
 /**
  * Extended validation for VSOP87 (astronomy-engine) against NASA JPL HORIZONS
  * - Samples multiple timestamps
@@ -90,7 +97,7 @@ async function getAPI(dateISO, observer) {
   const res = await fetch(`http://localhost:3000/api/display?${q}`);
   if (!res.ok) throw new Error(`/api/display HTTP ${res.status}`);
   const data = await res.json();
-  return data.system.debug.ecliptic_coordinates; // { sun:{lon,lat}, ... }
+  return data.system.debug.ecliptic_coordinates_ect; // ECT — matches HORIZONS OBSERVER/Q31
 }
 
 async function main() {

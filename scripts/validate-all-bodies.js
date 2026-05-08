@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+// ECT validator — compares the zodiac path and ecliptic_coordinates_ect
+// debug field against HORIZONS OBSERVER/Q31 (which is also ECT). HORIZONS
+// OBSERVER+Q31 returns ObsEcLon/ObsEcLat in true ecliptic of date regardless
+// of REF_SYSTEM. Pair with validate-ecl-vectors.js for ECL ground truth.
+
 /**
  * Comprehensive HORIZONS Validation
  * Validates ALL celestial bodies against NASA JPL HORIZONS
@@ -29,7 +34,11 @@ async function validateAllBodies() {
     }
     const apiData = await apiResponse.json();
     const timestamp = new Date(apiData.timestamp);
-    const coords = apiData.system.debug.ecliptic_coordinates;
+    // ECT validator: pull from ecliptic_coordinates_ect (matches HORIZONS OBSERVER/Q31).
+    const coords = apiData.system.debug.ecliptic_coordinates_ect;
+    if (!coords) {
+      throw new Error('Missing ecliptic_coordinates_ect from /api/display response — server out of date?');
+    }
     const observer = apiData.system.observer || { latitude: 37.5, longitude: 23.0, elevation: 0, country: 'N/A', source: 'default' };
     
     console.log(`Timestamp: ${timestamp.toISOString()}`);
