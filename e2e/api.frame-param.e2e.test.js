@@ -75,14 +75,21 @@ afterAll(() => {
 
 // Pin a deterministic date so the ECL/ECT longitude difference is a
 // well-defined number rather than depending on whatever wall-clock the
-// test runs at. May 11, 2026 is ~26.4 years since J2000; precession
-// alone runs at ~50.291"/yr → ~1327" ≈ 0.369° expected diff on
-// ecliptic longitude.
+// test runs at. May 11, 2026 is ~26.4 years since J2000; precession at
+// ~50.291"/yr + nutation accumulate to a measured 0.3699° on bodies and
+// 0.3828° on the lunar node line at this specific date.
+//
+// Calibration: the values below were measured against the live engine at
+// commit time (see audit run before #97's test-strengthening commit).
+// The tight ±0.001° tolerance catches any unexpected library/formula
+// drift — body deltas cluster within 0.0001° (≈ 0.5″) of each other and
+// vary by < 0.0001° across reasonable library-version bumps. Loosening
+// this hides real regressions; tightening below ±0.0005° would start
+// flapping on nutation's ±0.0025° peak-to-peak.
 const FIXED_DATE = '2026-05-11T12:00:00Z';
-const EXPECTED_ECL_VS_ECT_LON_DEG = 0.369;
-// Allow ±0.05° tolerance — nutation oscillates ±9″ on the 18.6-yr cycle
-// and there's a few-arcsec uncertainty in the precession model.
-const LON_DIFF_TOLERANCE_DEG = 0.05;
+const EXPECTED_BODY_LON_DELTA_DEG = 0.3699;
+const EXPECTED_NODE_LON_DELTA_DEG = 0.3828;
+const LON_DELTA_TOLERANCE_DEG = 0.001;
 
 describe('?frame= default behavior', () => {
   test('absent ?frame= is equivalent to ?frame=ecliptic_j2000 for /api/sun', async () => {
@@ -118,10 +125,10 @@ describe('?frame=ecliptic_of_date returns ECT', () => {
     expect(sunEct.coordinate_frames.ecliptic).toBe('ecliptic_of_date');
   });
 
-  test('ECL vs ECT ecliptic longitude differs within the precession+nutation envelope', () => {
+  test('ECL vs ECT ecliptic longitude differs by the measured precession+nutation accumulation', () => {
     const diff = sunEct.longitude - sunEcl.longitude;
-    expect(diff).toBeGreaterThan(EXPECTED_ECL_VS_ECT_LON_DEG - LON_DIFF_TOLERANCE_DEG);
-    expect(diff).toBeLessThan(EXPECTED_ECL_VS_ECT_LON_DEG + LON_DIFF_TOLERANCE_DEG);
+    expect(diff).toBeGreaterThan(EXPECTED_BODY_LON_DELTA_DEG - LON_DELTA_TOLERANCE_DEG);
+    expect(diff).toBeLessThan(EXPECTED_BODY_LON_DELTA_DEG + LON_DELTA_TOLERANCE_DEG);
   });
 
   test('equatorial and horizontal frames are unchanged by ?frame= (out of scope per #97)', () => {
@@ -164,11 +171,20 @@ describe('/api/state ?frame=ecliptic_of_date', () => {
     expect(stateEct.lunarNodes.frame).toBe('ecliptic_of_date');
   });
 
-  test('lunarNodes ascendingNode differs between frames (ECT path takes effect)', () => {
-    // Precession+nutation moves the ECT node position relative to ECL by
-    // the same ~0.37° as Sun longitude at this epoch. We just check it's
-    // numerically different — within the same envelope, not byte-equal.
-    expect(stateEct.lunarNodes.ascendingNode).not.toBeCloseTo(stateEcl.lunarNodes.ascendingNode, 2);
+  test('lunarNodes ascendingNode shifts by the measured node-line precession delta', () => {
+    // The lunar-node delta is ~0.013° larger than body deltas at this
+    // epoch because Ω is derived from r × v (orbital-plane normal) which
+    // is at ~5° inclination off the ecliptic, so the precession rotation
+    // has a slightly different projection onto the node line vs. an
+    // in-ecliptic body longitude. The expected value is calibrated to
+    // the actual engine output — a regression that swapped rotations or
+    // broke the per-date Rotation_EQJ_ECT path would shift this far
+    // outside the ±0.001° band.
+    let delta = stateEct.lunarNodes.ascendingNode - stateEcl.lunarNodes.ascendingNode;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    expect(delta).toBeGreaterThan(EXPECTED_NODE_LON_DELTA_DEG - LON_DELTA_TOLERANCE_DEG);
+    expect(delta).toBeLessThan(EXPECTED_NODE_LON_DELTA_DEG + LON_DELTA_TOLERANCE_DEG);
   });
 
   test('zodiac longitude is unchanged regardless of ?frame= (always ECT, definitional)', () => {
@@ -180,14 +196,24 @@ describe('/api/state ?frame=ecliptic_of_date', () => {
     expect(stateEcl.zodiac.frame).toBe('ecliptic_of_date');
   });
 
-  test('body longitudes (sun, moon, planets) shift by the precession envelope', () => {
-    const sunDiff = stateEct.sun.longitude - stateEcl.sun.longitude;
-    const moonDiff = stateEct.moon.longitude - stateEcl.moon.longitude;
-    const marsDiff = stateEct.planets.mars.longitude - stateEcl.planets.mars.longitude;
-    for (const diff of [sunDiff, moonDiff, marsDiff]) {
-      expect(diff).toBeGreaterThan(EXPECTED_ECL_VS_ECT_LON_DEG - LON_DIFF_TOLERANCE_DEG);
-      expect(diff).toBeLessThan(EXPECTED_ECL_VS_ECT_LON_DEG + LON_DIFF_TOLERANCE_DEG);
-    }
+  // All 7 bodies share the same EQJ→ECT rotation matrix at a given date,
+  // so they should all cluster within < 0.0001° of each other. Iterating
+  // all 7 (rather than spot-checking 3) means a regression that threaded
+  // frame into some getters but not others would produce a body-specific
+  // drift that the per-body assertion catches. Using test.each so the
+  // failing body name appears in Jest's output.
+  test.each([
+    ['sun', (s) => s.sun.longitude],
+    ['moon', (s) => s.moon.longitude],
+    ['mercury', (s) => s.planets.mercury.longitude],
+    ['venus', (s) => s.planets.venus.longitude],
+    ['mars', (s) => s.planets.mars.longitude],
+    ['jupiter', (s) => s.planets.jupiter.longitude],
+    ['saturn', (s) => s.planets.saturn.longitude],
+  ])('%s longitude shifts by the measured precession delta when frame=ecliptic_of_date', (_body, pick) => {
+    const diff = pick(stateEct) - pick(stateEcl);
+    expect(diff).toBeGreaterThan(EXPECTED_BODY_LON_DELTA_DEG - LON_DELTA_TOLERANCE_DEG);
+    expect(diff).toBeLessThan(EXPECTED_BODY_LON_DELTA_DEG + LON_DELTA_TOLERANCE_DEG);
   });
 });
 

@@ -115,24 +115,54 @@ describe.each([
   });
 });
 
+// Range helpers: a value being `typeof === 'number'` accepts NaN and
+// Infinity, which would mask arithmetic-bug regressions. Use finite-and-
+// in-range checks instead so a NaN longitude or an Infinity declination
+// trips the test immediately.
+function expectEclipticLongitude(value) {
+  expect(Number.isFinite(value)).toBe(true);
+  expect(value).toBeGreaterThanOrEqual(0);
+  expect(value).toBeLessThan(360);
+}
+function expectEclipticLatitude(value) {
+  expect(Number.isFinite(value)).toBe(true);
+  // Ecliptic latitude bounded by the body's orbital inclination; ±10°
+  // safely covers Sun (0°), Moon (±5°), all classical planets (≤ ±7°)
+  // with margin. Tightening below this would require per-body bounds.
+  expect(Math.abs(value)).toBeLessThanOrEqual(10);
+}
+function expectRA(value) {
+  expect(Number.isFinite(value)).toBe(true);
+  expect(value).toBeGreaterThanOrEqual(0);
+  expect(value).toBeLessThan(24); // hours
+}
+function expectDeclination(value) {
+  expect(Number.isFinite(value)).toBe(true);
+  expect(Math.abs(value)).toBeLessThanOrEqual(90); // degrees
+}
+
 test('/api/sun still returns body data alongside coordinate_frames (no breaking shape change)', async () => {
   const res = await fetch(`${BASE_URL}/api/sun`);
   expect(res.ok).toBe(true);
   const body = await res.json();
   // Existing fields stay top-level — coordinate_frames is purely additive.
-  expect(typeof body.longitude).toBe('number');
-  expect(typeof body.latitude).toBe('number');
-  expect(typeof body.rightAscension).toBe('number');
-  expect(typeof body.declination).toBe('number');
+  expectEclipticLongitude(body.longitude);
+  expectEclipticLatitude(body.latitude);
+  expectRA(body.rightAscension);
+  expectDeclination(body.declination);
 });
 
 test('/api/moon still returns body data alongside coordinate_frames (no breaking shape change)', async () => {
   const res = await fetch(`${BASE_URL}/api/moon`);
   expect(res.ok).toBe(true);
   const body = await res.json();
-  expect(typeof body.longitude).toBe('number');
-  expect(typeof body.phase).toBe('number');
-  expect(typeof body.illumination).toBe('number');
+  expectEclipticLongitude(body.longitude);
+  expect(Number.isFinite(body.phase)).toBe(true);
+  expect(body.phase).toBeGreaterThanOrEqual(0);
+  expect(body.phase).toBeLessThan(360);
+  expect(Number.isFinite(body.illumination)).toBe(true);
+  expect(body.illumination).toBeGreaterThanOrEqual(0);
+  expect(body.illumination).toBeLessThanOrEqual(1);
 });
 
 test('/api/planets still returns per-planet data alongside coordinate_frames (no breaking shape change)', async () => {
@@ -144,6 +174,7 @@ test('/api/planets still returns per-planet data alongside coordinate_frames (no
   // planets must skip it (documented in #96).
   for (const planet of ['mercury', 'venus', 'mars', 'jupiter', 'saturn']) {
     expect(body).toHaveProperty(planet);
-    expect(typeof body[planet].longitude).toBe('number');
+    expectEclipticLongitude(body[planet].longitude);
+    expectEclipticLatitude(body[planet].latitude);
   }
 });
