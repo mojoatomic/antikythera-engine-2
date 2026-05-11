@@ -918,7 +918,17 @@ The API uses an explicit dual-frame architecture for ecliptic outputs:
 - **Default ecliptic frame: J2000 mean ecliptic (ECL).** All inertial/orbital
   outputs — `sun`, `moon`, `planets.*`, `lunarNodes`, and the
   `system.debug.ecliptic_coordinates` block — are in J2000 mean ecliptic
-  coordinates, the canonical inertial frame for solar-system work.
+  coordinates by default, the canonical inertial frame for solar-system work.
+- **Optional ECT override via `?frame=` query parameter.** Pass
+  `?frame=ecliptic_of_date` on any of `/api/state`, `/api/state/:date`,
+  `/api/display`, `/api/sun`, `/api/moon`, or `/api/planets` to receive
+  body data (`sun`, `moon`, `planets.*`, `lunarNodes`) in true ecliptic of
+  date instead of J2000. Useful for consumers overlaying body positions on
+  of-date sign cusps, or for matching HORIZONS OBSERVER+QUANTITIES=31
+  output without going through the `system.debug.ecliptic_coordinates_ect`
+  debug block. Zodiac stays ECT regardless of the parameter (definitional
+  for the tropical zodiac). Equatorial / horizontal frames are unaffected.
+  Invalid values return HTTP 400.
 - **Tropical zodiac path: true ecliptic of date (ECT).** The `zodiac` block
   is anchored to the equinox of the moment, so its longitude is reported in
   ECT. The response carries `frame: 'ecliptic_of_date'` directly on the
@@ -927,10 +937,15 @@ The API uses an explicit dual-frame architecture for ecliptic outputs:
   validation.
 - **Top-level `coordinate_frames` map** on `/api/state`, `/api/state/:date`,
   and `/api/display` declares the frame of every frame-bearing field, so no
-  consumer has to infer it from field names. Calendar/cycle/phase fields
-  (egyptianCalendar, metonicCycle, sarosCycle, moon.phase, moon.illumination,
-  equationOfTime.meanSun) intentionally have no frame entry — they're not
-  celestial coordinates.
+  consumer has to infer it from field names. The map reflects the frame
+  actually returned for this request — under `?frame=ecliptic_of_date`,
+  `bodies.ecliptic` and `lunarNodes` flip to `ecliptic_of_date`; other
+  entries (equatorial, horizontal, zodiac, equationOfTime.apparentSun)
+  remain fixed. The single-body endpoints (`/api/sun`, `/api/moon`,
+  `/api/planets`) carry a subset map with bare keys `ecliptic`, `equatorial`,
+  `horizontal`. Calendar/cycle/phase fields (egyptianCalendar, metonicCycle,
+  sarosCycle, moon.phase, moon.illumination, equationOfTime.meanSun)
+  intentionally have no frame entry — they're not celestial coordinates.
 - Right ascension / declination outputs are J2000 mean equator (EQJ).
 - Altitude / azimuth are topocentric apparent (refracted, of date).
 - No proper motion corrections (suitable for solar system bodies only).

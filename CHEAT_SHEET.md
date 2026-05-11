@@ -83,6 +83,12 @@ GET http://localhost:3000/api/moon
 
 # Just planets
 GET http://localhost:3000/api/planets
+
+# Frame override: return bodies in true ecliptic of date (ECT)
+# instead of the default J2000 mean ecliptic (ECL). Accepted on all
+# six endpoints above; zodiac stays ECT regardless.
+GET http://localhost:3000/api/state?frame=ecliptic_of_date
+GET http://localhost:3000/api/sun?frame=ecliptic_of_date
 ```
 
 ## 📊 What Each Face Shows
