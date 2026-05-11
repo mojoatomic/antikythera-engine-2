@@ -10,6 +10,13 @@
 // Why VECTORS instead of OBSERVER: HORIZONS OBSERVER+Q31 returns angular
 // quantities (ObsEcLon/ObsEcLat) that are ECT regardless of REF_SYSTEM.
 // REF_SYSTEM: J2000 only meaningfully applies to vector-style ephemerides.
+//
+// Observer strategy: Fixed-Athens. Both halves of the comparison observe
+// from Athens (37.5°N, 23°E, 0 m), hardcoded for reproducibility — the
+// per-task equivalence discipline in #102 requires identical inputs
+// across runs, so the observer can't depend on whatever the running dev
+// server happens to be geolocated to. Sibling pattern (Read-server-
+// observer): validate-all-bodies.js and validate-simple.js. See #103.
 
 const fetch = require('node-fetch');
 const { VALIDATION } = require('../constants/validation');

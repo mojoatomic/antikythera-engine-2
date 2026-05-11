@@ -5,6 +5,15 @@
 // script computes ECT directly via engine.getEclipticCoordsECT() rather
 // than going through /api/display, so it does not require a running
 // server. Pair with validate-ecl-vectors.js for ECL ground truth.
+//
+// Observer strategy: Fixed-Athens (in-process). This validator doesn't
+// hit /api/display — it instantiates the engine directly and calls
+// getState / getEclipticCoordsECT at (37.5°N, 23°E). HORIZONS queries
+// the same site. Same reproducibility argument as validate-extended.js
+// and validate-ecl-vectors.js: no dependency on the running server's
+// configured observer, so the result is identical across machines.
+// Sibling pattern (Read-server-observer): validate-all-bodies.js and
+// validate-simple.js. See #103.
 
 /**
  * NASA HORIZONS Validation Script
