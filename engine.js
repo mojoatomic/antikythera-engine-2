@@ -39,6 +39,18 @@ const COORDINATE_FRAMES = Object.freeze({
   'equationOfTime.apparentSun': 'ecliptic_j2000'
 });
 
+// Subset of COORDINATE_FRAMES used by /api/sun, /api/moon, /api/planets.
+// Those endpoints return body-only data — three frames are in play
+// (ecliptic, equatorial, horizontal) and the `bodies.` prefix becomes
+// redundant because the body IS the response. zodiac, lunarNodes,
+// sunVisibility.*, equationOfTime.* don't appear on single-body responses
+// and so don't appear here. Refs #96.
+const SINGLE_BODY_COORDINATE_FRAMES = Object.freeze({
+  'ecliptic': 'ecliptic_j2000',
+  'equatorial': 'equatorial_j2000',
+  'horizontal': 'topocentric_apparent'
+});
+
 class AntikytheraEngine {
   /**
    * Convert an equator-of-date vector to J2000 mean ecliptic angles
@@ -799,3 +811,4 @@ class AntikytheraEngine {
 
 module.exports = AntikytheraEngine;
 module.exports.COORDINATE_FRAMES = COORDINATE_FRAMES;
+module.exports.SINGLE_BODY_COORDINATE_FRAMES = SINGLE_BODY_COORDINATE_FRAMES;

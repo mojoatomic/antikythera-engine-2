@@ -8,6 +8,7 @@ const { getObserverFromRequest } = require('./lib/location-service');
 const { effectiveDate, status: controlStatus, setTime: controlSetTime, setAnimate: controlSetAnimate, setScene: controlSetScene, run: controlRun, pause: controlPause, stop: controlStop, setLocation: controlSetLocation } = require('./lib/control-state');
 const { getConfigLoader } = require('./lib/config-loader');
 const AntikytheraEngine = require('./engine');
+const { SINGLE_BODY_COORDINATE_FRAMES } = require('./engine');
 const { parseISODate } = require('./utils/time');
 
 const app = express();
@@ -16,7 +17,10 @@ const engine = new AntikytheraEngine();
 // Initialize configuration system
 const configLoader = getConfigLoader();
 const config = configLoader.getConfig();
-const PORT = config.server.port || 3000;
+// PORT resolution order: explicit env var → config file → default 3000.
+// The env-var override lets test files spawn isolated servers without
+// colliding with a developer's running instance on the configured port.
+const PORT = parseInt(process.env.PORT, 10) || config.server.port || 3000;
 
 // Listen for config reload events
 configLoader.on('reload', () => {
@@ -123,7 +127,7 @@ app.get('/api/sun', async (req, res) => {
     const currentConfig = configLoader.getConfig();
     const observer = await getObserverFromRequest(req, currentConfig);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
-    res.json(state.sun);
+    res.json({ coordinate_frames: SINGLE_BODY_COORDINATE_FRAMES, ...state.sun });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -136,7 +140,7 @@ app.get('/api/moon', async (req, res) => {
     const currentConfig = configLoader.getConfig();
     const observer = await getObserverFromRequest(req, currentConfig);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
-    res.json(state.moon);
+    res.json({ coordinate_frames: SINGLE_BODY_COORDINATE_FRAMES, ...state.moon });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -149,7 +153,7 @@ app.get('/api/planets', async (req, res) => {
     const currentConfig = configLoader.getConfig();
     const observer = await getObserverFromRequest(req, currentConfig);
     const state = engine.getState(date, observer.latitude, observer.longitude, observer);
-    res.json(state.planets);
+    res.json({ coordinate_frames: SINGLE_BODY_COORDINATE_FRAMES, ...state.planets });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
