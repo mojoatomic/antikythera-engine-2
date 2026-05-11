@@ -6,6 +6,13 @@
 // regardless of REF_SYSTEM (which only affects vector ephemerides). Pair
 // this script with validate-ecl-vectors.js for the ECL ground truth via
 // EPHEM_TYPE: VECTORS, REF_PLANE: ECLIPTIC, REF_SYSTEM: J2000.
+//
+// Observer strategy: Fixed-Athens. Both halves of the comparison observe
+// from Athens (37.5°N, 23°E, 0 m), hardcoded for reproducibility — the
+// per-task equivalence discipline in #102 requires identical inputs
+// across runs, so the observer can't depend on whatever the running dev
+// server happens to be geolocated to. Sibling pattern (Read-server-
+// observer): validate-all-bodies.js and validate-simple.js. See #103.
 
 /**
  * Extended validation for VSOP87 (astronomy-engine) against NASA JPL HORIZONS

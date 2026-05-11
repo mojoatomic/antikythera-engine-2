@@ -3,6 +3,14 @@
 // ECT validator — compares the zodiac path and ecliptic_coordinates_ect
 // debug field against HORIZONS OBSERVER/Q31 (which is also ECT). Use
 // validate-ecl-vectors.js for the ECL counterpart (VECTORS query).
+//
+// Observer strategy: Read-server-observer. Reads apiData.system.observer
+// (whatever the running server is configured for — IP-geolocated by
+// default, or from settings.local.json / control state) and queries
+// HORIZONS at the same point. Appropriate for tutorial / sanity-check
+// validators where "validate what your server is actually returning"
+// is the goal. Sibling pattern (Fixed-Athens): validate-extended.js,
+// validate-ecl-vectors.js, validate-horizons.js. See #103.
 
 /**
  * Simple HORIZONS Validation Example

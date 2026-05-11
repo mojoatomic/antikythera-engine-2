@@ -4,6 +4,14 @@
 // debug field against HORIZONS OBSERVER/Q31 (which is also ECT). HORIZONS
 // OBSERVER+Q31 returns ObsEcLon/ObsEcLat in true ecliptic of date regardless
 // of REF_SYSTEM. Pair with validate-ecl-vectors.js for ECL ground truth.
+//
+// Observer strategy: Read-server-observer. Reads apiData.system.observer
+// (whatever the running server is configured for — IP-geolocated by
+// default, or from settings.local.json / control state) and queries
+// HORIZONS at the same point. Appropriate for sanity-check validators
+// where "validate what your server is actually returning" is the goal.
+// Sibling pattern (Fixed-Athens): validate-extended.js,
+// validate-ecl-vectors.js, validate-horizons.js. See #103.
 
 /**
  * Comprehensive HORIZONS Validation
