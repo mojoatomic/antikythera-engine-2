@@ -67,3 +67,60 @@ describe('getLunarNodes — instantaneous geometric computation in ECL', () => {
     }
   });
 });
+
+describe('getLunarNodes — ECT frame override (#97)', () => {
+  test('passing frame=ecliptic_of_date stamps frame field accordingly', () => {
+    const date = new Date('2026-05-11T12:00:00Z');
+    const result = engine.getLunarNodes(date, 'ecliptic_of_date');
+    expect(result.frame).toBe('ecliptic_of_date');
+  });
+
+  test('default (no frame arg) preserves pre-#97 ECL behavior bit-for-bit', () => {
+    // The ECT-frame code path uses Rotation_EQJ_ECT(date) instead of the
+    // cached ROT_EQJ_TO_ECL. The default-argument path must still hit
+    // ROT_EQJ_TO_ECL → same result as before the threading change.
+    const date = new Date('2026-05-11T12:00:00Z');
+    const explicit = engine.getLunarNodes(date, 'ecliptic_j2000');
+    const implicit = engine.getLunarNodes(date);
+    expect(implicit.ascendingNode).toBe(explicit.ascendingNode);
+    expect(implicit.descendingNode).toBe(explicit.descendingNode);
+    expect(implicit.frame).toBe('ecliptic_j2000');
+    expect(explicit.frame).toBe('ecliptic_j2000');
+  });
+
+  test('ECT ascending node differs from ECL by ≈ accumulated precession+nutation at the epoch', () => {
+    // 2026 is ~26.4 yr since J2000 → ~1327″ ≈ 0.369° precession alone,
+    // plus ±9″ nutation oscillation. Allow ±0.05° tolerance.
+    const date = new Date('2026-05-11T12:00:00Z');
+    const ecl = engine.getLunarNodes(date, 'ecliptic_j2000');
+    const ect = engine.getLunarNodes(date, 'ecliptic_of_date');
+
+    // The node longitude shift between frames has the same sign+magnitude
+    // as for any other body longitude, modulo the 360° wrap. Unwrap to a
+    // signed delta in [-180, 180].
+    let delta = ect.ascendingNode - ecl.ascendingNode;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+
+    expect(delta).toBeGreaterThan(0.32);
+    expect(delta).toBeLessThan(0.42);
+  });
+
+  test('descending node remains exactly 180° opposite ascending node in ECT', () => {
+    const date = new Date('2026-05-11T12:00:00Z');
+    const result = engine.getLunarNodes(date, 'ecliptic_of_date');
+    let delta = Math.abs(result.ascendingNode - result.descendingNode);
+    if (delta > 180) delta = 360 - delta;
+    expect(delta).toBeCloseTo(180, 9);
+  });
+
+  test('output longitudes are normalized to [0, 360) in ECT', () => {
+    for (const iso of ['1995-06-15T00:00:00Z', '2025-12-25T00:00:00Z', '2050-03-01T00:00:00Z']) {
+      const r = engine.getLunarNodes(new Date(iso), 'ecliptic_of_date');
+      expect(r.ascendingNode).toBeGreaterThanOrEqual(0);
+      expect(r.ascendingNode).toBeLessThan(360);
+      expect(r.descendingNode).toBeGreaterThanOrEqual(0);
+      expect(r.descendingNode).toBeLessThan(360);
+    }
+  });
+});
