@@ -8,7 +8,30 @@ const { getObserverFromRequest } = require('./lib/location-service');
 const { effectiveDate, status: controlStatus, setTime: controlSetTime, setAnimate: controlSetAnimate, setScene: controlSetScene, run: controlRun, pause: controlPause, stop: controlStop, setLocation: controlSetLocation } = require('./lib/control-state');
 const { getConfigLoader } = require('./lib/config-loader');
 const AntikytheraEngine = require('./engine');
-const { SINGLE_BODY_COORDINATE_FRAMES } = require('./engine');
+const {
+  VALID_ECLIPTIC_FRAMES,
+  buildSingleBodyCoordinateFramesMap,
+} = require('./engine');
+
+// Parse and validate the optional ?frame= query parameter (#97).
+// Returns the validated frame string on success. On invalid input, sends
+// a 400 response and returns null — caller should bail out if null.
+// Absent parameter → returns the default 'ecliptic_j2000', preserving
+// pre-#97 behavior for clients that don't pass the parameter.
+function parseFrameQuery(req, res) {
+  const raw = req.query.frame;
+  if (raw === undefined || raw === '') {
+    return 'ecliptic_j2000';
+  }
+  const value = String(raw);
+  if (!VALID_ECLIPTIC_FRAMES.has(value)) {
+    res.status(400).json({
+      error: `Invalid frame parameter "${value}". Expected one of: ${[...VALID_ECLIPTIC_FRAMES].join(', ')}.`,
+    });
+    return null;
+  }
+  return value;
+}
 const { parseISODate } = require('./utils/time');
 
 const app = express();
@@ -74,6 +97,8 @@ app.get('/api/settings', (req, res) => {
 // Get current state
 app.get('/api/state', async (req, res) => {
   try {
+    const frame = parseFrameQuery(req, res);
+    if (frame === null) return; // parseFrameQuery already sent 400
     const hasExplicitDate = !!req.query.date;
     const requested = hasExplicitDate ? parseISODate(String(req.query.date)) : new Date();
 
@@ -90,7 +115,7 @@ app.get('/api/state', async (req, res) => {
     } else {
       observer = await getObserverFromRequest(req, currentConfig);
     }
-    const state = engine.getState(date, observer.latitude, observer.longitude, observer);
+    const state = engine.getState(date, observer.latitude, observer.longitude, observer, frame);
     res.json(state);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -100,6 +125,8 @@ app.get('/api/state', async (req, res) => {
 // Get state for a specific date (absolute, independent of control time)
 app.get('/api/state/:date', async (req, res) => {
   try {
+    const frame = parseFrameQuery(req, res);
+    if (frame === null) return;
     const date = parseISODate(String(req.params.date));
 
     // Path parameter always represents an absolute timestamp; do not route
@@ -113,7 +140,7 @@ app.get('/api/state/:date', async (req, res) => {
     } else {
       observer = await getObserverFromRequest(req, currentConfig);
     }
-    const state = engine.getState(date, observer.latitude, observer.longitude, observer);
+    const state = engine.getState(date, observer.latitude, observer.longitude, observer, frame);
     res.json(state);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -123,11 +150,13 @@ app.get('/api/state/:date', async (req, res) => {
 // Get just sun position
 app.get('/api/sun', async (req, res) => {
   try {
+    const frame = parseFrameQuery(req, res);
+    if (frame === null) return;
     const date = req.query.date ? parseISODate(String(req.query.date)) : new Date();
     const currentConfig = configLoader.getConfig();
     const observer = await getObserverFromRequest(req, currentConfig);
-    const state = engine.getState(date, observer.latitude, observer.longitude, observer);
-    res.json({ coordinate_frames: SINGLE_BODY_COORDINATE_FRAMES, ...state.sun });
+    const state = engine.getState(date, observer.latitude, observer.longitude, observer, frame);
+    res.json({ coordinate_frames: buildSingleBodyCoordinateFramesMap(frame), ...state.sun });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -136,11 +165,13 @@ app.get('/api/sun', async (req, res) => {
 // Get just moon position
 app.get('/api/moon', async (req, res) => {
   try {
+    const frame = parseFrameQuery(req, res);
+    if (frame === null) return;
     const date = req.query.date ? parseISODate(String(req.query.date)) : new Date();
     const currentConfig = configLoader.getConfig();
     const observer = await getObserverFromRequest(req, currentConfig);
-    const state = engine.getState(date, observer.latitude, observer.longitude, observer);
-    res.json({ coordinate_frames: SINGLE_BODY_COORDINATE_FRAMES, ...state.moon });
+    const state = engine.getState(date, observer.latitude, observer.longitude, observer, frame);
+    res.json({ coordinate_frames: buildSingleBodyCoordinateFramesMap(frame), ...state.moon });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -149,11 +180,13 @@ app.get('/api/moon', async (req, res) => {
 // Get planetary positions
 app.get('/api/planets', async (req, res) => {
   try {
+    const frame = parseFrameQuery(req, res);
+    if (frame === null) return;
     const date = req.query.date ? parseISODate(String(req.query.date)) : new Date();
     const currentConfig = configLoader.getConfig();
     const observer = await getObserverFromRequest(req, currentConfig);
-    const state = engine.getState(date, observer.latitude, observer.longitude, observer);
-    res.json({ coordinate_frames: SINGLE_BODY_COORDINATE_FRAMES, ...state.planets });
+    const state = engine.getState(date, observer.latitude, observer.longitude, observer, frame);
+    res.json({ coordinate_frames: buildSingleBodyCoordinateFramesMap(frame), ...state.planets });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -163,6 +196,8 @@ app.get('/api/planets', async (req, res) => {
 // Hybrid display endpoint - mechanical + digital data for physical device
 app.get('/api/display', async (req, res) => {
   try {
+    const frame = parseFrameQuery(req, res);
+    if (frame === null) return;
     const startTime = Date.now();
     const requested = req.query.date ? parseISODate(String(req.query.date)) : new Date();
     const date = effectiveDate(requested);
@@ -185,8 +220,8 @@ app.get('/api/display', async (req, res) => {
     const stepsPerDegree = (stepsPerDegParam !== undefined) ? Number(stepsPerDegParam) : null;
     const computeSteps = Number.isFinite(dtSec) && Number.isFinite(stepsPerDegree) && dtSec > 0 && stepsPerDegree > 0;
     
-    const state = engine.getState(date, latitude, longitude, observer);
-    
+    const state = engine.getState(date, latitude, longitude, observer, frame);
+
     // Helper to enrich a stepper entry
     function makeStepper(pos, vel, alt, az) {
       const velocityDegPerSec = Number(vel) / 86400;

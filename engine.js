@@ -29,27 +29,44 @@ const ROT_EQJ_TO_ECL = astronomy.Rotation_EQJ_ECL();
 // shape across endpoints. Calendar/cycle/phase fields (egyptianCalendar,
 // metonicCycle, sarosCycle, moon.phase, moon.illumination,
 // equationOfTime.meanSun) don't have celestial frames — correctly absent.
-const COORDINATE_FRAMES = Object.freeze({
-  'bodies.ecliptic': 'ecliptic_j2000',
-  'bodies.equatorial': 'equatorial_j2000',
-  'bodies.horizontal': 'topocentric_apparent',
-  'zodiac': 'ecliptic_of_date',
-  'lunarNodes': 'ecliptic_j2000',
-  'sunVisibility.horizontal': 'topocentric_apparent',
-  'equationOfTime.apparentSun': 'ecliptic_j2000'
-});
+//
+// Two keys are dynamic per-request via the ?frame= query parameter (#97):
+// `bodies.ecliptic` and `lunarNodes` swap between 'ecliptic_j2000' (default)
+// and 'ecliptic_of_date'. zodiac stays ECT regardless (definitional
+// constraint of the tropical zodiac). Equatorial and horizontal frames
+// stay fixed (always J2000 / topocentric-apparent — out of scope per #97).
+const VALID_ECLIPTIC_FRAMES = Object.freeze(new Set(['ecliptic_j2000', 'ecliptic_of_date']));
 
-// Subset of COORDINATE_FRAMES used by /api/sun, /api/moon, /api/planets.
-// Those endpoints return body-only data — three frames are in play
-// (ecliptic, equatorial, horizontal) and the `bodies.` prefix becomes
-// redundant because the body IS the response. zodiac, lunarNodes,
-// sunVisibility.*, equationOfTime.* don't appear on single-body responses
-// and so don't appear here. Refs #96.
-const SINGLE_BODY_COORDINATE_FRAMES = Object.freeze({
-  'ecliptic': 'ecliptic_j2000',
-  'equatorial': 'equatorial_j2000',
-  'horizontal': 'topocentric_apparent'
-});
+function buildCoordinateFramesMap(frame = 'ecliptic_j2000') {
+  return Object.freeze({
+    'bodies.ecliptic': frame,
+    'bodies.equatorial': 'equatorial_j2000',
+    'bodies.horizontal': 'topocentric_apparent',
+    'zodiac': 'ecliptic_of_date',
+    'lunarNodes': frame,
+    'sunVisibility.horizontal': 'topocentric_apparent',
+    'equationOfTime.apparentSun': 'ecliptic_j2000'
+  });
+}
+
+// Subset used by /api/sun, /api/moon, /api/planets. Single-body endpoints
+// return body-only data — three frames are in play (ecliptic, equatorial,
+// horizontal) and the `bodies.` prefix becomes redundant because the body
+// IS the response. zodiac, lunarNodes, sunVisibility.*, equationOfTime.*
+// don't appear on single-body responses and so don't appear here. Refs #96.
+// Only `ecliptic` is dynamic per the ?frame= override (#97).
+function buildSingleBodyCoordinateFramesMap(frame = 'ecliptic_j2000') {
+  return Object.freeze({
+    'ecliptic': frame,
+    'equatorial': 'equatorial_j2000',
+    'horizontal': 'topocentric_apparent'
+  });
+}
+
+// Backward-compatible aliases for the ECL-default versions. Exported on
+// module.exports for consumers that imported these constants prior to #97.
+const COORDINATE_FRAMES = buildCoordinateFramesMap('ecliptic_j2000');
+const SINGLE_BODY_COORDINATE_FRAMES = buildSingleBodyCoordinateFramesMap('ecliptic_j2000');
 
 class AntikytheraEngine {
   /**
@@ -72,6 +89,19 @@ class AntikytheraEngine {
     const eclVec = astronomy.RotateVector(ROT_EQJ_TO_ECL, equatorJ2000Vec);
     const sph = astronomy.SphereFromVector(eclVec);
     return { elon: sph.lon, elat: sph.lat };
+  }
+
+  /**
+   * Frame-dispatching wrapper around the two ecliptic helpers above. Every
+   * body getter that produces top-level longitude/latitude routes through
+   * this one method, so the per-request ?frame= override (#97) lives in a
+   * single decision point. Default is 'ecliptic_j2000' (ECL) so the
+   * pre-#97 default behavior is preserved.
+   */
+  eclipticFromEquatorVec_EQJ_byFrame(equatorJ2000Vec, frame = 'ecliptic_j2000') {
+    return frame === 'ecliptic_of_date'
+      ? this.eclipticFromEquatorVec_EQJ_to_ECT(equatorJ2000Vec)
+      : this.eclipticFromEquatorVec_EQJ(equatorJ2000Vec);
   }
 
   /**
@@ -268,10 +298,10 @@ class AntikytheraEngine {
   /**
    * Get the complete state of the Antikythera mechanism for a given date
    */
-  getState(date = new Date(), latitude = 37.5, longitude = 23.0, observerInfo = null) {
+  getState(date = new Date(), latitude = 37.5, longitude = 23.0, observerInfo = null, frame = 'ecliptic_j2000') {
     const elevation = observerInfo && typeof observerInfo.elevation === 'number' ? observerInfo.elevation : 0;
     const observer = new astronomy.Observer(latitude, longitude, elevation);
-    
+
     const observerOut = observerInfo ? { ...observerInfo } : { latitude, longitude };
     if (observerOut && observerOut.timezone) {
       const off = getUtcOffsetMinutes(date, observerOut.timezone);
@@ -282,15 +312,15 @@ class AntikytheraEngine {
       date: date.toISOString(),
       location: { latitude, longitude },
       observer: observerOut,
-      coordinate_frames: COORDINATE_FRAMES,
-      sun: this.getSunPosition(date, observer),
-      moon: this.getMoonPosition(date, observer),
-      planets: this.getPlanetaryPositions(date, observer),
+      coordinate_frames: buildCoordinateFramesMap(frame),
+      sun: this.getSunPosition(date, observer, frame),
+      moon: this.getMoonPosition(date, observer, frame),
+      planets: this.getPlanetaryPositions(date, observer, frame),
       zodiac: this.getZodiacPosition(date),
       egyptianCalendar: this.getEgyptianCalendar(date),
       metonicCycle: this.getMetonicCycle(date),
       sarosCycle: this.getSarosCycle(date),
-      lunarNodes: this.getLunarNodes(date),
+      lunarNodes: this.getLunarNodes(date, frame),
       nextEclipse: this.getNextEclipse(date, observer),
       nextOpposition: this.getNextOpposition(date),
       equationOfTime: this.getEquationOfTime(date),
@@ -321,13 +351,13 @@ class AntikytheraEngine {
     return result;
   }
 
-  getSunPosition(date, observer) {
+  getSunPosition(date, observer, frame = 'ecliptic_j2000') {
     const equator = astronomy.Equator('Sun', date, observer, false, true); // EQJ
     const horizonEqd = astronomy.Equator('Sun', date, observer, true, true);
     const horizon = astronomy.Horizon(date, observer, horizonEqd.ra, horizonEqd.dec, 'normal');
-    const ecliptic = this.eclipticFromEquatorVec_EQJ(equator.vec);
-    
-    const velocity = this.getVelocity('Sun', date, observer);
+    const ecliptic = this.eclipticFromEquatorVec_EQJ_byFrame(equator.vec, frame);
+
+    const velocity = this.getVelocity('Sun', date, observer, frame);
     
     return {
       longitude: ecliptic.elon, // Ecliptic longitude (degrees)
@@ -341,14 +371,14 @@ class AntikytheraEngine {
     };
   }
 
-  getMoonPosition(date, observer) {
+  getMoonPosition(date, observer, frame = 'ecliptic_j2000') {
     const phase = astronomy.MoonPhase(date);
     const equator = astronomy.Equator('Moon', date, observer, false, true); // EQJ
-    const ecliptic = this.eclipticFromEquatorVec_EQJ(equator.vec);
+    const ecliptic = this.eclipticFromEquatorVec_EQJ_byFrame(equator.vec, frame);
     const illumination = astronomy.Illumination('Moon', date);
     const horizon = astronomy.Horizon(date, observer, equator.ra, equator.dec, 'normal');
-    
-    const velocity = this.getVelocity('Moon', date, observer);
+
+    const velocity = this.getVelocity('Moon', date, observer, frame);
     
     return {
       longitude: ecliptic.elon,
@@ -366,18 +396,23 @@ class AntikytheraEngine {
   }
 
   /**
-   * Calculate velocity (degrees per day) for a celestial body
-   * Uses 1-day delta to determine rate of change
+   * Calculate velocity (degrees per day) for a celestial body.
+   * Uses 1-day delta to determine rate of change. Velocity is in the same
+   * ecliptic frame as the longitudes the parent getter is producing, so
+   * threading `frame` here keeps longitude and velocity internally consistent
+   * (a body's velocity in ECL ≠ its velocity in ECT, even though the two
+   * differ by ≪ 1″/day for most bodies). Default ECL preserves pre-#97
+   * behavior.
    */
-  getVelocity(body, date, observer) {
+  getVelocity(body, date, observer, frame = 'ecliptic_j2000') {
     const currentEquator = astronomy.Equator(body, date, observer, false, true);
-    const currentEcliptic = this.eclipticFromEquatorVec_EQJ(currentEquator.vec);
+    const currentEcliptic = this.eclipticFromEquatorVec_EQJ_byFrame(currentEquator.vec, frame);
     const currentLongitude = currentEcliptic.elon;
-    
+
     // Calculate position 1 day later
     const nextDate = new Date(date.getTime() + MS_PER_DAY);
     const nextEquator = astronomy.Equator(body, nextDate, observer, false, true);
-    const nextEcliptic = this.eclipticFromEquatorVec_EQJ(nextEquator.vec);
+    const nextEcliptic = this.eclipticFromEquatorVec_EQJ_byFrame(nextEquator.vec, frame);
     const nextLongitude = nextEcliptic.elon;
     
     // Handle 360° wraparound (e.g., 359° -> 1°)
@@ -391,17 +426,17 @@ class AntikytheraEngine {
     return delta; // degrees per day
   }
 
-  getPlanetaryPositions(date, observer) {
+  getPlanetaryPositions(date, observer, frame = 'ecliptic_j2000') {
     const planets = ['Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
     const positions = {};
 
     planets.forEach(planet => {
       const equator = astronomy.Equator(planet, date, observer, false, true);
-      const ecliptic = this.eclipticFromEquatorVec_EQJ(equator.vec);
+      const ecliptic = this.eclipticFromEquatorVec_EQJ_byFrame(equator.vec, frame);
       const horizon = astronomy.Horizon(date, observer, equator.ra, equator.dec, 'normal');
-      
+
       // Calculate velocity and retrograde status
-      const velocity = this.getVelocity(planet, date, observer);
+      const velocity = this.getVelocity(planet, date, observer, frame);
       const isRetrograde = velocity < 0;
       
       positions[planet.toLowerCase()] = {
@@ -746,7 +781,7 @@ class AntikytheraEngine {
    * which drifted from the true (osculating) value by up to ~1.5° from
    * mid-month perturbations.
    */
-  getLunarNodes(date) {
+  getLunarNodes(date, frame = 'ecliptic_j2000') {
     const NODAL_PERIOD_DAYS = 6798.375;   // 18.613 years
     const NODAL_PERIOD_YEARS = 18.613;
     const nodeMotionPerDay = -19.3416 / 365.25; // mean retrograde rate, deg/day
@@ -754,11 +789,18 @@ class AntikytheraEngine {
     // 1. Moon state in EQJ.
     const state = astronomy.GeoMoonState(date);
 
-    // 2. Rotate position and velocity into ECL — separately, per invariant.
+    // 2. Rotate position and velocity into the requested ecliptic frame —
+    //    separately, per invariant. ECL uses the cached constant
+    //    ROT_EQJ_TO_ECL; ECT uses the per-date Rotation_EQJ_ECT(date)
+    //    which folds in precession + nutation. Default ECL preserves the
+    //    pre-#97 result byte-for-byte.
+    const rotation = frame === 'ecliptic_of_date'
+      ? astronomy.Rotation_EQJ_ECT(date)
+      : ROT_EQJ_TO_ECL;
     const r_eqj = new astronomy.Vector(state.x, state.y, state.z, state.t);
     const v_eqj = new astronomy.Vector(state.vx, state.vy, state.vz, state.t);
-    const r = astronomy.RotateVector(ROT_EQJ_TO_ECL, r_eqj);
-    const v = astronomy.RotateVector(ROT_EQJ_TO_ECL, v_eqj);
+    const r = astronomy.RotateVector(rotation, r_eqj);
+    const v = astronomy.RotateVector(rotation, v_eqj);
 
     // 3. Specific angular momentum h = r × v (in ECL).
     const hx = r.y * v.z - r.z * v.y;
@@ -804,7 +846,7 @@ class AntikytheraEngine {
         daysUntil: daysUntilNodePassage,
         type: distToAscending < distToDescending ? 'ascending' : 'descending'
       },
-      frame: 'ecliptic_j2000'
+      frame
     };
   }
 }
@@ -812,3 +854,6 @@ class AntikytheraEngine {
 module.exports = AntikytheraEngine;
 module.exports.COORDINATE_FRAMES = COORDINATE_FRAMES;
 module.exports.SINGLE_BODY_COORDINATE_FRAMES = SINGLE_BODY_COORDINATE_FRAMES;
+module.exports.VALID_ECLIPTIC_FRAMES = VALID_ECLIPTIC_FRAMES;
+module.exports.buildCoordinateFramesMap = buildCoordinateFramesMap;
+module.exports.buildSingleBodyCoordinateFramesMap = buildSingleBodyCoordinateFramesMap;
