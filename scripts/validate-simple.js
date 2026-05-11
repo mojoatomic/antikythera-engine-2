@@ -10,7 +10,7 @@
  */
 
 const fetch = require('node-fetch');
-const { MS_PER_MINUTE } = require('../constants/time');
+const { queryObserverEcliptic } = require('./lib/horizons');
 
 async function validateMoon() {
   // 1. Get your API data
@@ -52,49 +52,17 @@ async function validateMoon() {
 }
 
 async function queryHORIZONS(date) {
-  const stop = new Date(date.getTime() + MS_PER_MINUTE);
-  
-  const params = new URLSearchParams({
-    format: 'text',
-    COMMAND: "'301'",
-    MAKE_EPHEM: 'YES',
-    EPHEM_TYPE: 'OBSERVER',
-    CENTER: "'coord@399'",
-    COORD_TYPE: 'GEODETIC',
-    SITE_COORD: "'23,37.5,0'",
-    START_TIME: `'${date.toISOString().slice(0,16).replace('T',' ')}'`,
-    STOP_TIME: `'${stop.toISOString().slice(0,16).replace('T',' ')}'`,
-    STEP_SIZE: "'1 m'",
-    QUANTITIES: "'31'",
-    ANG_FORMAT: 'DEG',
-    TIME_TYPE: 'UT',
-    TIME_DIGITS: 'SECONDS',
-    CSV_FORMAT: 'YES'
-  });
-  
+  // Moon (301) via OBSERVER/Q31 → ECT, site Athens (23E, 37.5N, 0km). Pre-
+  // refactor used .slice(0,16) minute-resolution time formatting; pass
+  // timePrecision: 'minutes' to keep byte-level URL identity. The lib
+  // returns { lon, lat } — same shape this script's caller expects.
   try {
-    const response = await fetch(`https://ssd.jpl.nasa.gov/api/horizons.api?${params}`);
-    const text = await response.text();
-    
-    const lines = text.split('\n');
-    const headerIndex = lines.findIndex(l => l.includes('$$SOE')) - 2;
-    const startIndex = lines.findIndex(l => l.includes('$$SOE')) + 1;
-    const endIndex = lines.findIndex(l => l.includes('$$EOE'));
-    
-    if (headerIndex < 0 || startIndex < 0 || endIndex < 0) return null;
-    
-    const header = lines[headerIndex].split(',').map(s => s.replace(/(^"|"$)/g,'').trim());
-    const dataRow = lines[startIndex].split(',').map(s => s.replace(/(^"|"$)/g,'').trim());
-    
-    const lonIdx = header.findIndex(h => /ObsEcLon/i.test(h));
-    const latIdx = header.findIndex(h => /ObsEcLat/i.test(h));
-    
-    if (lonIdx === -1 || latIdx === -1) return null;
-    
-    return {
-      lon: parseFloat(dataRow[lonIdx]),
-      lat: parseFloat(dataRow[latIdx])
-    };
+    return await queryObserverEcliptic(
+      '301',
+      date,
+      { latitude: 37.5, longitude: 23, elevation: 0 },
+      { timePrecision: 'minutes' }
+    );
   } catch (error) {
     console.error('❌ HORIZONS query failed:', error.message);
     return null;
