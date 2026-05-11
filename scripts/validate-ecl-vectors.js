@@ -13,7 +13,9 @@
 
 const fetch = require('node-fetch');
 const { VALIDATION } = require('../constants/validation');
-const { MS_PER_MINUTE, MS_PER_DAY } = require('../constants/time');
+const { MS_PER_DAY } = require('../constants/time');
+const { queryVectorsPosition } = require('./lib/horizons');
+const { quantile, wrapLonDiffDeg } = require('./lib/stats');
 
 const BODY_CODES = {
   sun: '10',
@@ -38,21 +40,6 @@ function parseArgs() {
   return opts;
 }
 
-function wrapLonDiffDeg(a, b) {
-  let d = (a - b + 540) % 360 - 180;
-  return Math.abs(d);
-}
-
-function quantile(sorted, p) {
-  if (sorted.length === 0) return null;
-  const idx = (sorted.length - 1) * p;
-  const lo = Math.floor(idx);
-  const hi = Math.ceil(idx);
-  if (lo === hi) return sorted[lo];
-  const h = idx - lo;
-  return sorted[lo] * (1 - h) + sorted[hi] * h;
-}
-
 // Derive ecliptic lon/lat from a J2000 ecliptic position vector.
 // HORIZONS VECTORS table (TYPE=2: position only) returns x, y, z in AU.
 function lonLatFromVec(x, y, z) {
@@ -66,54 +53,19 @@ function lonLatFromVec(x, y, z) {
 async function queryHorizons(bodyCode, date, observer) {
   // Match the API's topocentric apparent path: the engine's
   // ecliptic_coordinates field uses astronomy.Equator(..., aberration=true)
-  // with a topocentric Observer — i.e. topocentric apparent. To compare
-  // ECL vs ECL we need HORIZONS VECTORS with the same conventions:
-  //   CENTER=coord@399 + GEODETIC site → topocentric
-  //   ABERRATION=LT+S  → light-time + stellar aberration (apparent)
-  // Going geocentric or astrometric here adds 20–30″ of nuisance signal
-  // that has nothing to do with the frame being validated.
-  const stop = new Date(date.getTime() + MS_PER_MINUTE);
-  const params = new URLSearchParams({
-    format: 'text',
-    COMMAND: `'${bodyCode}'`,
-    MAKE_EPHEM: 'YES',
-    EPHEM_TYPE: 'VECTORS',
-    CENTER: "'coord@399'",
-    COORD_TYPE: 'GEODETIC',
-    SITE_COORD: `'${observer.longitude},${observer.latitude},${observer.elevation || 0}'`,
-    START_TIME: `'${date.toISOString().replace('T',' ').split('.')[0]}'`,
-    STOP_TIME: `'${stop.toISOString().replace('T',' ').split('.')[0]}'`,
-    STEP_SIZE: "'1 m'",
-    VEC_TABLE: '2',          // position + velocity (we only use position)
-    REF_PLANE: 'ECLIPTIC',   // ecliptic plane
-    REF_SYSTEM: 'J2000',     // J2000 equinox — meaningful for VECTORS, unlike OBSERVER
-    VEC_CORR: 'LT+S',        // light-time + stellar aberration → apparent
-    OUT_UNITS: 'AU-D',
-    CSV_FORMAT: 'YES',
-    TIME_TYPE: 'UT',
-    TIME_DIGITS: 'SECONDS'
-  });
-  const res = await fetch(`https://ssd.jpl.nasa.gov/api/horizons.api?${params}`);
-  if (!res.ok) throw new Error(`HORIZONS HTTP ${res.status}`);
-  const text = await res.text();
-  const lines = text.split('\n');
-  const soe = lines.findIndex(l => l.includes('$$SOE'));
-  const eoe = lines.findIndex(l => l.includes('$$EOE'));
-  if (soe < 0 || eoe < 0) throw new Error('Parse error: no $$SOE/$$EOE markers');
-
-  // VECTORS CSV layout: each ephemeris row is one CSV line in [SOE, EOE).
-  // The header line is two lines above $$SOE.
-  const header = lines[soe - 2].split(',').map(s => s.replace(/(^"|"$)/g,'').trim());
-  const row = lines[soe + 1].split(',').map(s => s.replace(/(^"|"$)/g,'').trim());
-  const xIdx = header.findIndex(h => /^X$/i.test(h));
-  const yIdx = header.findIndex(h => /^Y$/i.test(h));
-  const zIdx = header.findIndex(h => /^Z$/i.test(h));
-  if (xIdx < 0 || yIdx < 0 || zIdx < 0) {
-    throw new Error(`No X/Y/Z columns in header: ${header.join('|')}`);
-  }
-  const x = parseFloat(row[xIdx]);
-  const y = parseFloat(row[yIdx]);
-  const z = parseFloat(row[zIdx]);
+  // with a topocentric Observer — i.e. topocentric apparent. The lib's
+  // queryVectorsPosition uses CENTER=coord@399 + GEODETIC site (topocentric)
+  // and VEC_CORR=LT+S (light-time + stellar aberration → apparent), with
+  // REF_PLANE=ECLIPTIC + REF_SYSTEM=J2000 + VEC_TABLE=2 — same conventions
+  // as the pre-refactor inline query. Going geocentric or astrometric here
+  // adds 20–30″ of nuisance signal that has nothing to do with the frame
+  // being validated, so the lib defaults are exactly right.
+  //
+  // lonLatFromVec stays in this script (per MUST 2): the lib returns the
+  // raw {x, y, z} vector and we own the angular derivation. A future
+  // queryVectorsState will return the full 6-vector for validate-state-
+  // vectors.js under #101.
+  const { x, y, z } = await queryVectorsPosition(bodyCode, date, observer);
   return lonLatFromVec(x, y, z);
 }
 

@@ -11,8 +11,7 @@
  * Compares your API's Moon position against JPL HORIZONS (ECT path).
  */
 
-const fetch = require('node-fetch');
-const { MS_PER_MINUTE } = require('../constants/time');
+const { queryObserverEcliptic } = require('./lib/horizons');
 const AntikytheraEngine = require('../engine');
 
 const engine = new AntikytheraEngine();
@@ -25,64 +24,21 @@ const engine = new AntikytheraEngine();
  * Center: 500@399 (Geocentric)
  */
 async function queryHORIZONS(date, latitude = 37.5, longitude = 23.0) {
-  // HORIZONS requires STOP_TIME > START_TIME; request a 1-minute window
-  const stop = new Date(date.getTime() + MS_PER_MINUTE);
-
-  const params = new URLSearchParams({
-    format: 'text',
-    COMMAND: "'301'",           // Moon (quoted per HORIZONS examples)
-    MAKE_EPHEM: 'YES',
-    EPHEM_TYPE: 'OBSERVER',
-    // Topocentric Athens (lon,lat,elevkm): use coord@399 with GEODETIC
-    CENTER: "'coord@399'",
-    COORD_TYPE: 'GEODETIC',
-    SITE_COORD: `'${longitude},${latitude},0'`,
-    START_TIME: `'${date.toISOString().slice(0,16).replace('T',' ')}'`,
-    STOP_TIME: `'${stop.toISOString().slice(0,16).replace('T',' ')}'`,
-    STEP_SIZE: "'1 m'",         // URL-safe with quotes; space allowed
-    QUANTITIES: "'31'",         // 31 = Observer ecliptic lon/lat (ObsEcLon, ObsEcLat)
-    ANG_FORMAT: 'DEG',           // angles in degrees
-    TIME_TYPE: 'UT',
-    TIME_DIGITS: 'SECONDS',
-    CSV_FORMAT: 'YES'            // easier to parse
-  });
-
-  const url = `https://ssd.jpl.nasa.gov/api/horizons.api?${params}`;
-  
-  console.log('\n🔍 Querying NASA HORIZONS...');
-  console.log(`URL: ${url}`);
-  
+  console.log('\n🔍 Querying NASA HORIZONS via scripts/lib/horizons …');
   try {
-    const response = await fetch(url);
-    const text = await response.text();
-
-    // Extract CSV header and first data row between $$SOE and $$EOE
-    const lines = text.split('\n');
-    // In CSV mode, header labels line is two lines before $$SOE
-    const headerIndex = lines.findIndex(l => l.includes('$$SOE')) - 2; // header labels line
-    const startIndex = lines.findIndex(l => l.includes('$$SOE')) + 1;
-    const endIndex = lines.findIndex(l => l.includes('$$EOE'));
-
-    if (headerIndex < 0 || startIndex < 0 || endIndex < 0 || startIndex >= endIndex) {
-      console.log('⚠️  Could not locate CSV data section in HORIZONS output.');
-      return null;
-    }
-
-    const header = lines[headerIndex].split(',').map(s => s.replace(/(^\"|\"$)/g,'').trim());
-    const dataRow = lines[startIndex].split(',').map(s => s.replace(/(^\"|\"$)/g,'').trim());
-
-    const lonIdx = header.findIndex(h => /ObsEcLon/i.test(h));
-    const latIdx = header.findIndex(h => /ObsEcLat/i.test(h));
-
-    if (lonIdx === -1 || latIdx === -1) {
-      console.log('⚠️  ObsEcLon/ObsEcLat not found in CSV header.');
-      return null;
-    }
-
-    const longitude = parseFloat(dataRow[lonIdx]);
-    const latitude = parseFloat(dataRow[latIdx]);
-
-    return { longitude, latitude };
+    // Moon-only script; pre-refactor used minute-resolution time formatting
+    // (`.slice(0,16)`), so the lib call here matches by passing
+    // timePrecision: 'minutes' to preserve byte-level URL identity.
+    const result = await queryObserverEcliptic(
+      '301',
+      date,
+      { latitude, longitude, elevation: 0 },
+      { timePrecision: 'minutes' }
+    );
+    // The lib returns { lon, lat }; this script's downstream code expects
+    // { longitude, latitude }. Adapt at the boundary to keep main()
+    // untouched.
+    return { longitude: result.lon, latitude: result.lat };
   } catch (error) {
     console.error('❌ Error querying HORIZONS:', error.message);
     return null;

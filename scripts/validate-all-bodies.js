@@ -10,9 +10,8 @@
  * Validates ALL celestial bodies against NASA JPL HORIZONS
  */
 
-const fetch = require('node-fetch');
-const { MS_PER_MINUTE } = require('../constants/time');
 const { VALIDATION } = require('../constants/validation');
+const { queryObserverEcliptic } = require('./lib/horizons');
 
 // Per-body 3× p95 threshold from constants/validation.js. Replaces a flat
 // 0.1° (= 360″) threshold which was 200–400× looser than the engine's
@@ -154,85 +153,23 @@ async function validateBody(bodyName, bodyCode, apiCoords, timestamp, observer) 
   }
 }
 
+// HORIZONS query and CSV parsing now live in ./lib/horizons. This thin
+// wrapper preserves the original null-on-error contract that validateBody
+// relies on (line 113-122 of this file): callers see `null` for a failed
+// HORIZONS query and degrade gracefully, rather than the lib's throw-
+// semantics propagating up.
+//
+// Dropped from the original implementation: a one-time debug log of HORIZONS
+// header lines ("Reference Frame: ..." etc.) printed on the first successful
+// query of a run. Pure diagnostic noise; never read by the comparison logic;
+// not worth a fetchAndParse export from the lib just to preserve it.
 async function queryHORIZONS(bodyCode, date, observer) {
-  const stop = new Date(date.getTime() + MS_PER_MINUTE);
-  
-  const params = new URLSearchParams({
-    format: 'text',
-    COMMAND: `'${bodyCode}'`,
-    MAKE_EPHEM: 'YES',
-    EPHEM_TYPE: 'OBSERVER',
-    CENTER: "'coord@399'",
-    COORD_TYPE: 'GEODETIC',
-    SITE_COORD: `'${observer.longitude},${observer.latitude},${observer.elevation || 0}'`,
-    START_TIME: `'${formatHORIZONSTime(date)}'`,
-    STOP_TIME: `'${formatHORIZONSTime(stop)}'`,
-    STEP_SIZE: "'1 m'",
-    QUANTITIES: "'31'",
-    ANG_FORMAT: 'DEG',
-    TIME_TYPE: 'UT',
-    TIME_DIGITS: 'SECONDS',
-    REF_PLANE: 'ECLIPTIC',
-    REF_SYSTEM: 'J2000',
-    CSV_FORMAT: 'YES'
-  });
-  
   try {
-    const response = await fetch(`https://ssd.jpl.nasa.gov/api/horizons.api?${params}`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
-    const text = await response.text();
-    // Log reference frame lines once for debugging
-    if (!global.__printedHorizonsHeader) {
-      const headerLines = text.split('\n').slice(0, 60).filter(l => /Reference|Ecliptic|Equinox|Frame/i.test(l));
-      if (headerLines.length) {
-        console.log('    HORIZONS Header (frame):');
-        headerLines.forEach(l => console.log('    ', l));
-        global.__printedHorizonsHeader = true;
-      }
-    }
-    return parseHORIZONSCSV(text);
-    
+    return await queryObserverEcliptic(bodyCode, date, observer);
   } catch (error) {
     console.log(`    HORIZONS query error: ${error.message}`);
     return null;
   }
-}
-
-function formatHORIZONSTime(date) {
-  // Preserve seconds to avoid lunar fast motion discrepancies
-  return date.toISOString().replace('T', ' ').split('.')[0];
-}
-
-function parseHORIZONSCSV(text) {
-  const lines = text.split('\n');
-  
-  const soeIndex = lines.findIndex(l => l.includes('$$SOE'));
-  const eoeIndex = lines.findIndex(l => l.includes('$$EOE'));
-  
-  if (soeIndex === -1 || eoeIndex === -1) return null;
-  
-  const headerIndex = soeIndex - 2;
-  if (headerIndex < 0) return null;
-  
-  const header = parseCSVLine(lines[headerIndex]);
-  const dataRow = parseCSVLine(lines[soeIndex + 1]);
-  
-  const lonIdx = header.findIndex(h => /ObsEcLon/i.test(h));
-  const latIdx = header.findIndex(h => /ObsEcLat/i.test(h));
-  
-  if (lonIdx === -1 || latIdx === -1) return null;
-  
-  return {
-    lon: parseFloat(dataRow[lonIdx]),
-    lat: parseFloat(dataRow[latIdx])
-  };
-}
-
-function parseCSVLine(line) {
-  return line.split(',').map(s => s.replace(/(^"|"$)/g, '').trim());
 }
 
 if (require.main === module) {

@@ -15,7 +15,9 @@
  */
 
 const fetch = require('node-fetch');
-const { MS_PER_MINUTE, MS_PER_DAY } = require('../constants/time');
+const { MS_PER_DAY } = require('../constants/time');
+const { queryObserverEcliptic } = require('./lib/horizons');
+const { quantile, wrapLonDiffDeg } = require('./lib/stats');
 
 const BODY_CODES = {
   sun: '10',
@@ -40,56 +42,13 @@ function parseArgs() {
   return opts;
 }
 
-function wrapLonDiffDeg(a, b) {
-  // Smallest absolute difference in degrees
-  let d = (a - b + 540) % 360 - 180;
-  return Math.abs(d);
-}
-
-function quantile(sorted, p) {
-  if (sorted.length === 0) return null;
-  const idx = (sorted.length - 1) * p;
-  const lo = Math.floor(idx);
-  const hi = Math.ceil(idx);
-  if (lo === hi) return sorted[lo];
-  const h = idx - lo;
-  return sorted[lo] * (1 - h) + sorted[hi] * h;
-}
-
+// quantile, wrapLonDiffDeg now imported from ./lib/stats — see top of file.
+// HORIZONS query/parse logic now lives in ./lib/horizons — see top of file.
+// This script's queryHorizons wrapper is kept for backward compatibility
+// with anything that imports it (nothing on main, but the module.exports
+// at the bottom of the file preserved the surface historically).
 async function queryHorizons(bodyCode, date, observer) {
-  const stop = new Date(date.getTime() + MS_PER_MINUTE);
-  const params = new URLSearchParams({
-    format: 'text',
-    COMMAND: `'${bodyCode}'`,
-    MAKE_EPHEM: 'YES',
-    EPHEM_TYPE: 'OBSERVER',
-    CENTER: "'coord@399'",
-    COORD_TYPE: 'GEODETIC',
-    SITE_COORD: `'${observer.longitude},${observer.latitude},${observer.elevation || 0}'`,
-    START_TIME: `'${date.toISOString().replace('T',' ').split('.')[0]}'`,
-    STOP_TIME: `'${stop.toISOString().replace('T',' ').split('.')[0]}'`,
-    STEP_SIZE: "'1 m'",
-    QUANTITIES: "'31'",
-    ANG_FORMAT: 'DEG',
-    TIME_TYPE: 'UT',
-    TIME_DIGITS: 'SECONDS',
-    REF_PLANE: 'ECLIPTIC',
-    REF_SYSTEM: 'J2000',
-    CSV_FORMAT: 'YES'
-  });
-  const res = await fetch(`https://ssd.jpl.nasa.gov/api/horizons.api?${params}`);
-  if (!res.ok) throw new Error(`HORIZONS HTTP ${res.status}`);
-  const text = await res.text();
-  const lines = text.split('\n');
-  const soe = lines.findIndex(l => l.includes('$$SOE'));
-  const eoe = lines.findIndex(l => l.includes('$$EOE'));
-  if (soe < 0 || eoe < 0) throw new Error('Parse error');
-  const header = lines[soe - 2].split(',').map(s => s.replace(/(^"|"$)/g,'').trim());
-  const row = lines[soe + 1].split(',').map(s => s.replace(/(^"|"$)/g,'').trim());
-  const lonIdx = header.findIndex(h => /ObsEcLon/i.test(h));
-  const latIdx = header.findIndex(h => /ObsEcLat/i.test(h));
-  if (lonIdx < 0 || latIdx < 0) throw new Error('No ObsEcLon/ObsEcLat');
-  return { lon: parseFloat(row[lonIdx]), lat: parseFloat(row[latIdx]) };
+  return queryObserverEcliptic(bodyCode, date, observer);
 }
 
 async function getAPI(dateISO, observer) {
